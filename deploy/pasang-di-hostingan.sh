@@ -91,12 +91,29 @@ fi
 # ---------------------------------------------------------------------
 # 2. Folder data. Dibuat kalau belum ada, TIDAK PERNAH dihapus.
 #
+# SATU MODEL SATU FOLDER, akar data/output sengaja dibiarkan kosong. Dulu
+# model utama duduk di akar, dan itu bikin keluaran model lain yang salah
+# taruh langsung menimpa catalog model yang sudah jalan.
+#
+# Foldernya dibuat di sini walaupun masih kosong, dua alasannya. Susunannya
+# jadi KELIHATAN di disk, jadi yang mengirim data tidak perlu menebak nama
+# foldernya. Dan skrip kiriman yang lupa `mkdir -p` tidak gagal gara gara
+# folder tujuannya belum ada.
+#
+# Daftar di bawah ini CERMINAN dari MODELS di atmosight/app.js dan
+# smokewatch/app.js. Kalau di sana ada model baru, tambahkan di sini juga.
+# Salinan yang dua tempat memang tidak ideal, tapi skrip bash tidak bisa
+# membaca konstanta JavaScript, dan menebak dari nama folder yang sudah ada
+# justru lebih rapuh.
+#
 # Kalau folder ini kosong, situsnya tetap tampil, cuma masuk mode kosong
 # yang menjelaskan datanya belum ada. Itu bukan kerusakan.
 # ---------------------------------------------------------------------
-for app in atmosight smokewatch; do
-  mkdir -p "$SITUS/backend/$app/data/output"
-done
+MODEL_ATMOSIGHT="gfs wrfchem_9km_meteo wrf_citarum"
+MODEL_SMOKEWATCH="cams wrfchem_9km_kimia"
+
+for m in $MODEL_ATMOSIGHT;  do mkdir -p "$SITUS/backend/atmosight/data/output/$m";  done
+for m in $MODEL_SMOKEWATCH; do mkdir -p "$SITUS/backend/smokewatch/data/output/$m"; done
 kabar "Folder data siap, isinya tidak disentuh"
 
 # ---------------------------------------------------------------------
@@ -137,9 +154,21 @@ fi
 # 4. Laporan
 # ---------------------------------------------------------------------
 garis
-for app in atmosight smokewatch; do
-  d="$SITUS/backend/$app/data/output"
-  printf '  data %-12s %s berkas\n' "$app" "$(find "$d" -type f 2>/dev/null | wc -l)"
-done
+echo "  Isi folder data, per model."
+lapor_model() {
+  local app="$1" daftar="$2" m d n
+  for m in $daftar; do
+    d="$SITUS/backend/$app/data/output/$m"
+    n="$(find "$d" -type f 2>/dev/null | wc -l)"
+    # Berkas berawalan titik seperti .gitkeep ikut terhitung find, tapi TIDAK
+    # muncul di `ls` biasa. Disebut angkanya saja supaya tidak bingung waktu
+    # `ls` kelihatan kosong padahal laporannya bukan nol.
+    printf '    %-11s %-20s %s berkas\n' "$app" "$m" "$n"
+  done
+}
+lapor_model atmosight  "$MODEL_ATMOSIGHT"
+lapor_model smokewatch "$MODEL_SMOKEWATCH"
+echo
+kabar "Folder kosong itu WAJAR selama datanya belum dikirim server."
 kabar "Selesai. Muat ulang situsnya."
 garis
