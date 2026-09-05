@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Smokewatch, Peta Kualitas Udara Indonesia</title>
+  <meta name="description" content="Indeks Standar Pencemar Udara dan sebaran PM₂.₅, PM₁₀, CO, NO₂, SO₂, O₃, serta kabut asap untuk seluruh Indonesia. Klik lokasimu untuk grafik per jam." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#fcf8f8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Smokewatch" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <!-- Open Graph / kartu preview saat link dibagikan -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Smokewatch" />
+  <meta property="og:title" content="Smokewatch, peta kualitas udara interaktif Indonesia" />
+  <meta property="og:description" content="Indeks Standar Pencemar Udara dan sebaran PM₂.₅, PM₁₀, CO, NO₂, SO₂, O₃, serta kabut asap untuk seluruh Indonesia. Klik lokasimu untuk grafik per jam." />
+  <meta property="og:url" content="https://bungakertas-py.github.io/envirocircle/smokewatch/" />
+  <meta property="og:image" content="https://bungakertas-py.github.io/envirocircle/smokewatch/og-image.png" />
+  <meta property="og:image:width" content="2400" />
+  <meta property="og:image:height" content="1260" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Smokewatch — Peta kualitas udara interaktif Indonesia" />
+  <meta name="twitter:description" content="Angin, hujan, suhu, awan, dan tekanan untuk seluruh Indonesia. Klik lokasimu untuk prakiraan detail per jam." />
+  <meta name="twitter:image" content="https://bungakertas-py.github.io/envirocircle/smokewatch/og-image.png" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="stage">
+    <div id="map"></div>
+
+    <!-- Overlay UI (pointer-events none; panel di-enable) -->
+    <div id="ui">
+      <!-- ============ TOP ============ -->
+      <div class="ui-top">
+        <!-- kiri: layer + model -->
+        <div class="col">
+          <!-- brand + panah pindah ke Atmosight (kontainer saudara, geser ke kanan) -->
+          <div class="brand-row">
+            <div class="panel brand">
+              <svg class="brand-logo" viewBox="0 0 48 48" width="38" height="38" aria-hidden="true">
+                <rect x="2" y="2" width="44" height="44" rx="13" fill="#00f5ff" stroke="#050a14" stroke-width="4"/>
+                <g transform="translate(9.9 9.9) scale(1.175)" fill="#002021">
+                  <path d="M21,6.5c-1.66,0-3,1.34-3,3c0,0.07,0,0.14,0.01,0.21l-2.03,0.68c-0.64-1.21-1.82-2.09-3.22-2.32V5.91 C14.04,5.57,15,4.4,15,3c0-1.66-1.34-3-3-3S9,1.34,9,3c0,1.4,0.96,2.57,2.25,2.91v2.16c-1.4,0.23-2.58,1.11-3.22,2.32L5.99,9.71 C6,9.64,6,9.57,6,9.5c0-1.66-1.34-3-3-3s-3,1.34-3,3s1.34,3,3,3c1.06,0,1.98-0.55,2.52-1.37l2.03,0.68 c-0.2,1.29,0.17,2.66,1.09,3.69l-1.41,1.77C6.85,17.09,6.44,17,6,17c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3 c0-0.68-0.22-1.3-0.6-1.8l1.41-1.77c1.36,0.76,3.02,0.75,4.37,0l1.41,1.77C15.22,18.7,15,19.32,15,20c0,1.66,1.34,3,3,3s3-1.34,3-3 s-1.34-3-3-3c-0.44,0-0.85,0.09-1.23,0.26l-1.41-1.77c0.93-1.04,1.29-2.4,1.09-3.69l2.03-0.68c0.53,0.82,1.46,1.37,2.52,1.37 c1.66,0,3-1.34,3-3S22.66,6.5,21,6.5z M3,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C4,10.05,3.55,10.5,3,10.5z M6,21 c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C7,20.55,6.55,21,6,21z M11,3c0-0.55,0.45-1,1-1s1,0.45,1,1c0,0.55-0.45,1-1,1 S11,3.55,11,3z M12,15c-1.38,0-2.5-1.12-2.5-2.5c0-1.38,1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5C14.5,13.88,13.38,15,12,15z M18,19 c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C17,19.45,17.45,19,18,19z M21,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1 s1,0.45,1,1C22,10.05,21.55,10.5,21,10.5z"/>
+                </g>
+              </svg>
+              <div class="brand-text">
+                <strong>Smokewatch</strong>
+                <span>Sebaran Polutan · Tim Envirocircle</span>
+              </div>
+              <!-- Dulu tombol tanda seru yang membuka kartu Tentang. Diminta user jadi
+                   rumah yang memulangkan ke landing. Sengaja <a>, bukan <button>,
+                   supaya bisa dibuka di tab baru dan alamatnya kelihatan di bilah
+                   status. "../" benar di dua tempat sekaligus, di GitHub Pages
+                   /envirocircle/atmosight/ dan nanti di envirocircle.info/atmosight/.
+                   AKIBATNYA bagian #about jadi tidak punya pintu masuk lagi. -->
+              <a href="../" class="brand-info" title="Kembali ke Envirocircle"
+                 aria-label="Kembali ke landing page Envirocircle"><span class="material-symbols-outlined">home</span></a>
+              <button id="nav-arrow" class="nav-arrow" aria-label="Aplikasi lain" title="Aplikasi lain"><span class="material-symbols-outlined">chevron_right</span></button>
+            </div>
+            <!-- Kontainer saudara, tersembunyi sampai panah ditekan. Dulu berisi dua,
+                 Kertas Fenomena DIBUANG atas permintaan user sebab dia proyek lain
+                 dan bukan bagian dari Envirocircle. -->
+            <div class="sibling-links">
+              <a class="sibling-link" href="../atmosight/" title="Buka Atmosight (peta cuaca interaktif Indonesia)">
+                <span class="material-symbols-outlined pl-ico">partly_cloudy_day</span>
+                <span class="pl-txt">
+                  <strong>Atmosight</strong>
+                  <span>Angin, hujan, suhu, tekanan</span>
+                </span>
+                <span class="material-symbols-outlined pl-go">arrow_forward</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Wadah catatan siklon + ITCZ. Keduanya mengalir dalam kolom flex agar
+               saat satu banner memuai (dropdown), yang lain terdorong turun.
+               Desktop: absolute (mengambang tengah-atas). HP: mengalir di bawah brand. -->
+          <div class="notes">
+          <div id="cyc-note" class="cyc-note">
+            <div class="cyc-note-top">
+              <span class="material-symbols-outlined">error</span>
+              <span class="cyc-note-txt">Indikasi model GFS, bukan peringatan resmi BMKG/TCWC</span>
+            </div>
+            <div class="cyc-detail">
+              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#7a1fa2">cyclone</span><b>Siklon Lintang Tinggi</b><span class="cyc-th">lintang ≥30° · angin ≥25 kt</span></div>
+              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#d61f1f">cyclone</span><b>Siklon Tropis</b><span class="cyc-th">angin ≥34 kt · putaran kuat</span></div>
+              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#f59f00">cyclone</span><b>Bibit Siklon</b><span class="cyc-th">angin 25-33 kt · berputar</span></div>
+              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#1b7a3d">cyclone</span><b>Sirkulasi Siklonik</b><span class="cyc-th">angin ~20-24 kt · pusaran lemah</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="cyc-note-toggle" aria-label="Tampilkan keterangan siklon">
+              <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+          </div>
+
+          <!-- Catatan ITCZ + dropdown penjelasan awam (muncul saat toggle aktif). -->
+          <div id="itcz-note" class="cyc-note itcz-note">
+            <div class="cyc-note-top">
+              <span class="material-symbols-outlined">looks</span>
+              <span class="cyc-note-txt">Zona pertemuan angin (ITCZ), indikasi model GFS</span>
+            </div>
+            <div class="cyc-detail">
+              <div class="itcz-lead">Sabuk tempat angin pasat dua belahan bumi bertemu lalu naik, memicu banyak awan dan hujan. Posisinya bergeser tiap musim, dan bisa putus-putus di sekitar Indonesia.</div>
+              <div class="cyc-row"><span class="itcz-sw itcz-sw-line"></span><b>Garis</b><span class="cyc-th">sumbu pertemuan angin</span></div>
+              <div class="cyc-row"><span class="itcz-sw itcz-sw-band"></span><b>Pita</b><span class="cyc-th">zona konvergensi, awan &amp; hujan</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="itcz-note-toggle" aria-label="Tampilkan keterangan ITCZ">
+              <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+          </div>
+
+          <!-- Banner TITIK API: hotspot VIIRS 48 jam terakhir (pengamatan satelit).
+               Muncul saat toggle Titik Api aktif. Diisi app.js dari titik_api.json. -->
+          <div id="api-note" class="cyc-note api-note">
+            <div class="cyc-note-top">
+              <span class="material-symbols-outlined">local_fire_department</span>
+              <span class="cyc-note-txt" id="api-ringkas">Titik panas VIIRS</span>
+            </div>
+            <div class="cyc-detail">
+              <div class="api-lead">Titik api KUAT (FRP di atas 100 MW) dari satelit VIIRS, disaring dari jendela 48 jam terakhir. Ini PENGAMATAN (telat sekitar 3 jam), bukan ramalan, dan bisa terlewat bila tertutup awan. Klik titik untuk detail, dan geser slider di atas legenda untuk mempersempit jendela waktu.</div>
+              <div class="cyc-row"><span class="api-sw" style="background:#a80000"></span><b>Titik api</b><span class="cyc-th">FRP &ge; 100 MW</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="api-note-toggle" aria-label="Tampilkan keterangan titik api">
+              <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+          </div>
+
+          </div>
+
+          <div class="layer-bar">
+            <!-- HP: kepala dropdown "Parameter" (desktop disembunyikan) -->
+            <button id="param-toggle" class="param-toggle" aria-label="Parameter polutan">
+              <span class="material-symbols-outlined param-ico">tune</span>
+              <span class="param-lbl">Parameter</span>
+              <span class="material-symbols-outlined param-caret">expand_more</span>
+            </button>
+            <button id="layer-prev" class="layer-nav" aria-label="Variabel sebelumnya"><span class="material-symbols-outlined">chevron_left</span></button>
+            <div class="panel layers">
+              <div class="layer-split">
+                <button class="layer-btn layer-btn--half" data-layer="ispu" data-tip="Indeks Standar Pencemar Udara, Permen LHK 14/2020">
+                  <span class="lb-txt">ISPU</span>
+                </button>
+                <button class="layer-btn layer-btn--half" data-layer="aqi" data-tip="US EPA Air Quality Index, pembanding ISPU">
+                  <span class="lb-txt">AQI</span>
+                </button>
+              </div>
+              <button class="layer-btn" data-layer="pm25" data-tip="Partikel halus di bawah 2,5 mikron">
+                <span class="material-symbols-outlined">blur_on</span> <span class="lb-txt">PM<sub>2.5</sub></span>
+              </button>
+              <button class="layer-btn" data-layer="pm10" data-tip="Partikel di bawah 10 mikron">
+                <span class="material-symbols-outlined">grain</span> <span class="lb-txt">PM<sub>10</sub></span>
+              </button>
+              <button class="layer-btn" data-layer="co" data-tip="Karbon monoksida">
+                <span class="material-symbols-outlined">co2</span> <span class="lb-txt">CO</span>
+              </button>
+              <button class="layer-btn" data-layer="no2" data-tip="Nitrogen dioksida">
+                <span class="material-symbols-outlined">factory</span> <span class="lb-txt">NO<sub>2</sub></span>
+              </button>
+              <button class="layer-btn" data-layer="so2" data-tip="Sulfur dioksida">
+                <span class="material-symbols-outlined">volcano</span> <span class="lb-txt">SO<sub>2</sub></span>
+              </button>
+              <button class="layer-btn" data-layer="o3" data-tip="Ozon permukaan">
+                <span class="material-symbols-outlined">wb_sunny</span> <span class="lb-txt">O<sub>3</sub></span>
+              </button>
+              <button class="layer-btn" data-layer="aod" data-tip="Ketebalan optis aerosol 550 nm">
+                <span class="material-symbols-outlined">foggy</span> <span class="lb-txt">Kabut Asap</span>
+              </button>
+              <button class="layer-btn" data-layer="pbl" data-tip="Planetary Boundary Layer Height">
+                <span class="material-symbols-outlined">vertical_align_bottom</span> <span class="lb-txt">PBLH</span>
+              </button>
+            </div>
+            <button id="layer-next" class="layer-nav" aria-label="Variabel berikutnya"><span class="material-symbols-outlined">chevron_right</span></button>
+            <!-- Buka-tutup panel kiri (Parameter + Model). Menempel di sisi kontainer
+                 Parameter, sejajar tengahnya. Desktop saja; di HP sudah ada dropdown. -->
+            <button id="panel-toggle" class="panel-toggle" aria-label="Sembunyikan panel" title="Sembunyikan panel">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+          </div>
+
+          <!-- DAYA DUKUNG: daya tampung udara per sel (Permen LH No. 5). Pilihan
+               parameternya mendatar, karena cuma empat dan semuanya pendek.
+               Tombolnya sengaja memakai kelas .layer-btn juga, jadi seluruh
+               mesin pemilih layer yang sudah ada langsung berlaku. -->
+          <div class="panel daya-dukung">
+            <div class="label-caps">DAYA TAMPUNG</div>
+            <div class="dd-row">
+              <button class="layer-btn dd-btn" data-layer="dt_pm25" data-tip="Daya tampung PM2,5">PM<sub>2.5</sub></button>
+              <button class="layer-btn dd-btn" data-layer="dt_pm10" data-tip="Daya tampung PM10">PM<sub>10</sub></button>
+              <button class="layer-btn dd-btn" data-layer="dt_so2" data-tip="Daya tampung SO2">SO<sub>2</sub></button>
+              <button class="layer-btn dd-btn" data-layer="dt_no2" data-tip="Daya tampung NO2">NO<sub>2</sub></button>
+            </div>
+          </div>
+
+          <!-- HP-only: pemilih LEVEL, di bawah Parameter, mekanisme buka-tutup sama.
+               Desktop pakai dropdown LEVEL di panel .selects; kontainer ini display:none. -->
+          <div class="level-bar">
+            <button id="level-toggle" class="param-toggle" aria-label="Level ketinggian">
+              <span class="material-symbols-outlined param-ico">height</span>
+              <span class="param-lbl">Level</span>
+              <span class="material-symbols-outlined param-caret">expand_more</span>
+            </button>
+            <div class="panel levels">
+              <button class="level-btn active" data-level="surface">Permukaan</button>
+              <button class="level-btn" data-level="strato">Stratosfer, 70 hPa</button>
+            </div>
+          </div>
+
+          <div class="panel selects">
+            <div class="field">
+              <div class="label-caps">MODEL</div>
+              <div class="select-wrap">
+                <select id="model-select">
+                  <option>CAMS - 44 km</option>
+                  <!-- Model PAJANGAN. Sengaja cuma dipamerkan supaya rencananya
+                       kelihatan, tapi MATI dan tidak bisa dipilih. Tidak ada
+                       pipeline dan tidak ada datanya. Buang "disabled" kalau
+                       salah satunya betul betul sudah digarap.
+                       Nama dan angkanya dipatok user, jangan dirapikan sendiri.
+                       Chip di kartu Showcase landing page menulis "WRF-Chem"
+                       dengan hubung, di sini sengaja "WRFCHEM". -->
+                  <option disabled>WRFCHEM - 9 km</option>
+                  <option disabled>CAMx - 9 km</option>
+                  <option disabled>CMAQ - 9 km</option>
+                  <option disabled>Flexpart - 9 km</option>
+                </select>
+                <span class="material-symbols-outlined">arrow_drop_down</span>
+              </div>
+            </div>
+            <div class="field">
+              <div class="label-caps">LEVEL</div>
+              <div class="select-wrap">
+                <select id="level-select" disabled><option value="surface">Permukaan</option></select>
+                <span class="material-symbols-outlined">arrow_drop_down</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- kanan: lang + zoom + kontrol -->
+        <div class="col items-end">
+          <!-- HP: kepala dropdown kontrol (desktop disembunyikan) -->
+          <button id="ctrl-toggle" class="ctrl-toggle" aria-label="Kontrol peta">
+            <span class="material-symbols-outlined ctrl-ico">more_horiz</span>
+            <span class="material-symbols-outlined ctrl-caret">expand_more</span>
+          </button>
+          <div class="lang">
+            <button class="active">ID</button>
+            <button disabled title="Segera">EN</button>
+          </div>
+          <div class="zoom">
+            <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
+            <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
+          </div>
+          <button id="geo-btn" class="icon-btn" aria-label="Udara di lokasi saya" data-tip="Lokasi"><span class="material-symbols-outlined">my_location</span></button>
+          <div class="city-wrap">
+            <button id="city-toggle" class="icon-btn" aria-label="Ikon kondisi per kota" data-tip="Kondisi"><span class="material-symbols-outlined">partly_cloudy_day</span></button>
+            <div id="cond-legend" class="cond-legend"></div>
+          </div>
+          <button id="cyclone-toggle" class="icon-btn" aria-label="Deteksi siklon + jalur prakiraan" data-tip="Siklon"><span class="material-symbols-outlined">cyclone</span></button>
+          <button id="itcz-toggle" class="icon-btn" aria-label="Zona pertemuan angin (ITCZ)" data-tip="ITCZ"><span class="material-symbols-outlined">looks</span></button>
+          <button id="api-toggle" class="icon-btn" aria-label="Titik panas satelit VIIRS (FIRMS)" data-tip="Titik Api"><span class="material-symbols-outlined">local_fire_department</span></button>
+          <button id="info-toggle" class="icon-btn" aria-label="Kualitas udara: peringatan &amp; populasi terpapar" data-tip="Kualitas Udara"><span class="material-symbols-outlined">groups</span></button>
+          <button id="paparan-btn" class="icon-btn" aria-label="Peta paparan penduduk: jiwa di sel yang ISPU-nya Tidak Sehat" data-tip="Paparan"><span class="material-symbols-outlined">person_pin_circle</span></button>
+          <div class="phenom-wrap">
+            <button id="mon-toggle" class="icon-btn" aria-label="Fenomena atmosfer" data-tip="Fenomena"><span class="material-symbols-outlined">explore</span></button>
+            <div id="phenom-panel" class="phenom-panel"></div>
+          </div>
+          <button id="share-btn" class="icon-btn" aria-label="Bagikan tampilan ini" data-tip="Bagikan"><span class="material-symbols-outlined">share</span></button>
+          <button id="fs-btn" class="icon-btn" aria-label="Layar penuh" data-tip="Layar Penuh"><span class="material-symbols-outlined">fullscreen</span></button>
+          <div class="search-wrap">
+            <button id="search-btn" class="icon-btn" aria-label="Cari kota / kabupaten" data-tip="Cari"><span class="material-symbols-outlined">search</span></button>
+            <div id="search-box" class="search-box">
+              <input id="search-input" type="text" placeholder="Cari kota / kabupaten…" autocomplete="off" />
+              <div id="search-results" class="search-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ BOTTOM: slider (kiri) + legenda (kanan) ============ -->
+      <div class="ui-bottom">
+        <!-- timeline / slider — bawah kiri -->
+        <div class="panel timeline">
+          <div id="data-fresh" class="fresh-badge" title="Waktu inisiasi model GFS terakhir">
+            <span class="material-symbols-outlined fresh-ico">error</span>
+            <span class="mono" id="fresh-text"></span>
+            <span class="material-symbols-outlined fresh-chev">chevron_right</span>
+          </div>
+          <div class="tl-btns">
+            <button id="play-btn" class="tl-btn" title="Play/Pause"><span class="material-symbols-outlined" id="play-icon">play_arrow</span></button>
+          </div>
+          <div class="tl-main">
+            <div class="tl-cur"><span class="mono" id="valid-time">—</span></div>
+            <input type="range" id="time-slider" min="0" max="0" value="0" step="1" />
+            <div id="tl-ticks" class="tl-ticks"></div>
+          </div>
+        </div>
+
+        <!-- legenda — bawah kanan (legenda ikon kondisi di atas, muncul saat toggle) -->
+        <div class="legend-col">
+          <!-- Slider KHUSUS titik api: menyaring hotspot menurut jendela waktu
+               deteksi (jam ke belakang). Kontainer sendiri, DI ATAS legenda bar,
+               tipis & horizontal. Muncul hanya saat toggle Titik Api aktif. -->
+          <div id="fire-slider-box" class="fire-slider-box" hidden>
+            <div class="fsb-top">
+              <span class="material-symbols-outlined fsb-ico">local_fire_department</span>
+              <span class="fsb-label" id="fire-slider-label">48 jam terakhir</span>
+            </div>
+            <input id="fire-slider" class="fire-slider" type="range" min="1" max="48" value="48" step="1" aria-label="Jendela waktu titik api (jam ke belakang)">
+          </div>
+          <div class="legend-panel">
+            <div class="legend-head mono" id="legend-head">KNOTS</div>
+            <div class="legend" id="legend-cells"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast kecil (mis. "Link disalin") -->
+    <!-- ============ TATA LETAK HP ============
+         Semua kontrol dirangkum ke satu bilah bawah yang disembunyikan di luar
+         bingkai. Isinya DIBANGUN di app.js dari tombol yang sudah ada, dan
+         kliknya diteruskan ke tombol aslinya. Satu sumber kebenaran, jadi tak
+         ada dua tempat yang harus disamakan tiap ada parameter baru.
+         Di desktop seluruh blok ini disembunyikan CSS. -->
+    <button id="lowbar-handle" class="lowbar-handle" aria-label="Buka panel kontrol">
+      <span class="material-symbols-outlined">keyboard_arrow_up</span>
+    </button>
+    <div id="lowbar" class="lowbar" aria-hidden="true">
+      <div class="lowbar-grip"></div>
+      <div id="lowbar-body" class="lowbar-body"></div>
+    </div>
+    <div id="par-chip" class="par-chip" hidden></div>
+    <div id="ket-stack" class="ket-stack" hidden>
+      <div id="ket-body" class="ket-body"></div>
+      <button id="ket-toggle" class="ket-toggle" aria-label="Sembunyikan keterangan">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <!-- Gerbang sandi layer Daya Tampung -->
+    <div id="pw-overlay" class="about-overlay">
+      <div class="pw-card">
+        <span class="about-tag">TERKUNCI</span>
+        <h2 class="pw-title">Layer Daya Tampung</h2>
+        <p class="pw-note">Masukkan sandi untuk menampilkan layer ini.</p>
+        <input id="pw-input" class="pw-input" type="password" autocomplete="off"
+               spellcheck="false" placeholder="Sandi" aria-label="Sandi layer daya tampung" />
+        <div id="pw-err" class="pw-err" hidden>Sandi salah.</div>
+        <div class="pw-act">
+          <button id="pw-cancel" type="button" class="pw-btn">Batal</button>
+          <button id="pw-ok" type="button" class="pw-btn pw-btn-primary">Buka</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kartu Tim Envirocircle -->
+    <div id="about-overlay" class="about-overlay">
+      <div id="about-card-team" class="about-card about-card--team">
+        <button id="about-close" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <div class="tm-head">
+          <span class="about-tag">TIM ENVIROCIRCLE</span>
+          <h2 class="about-name">Tim Envirocircle</h2>
+          <p class="about-intro">Smokewatch mengubah model komposisi atmosfer global yang gratis jadi peta polusi yang enak dibaca siapa saja. ISPU, indeks AQI, tujuh polutan, sampai daya tampung udara wilayah, diperbarui otomatis tiap hari. Kami tim kecil di baliknya, dari data mentah sampai tampilan di layarmu.</p>
+        </div>
+        <div class="tm-row">
+          <figure class="tm tm--side tm--left">
+            <div class="tm-photo"><img src="tim-farras.jpg" alt="Farras Ghaly" /></div>
+            <figcaption class="tm-name">Farras Ghaly</figcaption>
+          </figure>
+          <figure class="tm tm--lead">
+            <div class="tm-photo"><img src="tim-alvin.jpg" alt="Alvin Pratama" /></div>
+            <figcaption class="tm-name">Alvin Pratama</figcaption>
+          </figure>
+          <figure class="tm tm--side tm--right">
+            <div class="tm-photo"><img src="tim-andre.jpg" alt="Andreas Boni Baik Simamora" /></div>
+            <figcaption class="tm-name">Andreas Boni Baik Simamora</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skeleton loading — meniru layout UI biar transisi mulus saat refresh -->
+    <div id="skeleton" aria-hidden="true">
+      <div class="sk-top">
+        <div class="sk-col">
+          <div class="sk-panel sk-brand">
+            <div class="sk-bar sk-logo"></div>
+            <div class="sk-lines">
+              <div class="sk-bar sk-line-lg"></div>
+              <div class="sk-bar sk-line-sm"></div>
+            </div>
+          </div>
+          <div class="sk-panel sk-layers">
+            <div class="sk-bar"></div><div class="sk-bar"></div><div class="sk-bar"></div>
+            <div class="sk-bar"></div><div class="sk-bar"></div><div class="sk-bar"></div>
+            <div class="sk-bar"></div>
+          </div>
+          <div class="sk-panel sk-selects">
+            <div class="sk-bar"></div><div class="sk-bar"></div>
+          </div>
+        </div>
+        <div class="sk-col sk-right">
+          <div class="sk-bar sk-mini"></div>
+          <div class="sk-bar sk-mini"></div>
+          <div class="sk-bar sk-mini"></div>
+          <div class="sk-bar sk-mini"></div>
+        </div>
+      </div>
+      <div class="sk-bottom">
+        <div class="sk-bar sk-slider"></div>
+        <div class="sk-bar sk-legend"></div>
+      </div>
+      <div class="sk-center">
+        <svg class="sk-mark" viewBox="0 0 48 48" width="60" height="60" aria-hidden="true">
+          <rect x="2" y="2" width="44" height="44" rx="13" fill="#00f5ff" stroke="#050a14" stroke-width="4"/>
+                <g transform="translate(9.9 9.9) scale(1.175)" fill="#002021">
+                  <path d="M21,6.5c-1.66,0-3,1.34-3,3c0,0.07,0,0.14,0.01,0.21l-2.03,0.68c-0.64-1.21-1.82-2.09-3.22-2.32V5.91 C14.04,5.57,15,4.4,15,3c0-1.66-1.34-3-3-3S9,1.34,9,3c0,1.4,0.96,2.57,2.25,2.91v2.16c-1.4,0.23-2.58,1.11-3.22,2.32L5.99,9.71 C6,9.64,6,9.57,6,9.5c0-1.66-1.34-3-3-3s-3,1.34-3,3s1.34,3,3,3c1.06,0,1.98-0.55,2.52-1.37l2.03,0.68 c-0.2,1.29,0.17,2.66,1.09,3.69l-1.41,1.77C6.85,17.09,6.44,17,6,17c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3 c0-0.68-0.22-1.3-0.6-1.8l1.41-1.77c1.36,0.76,3.02,0.75,4.37,0l1.41,1.77C15.22,18.7,15,19.32,15,20c0,1.66,1.34,3,3,3s3-1.34,3-3 s-1.34-3-3-3c-0.44,0-0.85,0.09-1.23,0.26l-1.41-1.77c0.93-1.04,1.29-2.4,1.09-3.69l2.03-0.68c0.53,0.82,1.46,1.37,2.52,1.37 c1.66,0,3-1.34,3-3S22.66,6.5,21,6.5z M3,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C4,10.05,3.55,10.5,3,10.5z M6,21 c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C7,20.55,6.55,21,6,21z M11,3c0-0.55,0.45-1,1-1s1,0.45,1,1c0,0.55-0.45,1-1,1 S11,3.55,11,3z M12,15c-1.38,0-2.5-1.12-2.5-2.5c0-1.38,1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5C14.5,13.88,13.38,15,12,15z M18,19 c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C17,19.45,17.45,19,18,19z M21,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1 s1,0.45,1,1C22,10.05,21.55,10.5,21,10.5z"/>
+                </g>
+        </svg>
+        <div class="sk-load-text mono">Memuat data cuaca…</div>
+      </div>
+    </div>
+
+    <div id="loading">Memuat data model…</div>
+
+    <!-- Panel detail titik. Layer polutan memakai popup kecil di titik (openPoint),
+         tapi layer daya tampung isinya terlalu panjang untuk popup, jadi khusus
+         layer itu detailnya masuk ke sidebar ini. -->
+    <aside id="point-panel">
+      <div class="pt-head">
+        <div class="pt-head-top">
+          <div class="pt-sec" id="pt-kind"><span id="pt-par"></span></div>
+          <div class="pt-head-btns">
+            <button id="pt-hide" class="pt-close" title="Sembunyikan ke kanan"><span class="material-symbols-outlined">chevron_right</span></button>
+            <button id="pt-close" class="pt-close" title="Tutup"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+        <div class="pt-coords mono" id="pt-coords"></div>
+      </div>
+      <div class="pt-body" id="pt-body"></div>
+    </aside>
+    <button id="pt-reopen" title="Tampilkan detail titik"><span class="material-symbols-outlined">chevron_left</span></button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.js"></script>
+  <!-- Daya Tampung Wilayah: baca banyak format vektor (SHP zip/KMZ via shpjs+JSZip,
+       KML/GeoJSON/WKT langsung) + reproyeksi (proj4) + digitasi manual -->
+  <script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
+  <script src="https://unpkg.com/shpjs@6.1.1/dist/shp.min.js"></script>
+  <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="app.js"></script>
+  <script src="wilayah.js"></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Envirocircle, peta atmosfer dan lingkungan Indonesia</title>
+  <meta name="description" content="Platform peta cuaca dan kualitas udara Indonesia dari model global gratis. Produk Atmosight dan Smokewatch." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Penanda "JS hidup". Keadaan awal animasi hanya dipasang kalau kelas ini ada,
+       jadi tanpa JS seluruh teks hero tetap terlihat. -->
+  <script>document.documentElement.className += " js-anim";</script>
+</head>
+<body>
+
+  <!-- Top bar dibekukan. Sengaja DI LUAR .hero, bukan di dalamnya, supaya
+       position:fixed tidak pernah tersandera containing block dari transform
+       atau overflow milik hero. -->
+  <header class="hero-top">
+    <div class="hero-bar">
+      <a class="brand" href="#top" data-anim="top">
+        <span class="brand-mark"><span class="material-symbols-outlined">hub</span></span>
+        <span class="brand-name">Envirocircle</span>
+      </a>
+      <!-- Urutan diminta user, Home, Showcase, Team. Sekaligus mengikuti urutan
+           bagiannya di halaman. Penyeimbang .bar-isi dibuang, menu sudah
+           mentok kanan jadi tidak ada yang perlu diimbangi. -->
+      <nav class="hero-nav">
+        <a href="#top" data-anim="top">Home</a>
+        <a href="#showcase" data-anim="top">Showcase</a>
+        <a href="#team" data-anim="top">Team</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ============================ HERO ============================ -->
+  <section class="hero" id="top">
+    <!-- lapis 1: konsentrasi (contourf pita jet) -->
+    <canvas class="hero-contour" aria-hidden="true"></canvas>
+    <!-- lapis 2: angin (partikel ala velocity.js) -->
+    <canvas class="hero-wind" aria-hidden="true"></canvas>
+
+
+    <!-- isi hero: tagline raksasa saja, lalu satu tombol -->
+    <div class="hero-inner">
+      <h1 class="hero-title">
+        <!-- Judul dipecah jadi potongan supaya tiap bagian bisa dianimasikan
+             sendiri. Huruf i ditulis "&#305;" (i TANPA TITIK), titiknya datang
+             belakangan dari titik milik "Forecast." yang ditendang huruf t.
+             Aman untuk tata letak: advance "&#305;" sama persis dengan "i", dan
+             Prec + &#305; + se = 702,40 = advance "Precise" utuh, jadi tidak ada
+             kerning yang hilang gara gara dipecah. -->
+        <span class="hl hl-1"><span class="hl-in"><span class="pc pc-a">Prec</span><span class="pc pc-i">&#305;</span><span class="pc pc-b">se</span></span></span>
+        <span class="hl hl-2"><span class="hl-in"><span class="pc fc-a glow">Foreca</span><span class="pc fc-s glow">s</span><span class="pc fc-t glow">t</span><span class="fc-slot"><span class="pc fc-dot">.</span><span class="fc-dot2">.</span></span></span></span>
+      </h1>
+      <div class="hero-foot">
+        <!-- Sekarang SUDAH aktif, tujuannya bagian Showcase yang baru dibuka.
+             Panah ke bawah itu memang maksudnya menggulir ke produk. -->
+        <a class="pill pill--lg" href="#showcase" data-anim="fade">
+          <span>See it live</span>
+          <span class="pill-ico"><span class="material-symbols-outlined">arrow_downward</span></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Bagian lain (disembunyikan dulu, digarap nanti) ============ -->
+  <main>
+
+    <section id="tentang" hidden>
+      <div class="wrap">
+        <div class="about-band">
+          <span class="section-head">Tentang</span>
+          <h2>Satu platform, <span class="glow">dua peta</span> untuk Indonesia.</h2>
+          <p>Envirocircle adalah platform peta atmosfer dan lingkungan untuk Indonesia. Kami ambil model global yang terbuka dan gratis, lalu olah jadi peta interaktif yang bisa dibaca tanpa latar belakang teknis.</p>
+          <p>Semua berjalan otomatis. Data disegarkan tiap hari, dan tiap titik di peta bisa diklik untuk rincian setempat.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="showcase">
+      <div class="wrap">
+        <span class="section-head" data-sc>Showcase</span>
+        <h2 class="sc-title" data-sc>Dua peta, satu <span class="glow">sumber</span>.</h2>
+        <p class="sc-lead" data-sc>Keduanya berdiri di atas model atmosfer yang terbuka dan gratis, dari model sedunia sampai model wilayah yang dijalankan sendiri. Diolah otomatis tiap hari, lalu disajikan sebagai peta yang bisa dibaca tanpa latar belakang teknis.</p>
+
+        <!-- Korsel. Satu kartu lanskap di tengah, tetangganya mengintip
+             terpotong di kiri kanan, keterangannya di bawah. Acuannya Showcase
+             gsap.com yang dikirim user.
+             TIDAK berputar, dan tidak ada tetangga kiri di tampilan awal.
+             Diminta user, sebab produknya baru dua, dan memaksa ada tetangga
+             di kiri berarti memajang produk yang sama dua kali. Jadi mulai
+             dari Atmosight dengan Smokewatch mengintip di kanan, panah kiri
+             mati sampai digeser. Begitu produk ketiga ada, tinggal tambah satu
+             <article>, sisanya jalan sendiri. -->
+        <div class="sc-korsel" data-sc>
+          <div class="sc-layar">
+            <div class="sc-rel" id="sc-rel">
+              <!-- Kartunya <a>, bukan <div>. Seluruh kartu itu satu tautan ke
+                   app-nya, jadi klik di mana pun langsung membuka Atmosight.
+                   Gambarnya tinggal jadi poster, dia yang tampil sebelum app
+                   sungguhannya selesai dimuat, dan tetap jadi tampilan akhir
+                   di HP, di sambungan hemat data, dan buat yang memilih
+                   reduced-motion. Bingkai app-nya disisipkan anim.js. -->
+              <article class="sc-slide" data-nama="atmosight">
+                <a class="sc-shot sc-shot--atmos" href="atmosight/"
+                   data-embed="atmosight/?embed=1"
+                   data-judul="Peta angin Atmosight yang sedang berjalan">
+                  <img src="img/atmosight.webp" width="1400" height="875" decoding="async"
+                       alt="Tampilan awal Atmosight, peta angin seluruh Indonesia dari model GFS" />
+                  <span class="sc-tudung" aria-hidden="true"></span>
+                </a>
+              </article>
+              <article class="sc-slide" data-nama="smokewatch">
+                <a class="sc-shot sc-shot--smoke" href="smokewatch/"
+                   data-embed="smokewatch/?embed=1"
+                   data-judul="Peta ISPU Smokewatch yang sedang berjalan">
+                  <img src="img/smokewatch.webp" width="1400" height="875" decoding="async"
+                       alt="Tampilan awal Smokewatch, peta ISPU seluruh Indonesia dari model CAMS" />
+                  <span class="sc-tudung" aria-hidden="true"></span>
+                </a>
+              </article>
+            </div>
+          </div>
+
+          <button class="sc-panah sc-panah--kiri" id="sc-kiri" type="button" aria-label="Produk sebelumnya">
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button class="sc-panah sc-panah--kanan" id="sc-kanan" type="button" aria-label="Produk berikutnya">
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+
+        <!-- Keterangannya DI BAWAH kartu, seperti acuan. Dua duanya ditulis
+             sebagai markup sungguhan lalu yang tidak aktif disembunyikan,
+             bukan dirakit JS. Dengan begitu chip dan tombolnya tetap elemen
+             beneran, bisa di-tab dan tetap ada kalau JS gagal. -->
+        <div class="sc-ket" id="sc-ket" data-sc>
+          <div class="sc-kap" data-nama="atmosight">
+            <div class="sc-judul">
+              <a class="sc-nama" href="atmosight/">Explore Atmosight</a>
+              <div class="chips">
+                <span class="chip">GFS</span><span class="chip">ECMWF</span><span class="chip">WRF</span>
+              </div>
+            </div>
+            <p class="card-desc">Prakiraan cuaca interaktif seluruh Indonesia, sampai tiga hari ke depan.</p>
+          </div>
+          <div class="sc-kap" data-nama="smokewatch" hidden>
+            <div class="sc-judul">
+              <a class="sc-nama" href="smokewatch/">Explore Smokewatch</a>
+              <div class="chips">
+                <span class="chip">CAMS</span><span class="chip">WRF-Chem</span><span class="chip">CAMx</span><span class="chip">CMAQ</span><span class="chip">Flexpart</span>
+              </div>
+            </div>
+            <p class="card-desc">Peta polusi udara seluruh Indonesia, dari ISPU sampai daya tampung wilayah.</p>
+          </div>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="team">
+      <div class="wrap">
+        <div class="team-head">
+          <div>
+            <span class="section-head" data-sc>Team</span>
+            <h2 class="team-title" data-sc>Meet our team.</h2>
+          </div>
+        </div>
+
+        <!-- Urutannya Alvin, Andreas, Farras. Foto Alvin SENGAJA dikosongkan,
+             ubinnya dibiarkan supaya iramanya tidak bolong. Begitu fotonya ada,
+             tinggal taruh satu img di dalam .team-photo seperti dua baris di
+             bawahnya lalu buang kelas team-photo bertanda kosong. -->
+        <div class="team-row" data-sc>
+          <h3 class="team-name">Alvin</h3>
+          <div class="team-photo team-photo--kosong"></div>
+        </div>
+
+        <div class="team-row" data-sc>
+          <h3 class="team-name">Andreas</h3>
+          <div class="team-photo">
+            <img src="img/tim-andreas.webp" width="466" height="800"
+                 loading="lazy" decoding="async" alt="Andreas" />
+          </div>
+        </div>
+
+        <div class="team-row" data-sc>
+          <h3 class="team-name">Farras</h3>
+          <div class="team-photo">
+            <img src="img/tim-farras.webp" width="487" height="800"
+                 loading="lazy" decoding="async" alt="Farras" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer hidden>
+      <div class="wrap">
+        <div class="f-brand">Envirocircle</div>
+        <div class="f-note">
+          Peta atmosfer dan lingkungan Indonesia, dari model global yang gratis.<br />
+          Sumber data NOAA GFS dan Copernicus CAMS. Dibuat oleh Tim Envirocircle, 2026.
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+  <script src="hero.js"></script>
+  <script src="vendor/gsap.min.js"></script>
+  <script src="vendor/ScrollTrigger.min.js"></script>
+  <script src="anim.js"></script>
+</body>
+</html>

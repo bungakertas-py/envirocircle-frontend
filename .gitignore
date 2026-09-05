@@ -1,0 +1,18 @@
+# Keluaran pipeline. TIDAK pernah masuk git, ukurannya ratusan MB dan isinya
+# bisa dibuat ulang kapan saja dengan menjalankan pipeline-nya.
+backend/*/data/raw/
+backend/*/data/output/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node. Cuma dipakai untuk mengambil GSAP, yang di-commit isi vendor/ saja.
+node_modules/
+package-lock.json
+
+# Berkas buangan. Kebiasaan di pohon ini, apa pun yang diawali garis bawah
+# itu sementara, boleh dihapus kapan saja.
+_*

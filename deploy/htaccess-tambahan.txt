@@ -1,0 +1,38 @@
+# Aturan yang disisipkan pasang-di-hostingan.sh ke .htaccess hostingan.
+# Jangan menyunting .htaccess di server tangan, sunting berkas ini lalu push.
+#
+# Kompresi SENGAJA tidak diatur di sini. Sudah diuji langsung di hostingan,
+# brotli hidup bawaan dan berkas JSON 347 KB turun jadi 104 KB tanpa aturan
+# apa pun. Menambah AddOutputFilterByType di sini cuma jadi berkas mati.
+# Catatan, berkas kecil memang tidak dikompresi, itu wajar.
+
+# Daftar isi folder MENYALA bawaan di hostingan ini. Tanpa baris ini, folder
+# data yang tidak punya index membalas 200 dan memajang seluruh nama
+# berkasnya ke siapa saja.
+Options -Indexes
+
+# Salinan kerja git ada di dalam folder yang disajikan, jadi tanpa ini siapa
+# pun bisa mengunduh seluruh repo berikut riwayatnya lewat browser.
+RedirectMatch 404 /\.git
+RedirectMatch 404 /\.gitignore$
+
+<IfModule mod_headers.c>
+  # Data peta berganti tiap hari, jadi jangan disimpan lama lama di browser.
+  # Sepuluh menit cukup untuk menahan muat ulang beruntun tanpa membuat orang
+  # melihat data kemarin.
+  <FilesMatch "\.(json|webp|png)$">
+    Header set Cache-Control "public, max-age=600"
+  </FilesMatch>
+
+  # Kode situs boleh disimpan lebih lama, dia jarang berubah. Kalau nanti
+  # terasa terlalu lama waktu menguji perubahan, turunkan angka ini.
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "public, max-age=3600"
+  </FilesMatch>
+
+  # HTML jangan pernah disimpan. Dia yang menunjuk ke berkas lain, jadi kalau
+  # dia basi, seluruh situs ikut basi walaupun berkas lainnya sudah baru.
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
