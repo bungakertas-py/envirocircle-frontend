@@ -286,7 +286,7 @@ for (const _p of DT_PARAM) LEGENDS[`dt_${_p}`] = DT_LEGEND;
 // Sandi TIDAK diingat: tiap kali salah satu dari empat tombol daya tampung
 // ditekan, sandi diketik lagi, walau baru saja keluar dari layer itu. Permintaan
 // user, kekakuannya persis gerbang model WRF di Atmosight.
-const DT_SANDI = "bungakertas123!";
+const DT_SANDI = "envi123!";
 const isLayerDT = (key) => !!key && key.startsWith("dt_");
 
 // Tampilkan modal, kembalikan janji true kalau sandinya benar.

@@ -342,7 +342,7 @@ function setLevel(lv) {
 // melewati halaman ini. Fungsinya cuma penghalang sopan supaya model ini tidak
 // terbuka begitu saja bagi yang sekadar lewat. Kalau datanya benar benar harus
 // dibatasi, satu satunya cara adalah tidak menerbitkannya di Pages publik.
-const WRF_SANDI = "bungakertas123!";
+const WRF_SANDI = "envi123!";
 const WRF_KUNCI = "kertas-cuaca:wrf-tiket";
 
 // Sandinya TIDAK diingat. Tiap muat ulang, dan tiap balik lagi dari GFS ke WRF,
