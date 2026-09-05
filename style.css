@@ -140,16 +140,27 @@ a { color: inherit; text-decoration: none; }
      .hero-title .hl-1 dibuang dulu. */
   padding: 0 calc(0.96 * var(--gutter) + 2vw);
 }
-/* BIDANG HITAM bar, dan dia LAPIS PALING BAWAH.
+/* BIDANG BAR, dan dia LAPIS PALING BAWAH.
    Susunannya diminta user, paling atas tombol dan lambang, di bawahnya baru
-   bidang hitam ini. Digambar lewat ::before supaya tidak menambah elemen di
-   markup, dan menembus tepi ke tepi sebab bar memang begitu.
+   bidang ini. Digambar lewat ::before supaya tidak menambah elemen di markup,
+   dan menembus tepi ke tepi sebab bar memang begitu.
    Yang memudar cuma bidang ini, bukan seluruh bar. Kalau opacity dipasang di
    .hero-top, tulisan dan lambangnya ikut pudar dan itu bukan yang diminta.
-   Warnanya --ink, sama persis dengan latar bagian tim. */
+
+   CYAN TEMBUS PANDANG plus blur, diminta user. Dulu --ink pekat.
+   Perhatikan, 75 persennya ada di WARNANYA lewat color-mix, BUKAN di opacity
+   elemennya. Kalau ditaruh di opacity, blur-nya ikut diencerkan dan hasilnya
+   bukan kaca buram tapi kabut tipis. Opacity elemen tetap dipakai untuk
+   memudarkan masuk keluar, dari 0 ke 1.
+   Baris background pertama itu cadangan buat browser tanpa color-mix,
+   hasilnya cyan pekat tanpa tembus pandang, jelek tapi tidak rusak. */
 .hero-bar::before {
   content: ""; position: absolute; inset: 0; z-index: 0;
-  background: var(--ink);
+  background: var(--lime);
+  background: color-mix(in srgb, var(--lime) 75%, transparent);
+  /* Satu angka ini yang mengatur seberapa buram kacanya. */
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   opacity: 0;
   transition: opacity .3s ease;
 }
@@ -157,40 +168,40 @@ a { color: inherit; text-decoration: none; }
    tulisan, sebab dia digambar belakangan. */
 .hero-bar > * { position: relative; z-index: 1; }
 
-/* Muncul waktu disorot, DAN waktu hero sudah terlewat. Kelas .gelap dipasang
+/* Muncul waktu disorot, DAN waktu hero sudah terlewat. Kelas .padat dipasang
    JS, lihat anim.js. Dua duanya memakai jalur yang sama supaya transisinya
    tidak pernah bertabrakan. */
 .hero-bar:hover::before,
-.hero-top.gelap .hero-bar::before { opacity: 1; }
+.hero-top.padat .hero-bar::before { opacity: 1; }
 
-/* Lambangnya ikut menyesuaikan. Garis dan bayangannya --ink, dan tinta di
-   atas bidang tinta itu sama saja dengan tidak digambar, bentuk kotaknya
-   hilang separuh. Jadi di keadaan gelap dua duanya dibalik jadi --paper.
-   Jebakan yang sama sudah kena dua kali sebelumnya, di kartu tim dan di
-   bayangan baris tim. */
-.brand-mark { transition: border-color .3s ease, box-shadow .3s ease; }
+/* ---- Warna isi bar, dan kenapa hampir semuanya TIDAK berubah lagi ----
+
+   Sejak bidangnya jadi cyan, seluruh pembalikan warna yang dulu ada di sini
+   DIBUANG, bukan disesuaikan. Alasannya, cyan itu warna TERANG, hampir
+   seterang kertas. Jadi latar di belakang tulisan sekarang terang di dua
+   duanya, waktu bidangnya belum muncul yang di belakang hero putih, waktu
+   sudah muncul yang di belakang cyan. Tulisan gelap benar di dua duanya.
+
+   Dulu berbeda sebab bidangnya --ink yang gelap pekat, jadi tulisan memang
+   HARUS berbalik terang. Kalau aturan lama itu dibiarkan, tulisan --paper
+   akan mendarat di atas cyan dan praktis hilang, rasio kontrasnya cuma
+   sekitar 1,4 banding 1.
+
+   Yang tersisa cuma SATU pembalikan, isian lambangnya. Lihat di bawah. */
+.hero-bar .brand-name { color: var(--ink); }
+
+/* ISIAN LAMBANG, dan ini SATU SATUNYA yang masih harus dibalik.
+   Kotak lambang isinya --lime, warna yang sama persis dengan bidang bar
+   sekarang. Cyan di atas cyan itu sama saja dengan tidak digambar, kotaknya
+   lenyap dan yang tersisa cuma garis tepinya.
+   Jadi begitu bidangnya muncul, isian kotaknya dibalik jadi --paper supaya
+   bentuknya tetap terbaca. Garis tepi dan bayangannya TETAP --ink, jangan
+   ikut dibalik, dua duanya justru yang menjaga kotaknya kelihatan.
+   Ini jebakan yang sama dengan tinta-di-atas-tinta yang sudah kena tiga
+   kali, cuma warnanya yang berganti. */
+.brand-mark { transition: background-color .3s ease; }
 .hero-bar:hover .brand-mark,
-.hero-top.gelap .brand-mark {
-  border-color: var(--paper);
-  box-shadow: 4px 4px 0 0 var(--paper);
-}
-/* ---- Warna tulisan bar, ikut keadaan bidang di belakangnya ----
-   Di awal bidangnya tidak ada, jadi yang di belakang tulisan itu hero yang
-   PUTIH, dan tulisannya harus gelap. Begitu bidang hitam muncul, tulisannya
-   berbalik terang. Dua duanya diberi transisi dengan durasi yang SAMA dengan
-   bidangnya, 0.3s, jadi warnanya berpindah bersamaan dan tidak pernah ada
-   sekejap tulisan gelap di atas hitam. */
-.hero-bar .brand-name { color: var(--ink); transition: color .3s ease; }
-.hero-nav a { transition: color .3s ease; }
-
-.hero-bar:hover .brand-name,
-.hero-top.gelap .hero-bar .brand-name { color: var(--paper); }
-
-.hero-bar:hover .hero-nav a,
-.hero-top.gelap .hero-nav a { color: var(--surface-highest); }
-
-.hero-bar:hover .hero-nav a:hover,
-.hero-top.gelap .hero-nav a:hover { color: var(--lime); }
+.hero-top.padat .brand-mark { background: var(--paper); }
 /* Susunan dan gaya menu mengikuti acuan yang dikirim user.
    Ini SATU SATUNYA tempat yang keluar dari pola "label kecil itu mono huruf
    besar". Di acuan menunya huruf biasa, agak besar, dan redup, jadi di sini

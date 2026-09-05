@@ -370,16 +370,20 @@
 })();
 
 /* =====================================================================
-   Bidang hitam top bar, dipasang begitu hero terlewat.
+   Bidang top bar, dipasang begitu hero terlewat.
 
    Bidangnya sendiri digambar CSS di .hero-bar::before dan sudah muncul
    sendiri waktu disorot. Yang tidak bisa dikerjakan CSS cuma satu, tahu
    kapan hero sudah lewat. Itu tugas blok ini, dia cuma memasang dan
-   melepas kelas .gelap, tidak menyentuh warna apa pun.
+   melepas kelas .padat, tidak menyentuh warna apa pun.
+
+   Namanya .padat, bukan .gelap seperti dulu. Waktu bidangnya masih --ink
+   pekat nama itu benar, sekarang bidangnya cyan tembus pandang jadi nama
+   lama itu berbohong. Yang dimaksud keadaan ini cuma satu, bidangnya sedang
+   tampil.
 
    Diminta user, sebab bar ini beku dan ikut turun ke bagian yang latarnya
-   sudah bukan putih lagi. Tanpa ini tulisan gelapnya menabrak pita tim yang
-   juga gelap.
+   sudah bukan putih lagi.
 
    IIFE TERPISAH dari blok animasi, sebab ini perilaku antarmuka biasa dan
    harus tetap jalan walau GSAP gagal dimuat atau pengguna memilih
@@ -394,7 +398,7 @@
   var nunggu = false;
   function periksa() {
     nunggu = false;
-    bar.classList.toggle("gelap", hero.getBoundingClientRect().bottom <= bar.offsetHeight);
+    bar.classList.toggle("padat", hero.getBoundingClientRect().bottom <= bar.offsetHeight);
   }
   /* Digandeng ke rAF supaya tidak menghitung ulang tiap kejadian gulir. */
   function jadwal() { if (!nunggu) { nunggu = true; requestAnimationFrame(periksa); } }
