@@ -24,10 +24,17 @@ RedirectMatch 404 /\.gitignore$
     Header set Cache-Control "public, max-age=600"
   </FilesMatch>
 
-  # Kode situs boleh disimpan lebih lama, dia jarang berubah. Kalau nanti
-  # terasa terlalu lama waktu menguji perubahan, turunkan angka ini.
+  # Kode situs. DITURUNKAN dari 3600 jadi 60 pada 5 September 2026, sebab
+  # angka lamanya betul betul menggigit. Sesudah menarik perubahan ke
+  # hostingan, browser tetap menyajikan app.js LAMA sampai satu jam, jadi
+  # perubahan yang sudah mendarat kelihatan seperti tidak jadi. Sudah kena
+  # sekali waktu mengganti sandi gerbang, dan bingungnya mahal.
+  #
+  # 60 detik itu pilihan untuk masa situsnya masih sering disunting. Kalau
+  # nanti sudah jarang berubah, naikkan lagi ke 3600 supaya lebih hemat.
+  # Ctrl+Shift+R tetap cara tercepat kalau tidak mau menunggu.
   <FilesMatch "\.(js|css)$">
-    Header set Cache-Control "public, max-age=3600"
+    Header set Cache-Control "public, max-age=60"
   </FilesMatch>
 
   # HTML jangan pernah disimpan. Dia yang menunjuk ke berkas lain, jadi kalau

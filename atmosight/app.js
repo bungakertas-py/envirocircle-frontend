@@ -2475,11 +2475,16 @@ function modeKosong() {
   // Pesannya beda tergantung datanya diambil dari mana. Kalau menumpang
   // sumber jauh lalu 404, itu BUKAN "belum dimasak", itu sumbernya yang
   // hilang, dan menyuruh orang menjalankan pipeline cuma menyesatkan.
-  if (DATA_JAUH) {
+  /* `DATA_JAUH` itu konstanta yang SELALU terisi, jadi memeriksanya sendirian
+     salah. Menumpang cuma berlaku untuk GFS, model lain memakai path
+     relatifnya sendiri. Tanpa syarat kedua ini, model 9 km yang datanya belum
+     ada akan dituduh "sumbernya hilang" dan menyuruh orang mengosongkan
+     DATA_JAUH, padahal dia tidak pernah menumpang sama sekali. */
+  if (DATA_JAUH && MODEL_ID === "gfs") {
     showLoadMsg(
       "<b>Sumber data tidak terjangkau</b><br><br>" +
-      "Peta dan seluruh antarmuka jalan normal, tapi katalog modelnya tidak " +
-      "ditemukan di sumber yang sedang ditumpangi.<br><br>" +
+      "Pilihan model di panel kiri tetap bisa dipakai.<br><br>" +
+      "Katalog modelnya tidak ditemukan di sumber yang sedang ditumpangi.<br><br>" +
       "<b>" + DATA_JAUH + "</b><br><br>" +
       "Kalau sumber itu memang sudah tidak ada, kosongkan <b>DATA_JAUH</b> di " +
       "app.js lalu masak datanya sendiri lewat pipeline.",
@@ -2487,8 +2492,10 @@ function modeKosong() {
     return;
   }
   showLoadMsg(
-    "<b>Salinan tanpa data</b><br><br>" +
-    "Peta dan seluruh antarmuka jalan normal, tapi keluaran model belum ada. " +
+    "<b>Model ini belum punya data</b><br><br>" +
+    "Pilihan model di panel kiri tetap bisa dipakai, jadi kamu bisa kembali " +
+    "ke model lain kapan saja.<br><br>" +
+    "Keluaran model ini belum ada. " +
     "Itu memang disengaja, keluaran pipeline tidak ikut dikirim.<br><br>" +
     "Untuk mengisinya, jalankan dari dalam folder pipeline-nya:<br>" +
     "<b>cd backend/atmosight/pipeline</b><br><b>python run.py</b><br><br>" +
@@ -2529,6 +2536,29 @@ async function init() {
     const boleh = await mintaSandi(MODEL.label);
     if (!boleh) { location.replace(location.pathname); return; }
   }
+  /* ---- ANTARMUKA YANG TIDAK BUTUH DATA, disetel DULUAN ----
+
+     Ketiganya dulu dijalankan SESUDAH katalog terbaca, dan itu bug. Jalur
+     mode kosong keluar dari init lebih awal lewat `return`, jadi begitu
+     sebuah model belum punya data, ketiganya tidak pernah jalan.
+
+     Akibat terparahnya, dropdown MODEL tidak pernah tersambung. Orang yang
+     masuk ke model yang datanya belum ada JADI TERJEBAK, tidak bisa memilih
+     model lain dan tidak bisa kembali ke GFS. Satu satunya jalan keluar
+     mengetik ulang alamatnya, dan tidak ada yang memberi tahu itu.
+
+     Ketiganya memang tidak menyentuh katalog sama sekali, sudah diperiksa.
+     setupModelSelect cuma membaca daftar MODELS, setupHP membangun bilah
+     bawah dari tombol yang sudah ada di HTML, dan terapkanFiturModel cuma
+     melihat model mana yang sedang dibuka. Jadi tidak ada alasan menunggu
+     data untuk menjalankannya.
+
+     setupLevelSelect TIDAK ikut dipindah, dia memang perlu katalog untuk
+     tahu ada tidaknya data stratosfer. */
+  setupModelSelect();      // dropdown MODEL, WAJIB duluan supaya tidak terjebak
+  setupHP();               // bilah bawah + chip parameter + kotak keterangan (HP)
+  terapkanFiturModel();    // sembunyikan fitur yang tak punya data di model ini
+
   try {
     // MODE KOSONG. Salinan untuk ditinjau dan salinan yang baru dipasang di
     // server memang dikirim TANPA data model, sebab keluaran pipeline itu
@@ -2597,9 +2627,6 @@ async function init() {
     const windS = cat.layers["wind_strato"];
     if (windS) windS.frames.forEach((f) => { if (f.velocity_json) windVelStrato[f.valid_time] = f.velocity_json; });
 
-    setupModelSelect();      // dropdown MODEL: GFS <-> WRF Citarum
-    setupHP();               // bilah bawah + chip parameter + kotak keterangan (HP)
-    terapkanFiturModel();    // sembunyikan fitur yang tak punya data di model ini
     setupLevelSelect();      // hidupkan dropdown LEVEL kalau data strato ada
 
     // Bingkai tampilan = kotak inti (VIEW_CORE) yang diperlebar pada sumbu yang
