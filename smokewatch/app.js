@@ -11,12 +11,18 @@
    sudah dipakai Atmosight. Ditambah 5 September 2026 sebab server ITERA
    menjalankan WRF-Chem, yang keluaran kimianya mengisi slot model kedua.
 
-   PERHATIKAN base path. CAMS memakai AKAR data/output, model lain memakai
-   SUB-FOLDER sendiri. Kalau keluaran model lain ditaruh di akar, dia menimpa
-   catalog.json CAMS dan yang hilang justru model yang sudah jalan. */
+   SATU MODEL SATU FOLDER, tidak ada yang nebeng di akar. Diminta pemilik
+   5 September 2026, dan susunan lama memang mengundang celaka. Dulu CAMS duduk
+   di AKAR data/output sedangkan model lain di sub-folder, jadi keluaran model
+   baru yang salah taruh langsung MENIMPA catalog.json CAMS, dan yang hilang
+   justru model yang sudah jalan. Sekarang akar sengaja dibiarkan kosong.
+
+   WRFCHEM 9 km di sini dan WRF 9 km di Atmosight itu DUA KELUARAN DARI SATU
+   RUN yang sama di server ITERA. Yang di sana parameter meteorologi, yang di
+   sini parameter kimia. Beda pohon, beda folder, satu sumber. */
 const MODELS = {
-  cams:    { base: "../backend/smokewatch/data/output/",         label: "CAMS - 44 km" },
-  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem/", label: "WRFCHEM - 9 km" },
+  cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km"   },
+  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 9 km" },
 };
 
 /* Ejaan "WRFCHEM" tanpa hubung itu maunya pemilik, padahal chip di kartu

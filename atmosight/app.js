@@ -10,15 +10,22 @@
 // profil) yang semuanya terkunci ke DATA_BASE. Menukarnya di tempat berarti
 // membatalkan semuanya satu per satu, dan satu yang kelewat = data model lama
 // nempel di model baru. Muat ulang selalu benar dan ongkosnya sepersekian detik.
+// SATU MODEL SATU FOLDER, tidak ada yang nebeng di akar. Diminta pemilik
+// 5 September 2026, dan susunan lama memang mengundang celaka. Dulu GFS duduk
+// di AKAR data/output sedangkan model lain di sub-folder, jadi keluaran model
+// baru yang salah taruh langsung MENIMPA catalog.json GFS, dan yang hilang
+// justru model yang sudah jalan. Sekarang akar sengaja dibiarkan kosong,
+// tidak ada model yang bisa menimpa model lain.
+//
+// Nama foldernya menyebut asal dan resolusinya, bukan nama internal. WRF 9 km
+// dan WRFCHEM 9 km itu DUA KELUARAN DARI SATU RUN yang sama di server ITERA,
+// yang satu parameter meteorologi yang satu parameter kimia. Yang meteorologi
+// mendarat di sini, yang kimia di pohon Smokewatch.
 const MODELS = {
-  gfs: { base: "../backend/atmosight/data/output/", label: "GFS - 28 km", ekstra: true },
-  wrf: { base: "../backend/atmosight/data/output/wrf/", label: "WRF Citarum - 7 km", ekstra: false },
-  wrf_itera: { base: "../backend/atmosight/data/output/wrf_itera/", label: "Private Model - 9 km", ekstra: false },
+  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true  },
+  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 9 km",          ekstra: false },
+  wrf_citarum: { base: "../backend/atmosight/data/output/wrf_citarum/",         label: "WRF Citarum - 7 km",  ekstra: false },
 };
-// PERHATIKAN base path di atas. GFS memakai AKAR data/output, model lain
-// memakai SUB-FOLDER sendiri. Kalau keluaran model lain ditaruh di akar, dia
-// menimpa catalog.json GFS dan yang hilang justru model yang sudah jalan.
-// Ini pernah hampir terjadi, dokumen dari sisi server menyebut folder akar.
 
 // ================= SAKLAR MODEL =================
 // Atmosight tahap awal SENGAJA cuma menampilkan GFS. Kode dan pipeline dua
@@ -36,13 +43,13 @@ const MODELS = {
 // sekarang server ITERA, dan dia mengirim hasilnya langsung ke folder
 // data/output di hostingan.
 //
-// wrf_itera DINYALAKAN 5 September 2026, sebab server ITERA sudah menjalankan
+// wrf9 DINYALAKAN 5 September 2026, sebab server ITERA sudah menjalankan
 // WRF-Chem yang keluaran meteorologinya mengisi slot ini. Sebelum kirimannya
 // mendarat, pilihannya muncul tapi masuk mode kosong, dan itu memang benar.
 const MODEL_AKTIF = {
   gfs: true,
-  wrf: false,          // WRF Citarum 7 km, arsip, belum dinyalakan
-  wrf_itera: true,     // Private Model 9 km, diisi WRF-Chem dari server ITERA
+  wrf9: true,          // keluaran meteorologi WRF-Chem 9 km dari server ITERA
+  wrf_citarum: false,  // arsip, belum dinyalakan
 };
 const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 
@@ -58,9 +65,11 @@ const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 // 0,25 derajat.
 // Aliran yang dipakai nanti "oper", berkasnya
 // https://data.ecmwf.int/forecasts/<YYYYMMDD>/<HH>z/ifs/0p25/oper/
+// "WRF - 9 km" DIKELUARKAN dari daftar ini 5 September 2026. Dia sudah jadi
+// model sungguhan di MODELS, bukan pajangan lagi. Kalau dibiarkan di sini, dia
+// muncul dua kali di dropdown, sekali hidup dan sekali mati.
 const MODEL_PAJANGAN = [
   { label: "ECMWF - 28 km" },
-  { label: "WRF - 9 km" },
   { label: "WRFDA - 9 km" },
 ];
 
@@ -257,7 +266,10 @@ const LEGENDS_WRF = {
             ["28", "#fdae61", 0], ["34", "#f46d43", 1], ["42+", "#d73027", 1]],
   },
 };
-if (MODEL_ID === "wrf") Object.assign(LEGENDS, LEGENDS_WRF);
+// Legenda khusus WRF Citarum. Kuncinya dulu "wrf", diganti "wrf_citarum" waktu
+// folder model ditata ulang, sebab "wrf" sekarang dipakai model 9 km yang baru.
+// Kalau baris ini kelewat, Citarum memakai legenda GFS dan skalanya salah.
+if (MODEL_ID === "wrf_citarum") Object.assign(LEGENDS, LEGENDS_WRF);
 
 // Tema per-layer: "dark" = latar peta gelap (overlay putih); "light" = latar
 // terang (overlay gelap). Menentukan label/batas/partikel.
@@ -445,9 +457,9 @@ function setupModelSelect() {
 // tombolnya mengejar berkas yang tak pernah dibuat lalu diam diam gagal.
 function terapkanFiturModel() {
   if (PUNYA_EKSTRA) return;
-  // Private Model punya monsun (dihitung dari anginnya sendiri), jadi toggle
-  // Monsun tetap ada. Siklon & ITCZ belum dibuat untuk model ini, disembunyikan.
-  const sembunyi = (MODEL_ID === "wrf_itera")
+  // WRF 9 km punya monsun (dihitung dari anginnya sendiri), jadi toggle Monsun
+  // tetap ada. Siklon dan ITCZ belum dibuat untuk model ini, disembunyikan.
+  const sembunyi = (MODEL_ID === "wrf9")
     ? ["cyclone-toggle", "itcz-toggle"]
     : ["cyclone-toggle", "itcz-toggle", "mon-toggle"];
   sembunyi.forEach((id) => {
@@ -458,7 +470,7 @@ function terapkanFiturModel() {
   const lv = $("level-select");
   if (lv) lv.closest(".field")?.style.setProperty("display", "none");
   document.body.classList.add("model-wrf");
-  if (MODEL_ID === "wrf_itera") document.body.classList.add("model-private");
+  if (MODEL_ID === "wrf9") document.body.classList.add("model-private");
 }
 
 function setupLevelSelect() {
