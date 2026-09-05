@@ -216,16 +216,19 @@
             <div class="field">
               <div class="label-caps">MODEL</div>
               <div class="select-wrap">
+                <!-- Isi dropdown ini DIBANGUN ULANG oleh app.js lewat
+                     setupModelSelect(), jadi option di bawah cuma cadangan
+                     kalau JS gagal. Yang menentukan mana yang hidup itu
+                     MODEL_AKTIF di app.js, bukan atribut disabled di sini. -->
                 <select id="model-select">
                   <option>CAMS - 44 km</option>
+                  <option>WRFCHEM - 9 km</option>
                   <!-- Model PAJANGAN. Sengaja cuma dipamerkan supaya rencananya
                        kelihatan, tapi MATI dan tidak bisa dipilih. Tidak ada
-                       pipeline dan tidak ada datanya. Buang "disabled" kalau
-                       salah satunya betul betul sudah digarap.
+                       pipeline dan tidak ada datanya.
                        Nama dan angkanya dipatok user, jangan dirapikan sendiri.
                        Chip di kartu Showcase landing page menulis "WRF-Chem"
                        dengan hubung, di sini sengaja "WRFCHEM". -->
-                  <option disabled>WRFCHEM - 9 km</option>
                   <option disabled>CAMx - 9 km</option>
                   <option disabled>CMAQ - 9 km</option>
                   <option disabled>Flexpart - 9 km</option>

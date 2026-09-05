@@ -15,22 +15,34 @@ const MODELS = {
   wrf: { base: "../backend/atmosight/data/output/wrf/", label: "WRF Citarum - 7 km", ekstra: false },
   wrf_itera: { base: "../backend/atmosight/data/output/wrf_itera/", label: "Private Model - 9 km", ekstra: false },
 };
+// PERHATIKAN base path di atas. GFS memakai AKAR data/output, model lain
+// memakai SUB-FOLDER sendiri. Kalau keluaran model lain ditaruh di akar, dia
+// menimpa catalog.json GFS dan yang hilang justru model yang sudah jalan.
+// Ini pernah hampir terjadi, dokumen dari sisi server menyebut folder akar.
 
 // ================= SAKLAR MODEL =================
 // Atmosight tahap awal SENGAJA cuma menampilkan GFS. Kode dan pipeline dua
 // model lain TIDAK dihapus, cuma dimatikan, supaya bisa dinyalakan lagi tanpa
 // menulis apa pun dari nol.
 //
-// CARA MENYALAKAN LAGI, ubah false jadi true di bawah ini. Tapi ingat, ada DUA
-// tempat yang harus cocok:
-//   1. di sini, supaya modelnya muncul di dropdown
-//   2. di .github/workflows/deploy.yml pada MASAK_MODEL_EXTRA, supaya datanya
-//      betul betul dimasak. Kalau cuma yang di sini dinyalakan, dropdown-nya
-//      muncul tapi petanya kosong karena berkasnya memang tak pernah dibuat.
+// CARA MENYALAKAN LAGI, ubah false jadi true di bawah ini. Tapi ingat,
+// menyalakan di sini CUMA memunculkan pilihannya di dropdown. Yang membuat
+// petanya berisi itu ADA DATANYA di base path model bersangkutan. Kalau cuma
+// yang di sini dinyalakan, pilihannya muncul tapi peta kosong.
+//
+// Catatan lama di sini menyuruh menyalakan MASAK_MODEL_EXTRA di
+// .github/workflows/deploy.yml juga. ITU SUDAH TIDAK BERLAKU di repo ini.
+// Repo ini isinya tampilan saja dan tidak punya workflow. Yang memasak data
+// sekarang server ITERA, dan dia mengirim hasilnya langsung ke folder
+// data/output di hostingan.
+//
+// wrf_itera DINYALAKAN 5 September 2026, sebab server ITERA sudah menjalankan
+// WRF-Chem yang keluaran meteorologinya mengisi slot ini. Sebelum kirimannya
+// mendarat, pilihannya muncul tapi masuk mode kosong, dan itu memang benar.
 const MODEL_AKTIF = {
   gfs: true,
-  wrf: false,          // WRF Citarum 7 km
-  wrf_itera: false,    // Private Model 9 km
+  wrf: false,          // WRF Citarum 7 km, arsip, belum dinyalakan
+  wrf_itera: true,     // Private Model 9 km, diisi WRF-Chem dari server ITERA
 };
 const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 

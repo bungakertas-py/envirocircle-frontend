@@ -2,20 +2,63 @@
  * Membaca catalog.json + aset dari pipeline backend; angin = partikel + heatmap
  * kecepatan, hujan = heatmap laju hujan. Layout & gaya ala BMKG Signature.
  */
+/* ================= MODEL =================
+   Dulu Smokewatch cuma punya SATU sumber data dan dropdown MODEL di panel itu
+   MURNI HIASAN, semua pilihan selain CAMS ditandai disabled dan tidak ada satu
+   baris JS pun yang menyentuhnya.
+
+   Sekarang dropdown itu betul betul memindah sumber data, mengikuti pola yang
+   sudah dipakai Atmosight. Ditambah 5 September 2026 sebab server ITERA
+   menjalankan WRF-Chem, yang keluaran kimianya mengisi slot model kedua.
+
+   PERHATIKAN base path. CAMS memakai AKAR data/output, model lain memakai
+   SUB-FOLDER sendiri. Kalau keluaran model lain ditaruh di akar, dia menimpa
+   catalog.json CAMS dan yang hilang justru model yang sudah jalan. */
+const MODELS = {
+  cams:    { base: "../backend/smokewatch/data/output/",         label: "CAMS - 44 km" },
+  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem/", label: "WRFCHEM - 9 km" },
+};
+
+/* Ejaan "WRFCHEM" tanpa hubung itu maunya pemilik, padahal chip di kartu
+   Showcase landing menulis "WRF-Chem". Dua tempat itu memang sengaja tidak
+   sama, jangan diseragamkan sendiri. */
+const MODEL_AKTIF = {
+  cams: true,
+  wrfchem: true,
+};
+const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
+
+/* Model PAJANGAN. Dipamerkan supaya rencananya kelihatan, tapi MATI dan tidak
+   bisa dipilih. Tidak ada pipeline, tidak ada data, tidak ada base path.
+   Daftarnya dipatok pemilik. */
+const MODEL_PAJANGAN = [
+  { label: "CAMx - 9 km" },
+  { label: "CMAQ - 9 km" },
+  { label: "Flexpart - 9 km" },
+];
+
+const _mp = new URLSearchParams(location.search).get("model");
+/* Dijaga di sini juga, bukan cuma di dropdown. Kalau tidak, model yang sudah
+   dimatikan masih bisa dibuka orang cuma dengan mengetik ?model=... */
+const MODEL_ID = modelHidup(_mp) ? _mp : "cams";
+const MODEL = MODELS[MODEL_ID];
+
 /* SUMBER DATA DIPILIH SENDIRI SAAT MUAT. Sama ceritanya dengan Atmosight,
    penjelasan panjangnya ada di atmosight/app.js.
 
    Singkatnya, yang DEKAT dicoba dulu baru yang JAUH. Di GitHub Pages tidak ada
    data lokal jadi menumpang, di hostingan sebelum server mengirim juga
    menumpang, dan begitu server mengirim dia pindah sendiri ke data lokal.
-   Tidak ada baris yang perlu disunting waktu pindah. */
-const DATA_DEKAT = "../backend/smokewatch/data/output/";
+
+   Menumpang CUMA berlaku untuk CAMS. Model lain memakai path relatifnya
+   sendiri, sebab keluarannya memang tidak pernah ada di repo lama itu. */
 const DATA_JAUH = "https://bungakertas-py.github.io/smokewatch/backend/data/output/";
-let DATA_BASE = DATA_DEKAT;
+let DATA_BASE = MODEL.base;
 
 async function ambilKatalog() {
-  for (const base of [DATA_DEKAT, DATA_JAUH]) {
-    if (!base) continue;
+  const urut = [MODEL.base];
+  if (DATA_JAUH && MODEL_ID === "cams") urut.push(DATA_JAUH);
+  for (const base of urut) {
     let res;
     try {
       res = await fetch(base + "catalog.json");
@@ -30,11 +73,53 @@ async function ambilKatalog() {
 
 function pakaiSumber(base) {
   DATA_BASE = base;
-  const dekat = base === DATA_DEKAT;
+  const dekat = base === MODEL.base;
   document.documentElement.dataset.sumber = dekat ? "dekat" : "jauh";
-  console.info(`[data] sumber ${dekat ? "LOKAL" : "menumpang"}, ${base}`);
+  console.info(`[data] model ${MODEL_ID}, sumber ${dekat ? "LOKAL" : "menumpang"}, ${base}`);
 }
 window.__sumberData = () => DATA_BASE;
+window.__model = () => MODEL_ID;
+
+/* Dropdown MODEL. Dulu dekoratif, sekarang benar benar memindah sumber data.
+   Pindah model = MUAT ULANG halaman dengan ?model=..., bukan menukar di tempat.
+   Alasannya sama dengan Atmosight, ada belasan keadaan yang terkunci ke
+   DATA_BASE dan menukarnya satu per satu berarti satu yang kelewat bikin data
+   model lama nempel di model baru. Muat ulang selalu benar. */
+function setupModelSelect() {
+  const sel = document.getElementById("model-select");
+  if (!sel) return;
+  sel.innerHTML = "";
+  const hidup = Object.entries(MODELS).filter(([id]) => modelHidup(id));
+  for (const [id, m] of hidup) {
+    const o = document.createElement("option");
+    o.value = id;
+    o.textContent = m.label;
+    sel.appendChild(o);
+  }
+  for (const m of MODEL_PAJANGAN) {
+    const o = document.createElement("option");
+    o.textContent = m.label;
+    o.disabled = true;
+    sel.appendChild(o);
+  }
+  sel.value = MODEL_ID;
+  /* Yang disembunyikan HARUS seluruh .field, bukan cuma .select-wrap, sebab
+     label MODEL ada di luar select-wrap dan kalau salah sasaran dia nongol
+     sendirian tanpa kotak pilihan di bawahnya. */
+  if (hidup.length + MODEL_PAJANGAN.length < 2) {
+    (sel.closest(".field") || sel.closest(".select-wrap") || sel).style.display = "none";
+    return;
+  }
+  sel.addEventListener("change", () => {
+    const id = sel.value;
+    if (id === MODEL_ID) return;
+    if (!modelHidup(id)) { sel.value = MODEL_ID; return; }
+    /* Hash (layer, waktu, titik) sengaja DIBUANG. Layer dan waktu model lama
+       belum tentu ada di model baru, dan restore yang gagal separuh lebih
+       membingungkan daripada mulai bersih. */
+    location.href = location.pathname + (id === "cams" ? "" : "?model=" + id);
+  });
+}
 
 /* ---------------------------------------------------------------------
    MODE SEMATAN (?embed=1). Dipakai kartu Showcase di landing.
@@ -394,7 +479,14 @@ if (EMBED) {
 // tengah Australia. Bingkai tampilan diturunkan dari kotak ini, diperlebar
 // mengikuti rasio layar. Domain DATA (dari catalog) lebih luas dari kotak ini di
 // tiap sisi → tepi data tak pernah terlihat.
-const VIEW_CORE = L.latLngBounds([-28, 68], [28, 174]);
+//
+// Angka di bawah ini CUMA bawaan, dipakai kalau catalog tidak membawa kotaknya
+// sendiri. Model wilayah seperti WRF-Chem domainnya jauh lebih sempit, cuma
+// se-Indonesia, dan memakai kotak global ini untuknya bikin petanya membingkai
+// separuh Asia dengan datanya jadi tempelan kecil di tengah. Jadi kalau catalog
+// membawa region.view_core, itu yang dipakai. Pola yang sama sudah ada di
+// Atmosight sejak model WRF masuk.
+let VIEW_CORE = L.latLngBounds([-28, 68], [28, 174]);
 
 // dark_NOLABELS, bukan dark_all. Alas sudah punya lapisan label sendiri di pane
 // "labels"; kalau alasnya juga membawa nama, namanya muncul dua kali di tempat yang
@@ -2850,6 +2942,11 @@ async function init() {
     // mundur ke `bounds` supaya katalog lama tetap terbaca.
     const ib = cat.region.image_bounds;
     imageBounds = ib ? L.latLngBounds([ib[1], ib[0]], [ib[3], ib[2]]) : dataBounds;
+    // Kotak tampilan awal, kalau modelnya membawa sendiri. Lihat VIEW_CORE.
+    if (cat.region.view_core) {
+      const [vw, vs, ve, vn] = cat.region.view_core;
+      VIEW_CORE = L.latLngBounds([vs, vw], [vn, ve]);
+    }
 
     // Wire tombol layer: klik memilih varian sesuai LEVEL aktif (permukaan/strato).
     // Tombol tanpa data (atau diredupkan oleh level) diabaikan saat diklik.
@@ -2887,6 +2984,7 @@ async function init() {
     Object.values(cat.layers || {}).forEach((L) =>
       (L.frames || []).forEach((f) => { if (f.velocity_json) windVelByTime[f.valid_time] = f.velocity_json; }));
 
+    setupModelSelect();   // dropdown MODEL: CAMS <-> WRFCHEM
     setupLevelSelect();   // hidupkan dropdown LEVEL kalau data strato ada
     if (!dataMissing) loadPeringatan();   // banner peringatan kualitas udara
     if (!dataMissing) loadPaparan();      // banner populasi terpapar (layer ISPU)
