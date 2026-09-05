@@ -105,10 +105,9 @@ fi
 # sengaja TIDAK dibuatkan folder, sebab tidak ada yang akan mengisinya dan
 # folder kosong yang tak berguna cuma bikin orang bertanya tanya isinya apa.
 #
-# Jadi wrf_citarum TIDAK ada di sini. Dia masih terdaftar di app.js sebagai
-# arsip yang dimatikan, dan itu memang disengaja, tapi selama dimatikan dia
-# tidak butuh tempat di disk. Kalau suatu saat dinyalakan, tambahkan namanya
-# di sini juga.
+# WRF Citarum sudah DIBUANG dari app.js 5 September 2026, jadi namanya tidak
+# ada di daftar ini dan tidak akan pernah dibuatkan folder. Foldernya yang
+# terlanjur ada di hostingan sudah dihapus tangan.
 #
 # Salinan dua tempat memang tidak ideal, tapi bash tidak bisa membaca
 # konstanta JavaScript, dan menebak dari nama folder yang sudah ada justru

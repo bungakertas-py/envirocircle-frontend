@@ -3,8 +3,8 @@
  * kecepatan, hujan = heatmap laju hujan. Layout & gaya ala BMKG Signature.
  */
 // ================= MODEL =================
-// Dua sumber data. GFS = pipeline utama (realtime, seluruh Asia Tenggara).
-// WRF Citarum = arsip ITB, domain kecil sekitar Jawa, resolusi 7 km.
+// Dua sumber data. GFS = model global, realtime, seluruh Asia Tenggara.
+// WRF 9 km = keluaran meteorologi WRF-Chem dari server ITERA, se-Indonesia.
 // Pindah model = MUAT ULANG halaman, bukan tukar state di tempat. Disengaja:
 // ada belasan cache lazy (point_data, city_data, siklon, ITCZ, isobar, monsun,
 // profil) yang semuanya terkunci ke DATA_BASE. Menukarnya di tempat berarti
@@ -24,13 +24,11 @@
 const MODELS = {
   gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true  },
   wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 9 km",          ekstra: false },
-  wrf_citarum: { base: "../backend/atmosight/data/output/wrf_citarum/",         label: "WRF Citarum - 7 km",  ekstra: false },
 };
 
 // ================= SAKLAR MODEL =================
-// Atmosight tahap awal SENGAJA cuma menampilkan GFS. Kode dan pipeline dua
-// model lain TIDAK dihapus, cuma dimatikan, supaya bisa dinyalakan lagi tanpa
-// menulis apa pun dari nol.
+// Atmosight tahap awal SENGAJA cuma menampilkan GFS. Model lain tidak dihapus,
+// cuma dimatikan, supaya bisa dinyalakan lagi tanpa menulis apa pun dari nol.
 //
 // CARA MENYALAKAN LAGI, ubah false jadi true di bawah ini. Tapi ingat,
 // menyalakan di sini CUMA memunculkan pilihannya di dropdown. Yang membuat
@@ -46,10 +44,14 @@ const MODELS = {
 // wrf9 DINYALAKAN 5 September 2026, sebab server ITERA sudah menjalankan
 // WRF-Chem yang keluaran meteorologinya mengisi slot ini. Sebelum kirimannya
 // mendarat, pilihannya muncul tapi masuk mode kosong, dan itu memang benar.
+//
+// WRF Citarum DIBUANG 5 September 2026 atas permintaan pemilik. Dia arsip ITB
+// 2018-2019 dengan domain kecil sekitar Jawa, tidak pernah dinyalakan di sini,
+// dan tidak ada yang akan mengisinya. Kodenya masih utuh di repo Kertas Cuaca
+// kalau suatu saat diperlukan lagi.
 const MODEL_AKTIF = {
   gfs: true,
   wrf9: true,          // keluaran meteorologi WRF-Chem 9 km dari server ITERA
-  wrf_citarum: false,  // arsip, belum dinyalakan
 };
 const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 
@@ -238,38 +240,6 @@ const LEGENDS = {
   },
 };
 
-// Tiga layer WRF memakai ambang yang BEDA dari GFS, jadi legendanya ditimpa.
-// Kalau tidak, warna di legenda dan warna di peta akan berbeda arti.
-// Angkanya WAJIB sama persis dengan SKALA_SUHU / SKALA_TEKANAN / SKALA_KNOT
-// di backend/pipeline/wrf_run.py.
-const LEGENDS_WRF = {
-  // Jawa cuma 14-35 derajat. Skala GFS -10..42 bikin seluruh pulau oranye rata.
-  temp_surface: {
-    head: "°C",
-    cells: [["14", "#2450b4", 1], ["18", "#4a97dc", 1], ["22", "#cfe4f2", 0],
-            ["25", "#ffe08a", 0], ["28", "#fbaa4a", 0], ["31", "#ee7233", 0],
-            ["34", "#d43325", 1]],
-  },
-  // TEKANAN PERMUKAAN MENTAH, bukan tekanan muka laut. Nilai rendah = tempat
-  // tinggi, bukan tekanan rendah cuaca. Judulnya sengaja dibedakan.
-  pressure_surface: {
-    head: "hPa permukaan",
-    cells: [["780", "#3b0f5c", 1], ["850", "#5e3c99", 1], ["910", "#356bc4", 1],
-            ["955", "#7dc8d8", 0], ["985", "#f0f0e0", 0], ["1000", "#f4c060", 0],
-            ["1012", "#e05a3a", 1]],
-  },
-  // Angin WRF mentok sekitar 23 knot, skala GFS sampai 120 knot jadi biru semua.
-  wind_surface: {
-    head: "KNOTS",
-    cells: [["3", "#2b83ba", 1], ["6", "#5aa8cf", 0], ["10", "#abdda4", 0],
-            ["14", "#66bd63", 0], ["18", "#d9ef8b", 0], ["22", "#fee08b", 0],
-            ["28", "#fdae61", 0], ["34", "#f46d43", 1], ["42+", "#d73027", 1]],
-  },
-};
-// Legenda khusus WRF Citarum. Kuncinya dulu "wrf", diganti "wrf_citarum" waktu
-// folder model ditata ulang, sebab "wrf" sekarang dipakai model 9 km yang baru.
-// Kalau baris ini kelewat, Citarum memakai legenda GFS dan skalanya salah.
-if (MODEL_ID === "wrf_citarum") Object.assign(LEGENDS, LEGENDS_WRF);
 
 // Tema per-layer: "dark" = latar peta gelap (overlay putih); "light" = latar
 // terang (overlay gelap). Menentukan label/batas/partikel.
@@ -620,7 +590,7 @@ let velocityLayer = null;
    sudah bukan yang terakhir. */
 let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
-// Jarak antar langkah waktu, dalam JAM. GFS 3 jam, WRF Citarum 1 jam.
+// Jarak antar langkah waktu, dalam JAM. GFS 3 jam, WRF 9 km 1 jam.
 // Dipakai untuk mengubah laju hujan (mm/jam) jadi akumulasi. Dulu dipatok 3
 // dan itu benar selama cuma ada GFS; begitu WRF masuk, patokan itu melebihkan
 // akumulasi tepat 3 kali. Dihitung ulang dari deret waktu yang sebenarnya.
@@ -785,9 +755,10 @@ function fmtDay(iso) {
 
 // Frame terdekat ke waktu "sekarang" (untuk posisi awal slider, karena window
 // bisa memuat masa lalu -24 jam).
-// "Sekarang" versi aplikasi. Untuk GFS ini jam dinding sungguhan. Untuk model
-// ARSIP (WRF Citarum, datanya 2018) jam dinding tak ada gunanya, semua frame
-// jadi masa lalu dan slider melompat ke ujung. Jadi dipakai run_time katalog,
+// "Sekarang" versi aplikasi. Untuk model ramalan ini jam dinding sungguhan.
+// Untuk model ARSIP, yang datanya bertahun tahun lalu, jam dinding tak ada
+// gunanya, semua frame jadi masa lalu dan slider melompat ke ujung. Jadi
+// dipakai run_time katalog,
 // yaitu batas antara 1 hari lampau dan 3 hari ke depan di jendela itu.
 function nowMs() {
   if (catalog?.arsip && catalog.run_time) {
@@ -1885,7 +1856,7 @@ function cityCondition(rain, cloud) {
   if (rain >= 20) return { icon: "thunderstorm", cls: "cc-storm", sev: 5, label: "hujan sangat lebat" };
   if (rain >= 10) return { icon: "rainy_heavy", cls: "cc-heavy", sev: 4, label: "hujan lebat" };
   if (rain >= 0.5) return { icon: "rainy", cls: "cc-rain", sev: 3, label: "hujan" };
-  // Model tanpa tutupan awan (WRF Citarum). Jangan mengaku "cerah", itu klaim
+  // Model tanpa tutupan awan. Jangan mengaku "cerah", itu klaim
   // yang datanya tak ada. Cukup katakan tidak hujan.
   if (cloud === null || cloud === undefined || !isFinite(cloud))
     return { icon: "partly_cloudy_day", cls: "cc-pcloud", sev: 1, label: "tidak hujan" };
