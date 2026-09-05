@@ -100,16 +100,24 @@ fi
 # foldernya. Dan skrip kiriman yang lupa `mkdir -p` tidak gagal gara gara
 # folder tujuannya belum ada.
 #
-# Daftar di bawah ini CERMINAN dari MODELS di atmosight/app.js dan
-# smokewatch/app.js. Kalau di sana ada model baru, tambahkan di sini juga.
-# Salinan yang dua tempat memang tidak ideal, tapi skrip bash tidak bisa
-# membaca konstanta JavaScript, dan menebak dari nama folder yang sudah ada
-# justru lebih rapuh.
+# Daftar di bawah ini cerminan dari MODELS di atmosight/app.js dan
+# smokewatch/app.js, TAPI HANYA YANG HIDUP. Model yang MODEL_AKTIF-nya false
+# sengaja TIDAK dibuatkan folder, sebab tidak ada yang akan mengisinya dan
+# folder kosong yang tak berguna cuma bikin orang bertanya tanya isinya apa.
+#
+# Jadi wrf_citarum TIDAK ada di sini. Dia masih terdaftar di app.js sebagai
+# arsip yang dimatikan, dan itu memang disengaja, tapi selama dimatikan dia
+# tidak butuh tempat di disk. Kalau suatu saat dinyalakan, tambahkan namanya
+# di sini juga.
+#
+# Salinan dua tempat memang tidak ideal, tapi bash tidak bisa membaca
+# konstanta JavaScript, dan menebak dari nama folder yang sudah ada justru
+# lebih rapuh.
 #
 # Kalau folder ini kosong, situsnya tetap tampil, cuma masuk mode kosong
 # yang menjelaskan datanya belum ada. Itu bukan kerusakan.
 # ---------------------------------------------------------------------
-MODEL_ATMOSIGHT="gfs wrfchem_9km_meteo wrf_citarum"
+MODEL_ATMOSIGHT="gfs wrfchem_9km_meteo"
 MODEL_SMOKEWATCH="cams wrfchem_9km_kimia"
 
 for m in $MODEL_ATMOSIGHT;  do mkdir -p "$SITUS/backend/atmosight/data/output/$m";  done
