@@ -6,6 +6,39 @@
 # apa pun. Menambah AddOutputFilterByType di sini cuma jadi berkas mati.
 # Catatan, berkas kecil memang tidak dikompresi, itu wajar.
 
+# =====================================================================
+# PAKSA HTTPS, dan satukan ke satu alamat resmi.
+#
+# Dipasang 5 September 2026, sesudah AutoSSL menerbitkan Let's Encrypt untuk
+# envirocircle.info. JANGAN dipasang sebelum sertifikatnya sah, kalau tidak
+# semua pengunjung dilempar ke halaman peringatan merah.
+#
+# Kenapa perlu. Tanpa ini situsnya bisa dibuka lewat http maupun https, dan
+# yang mengetik alamatnya tanpa https mendarat di http. Di situ browser
+# menandainya "Not secure" DAN mematikan geolokasi, sebab fitur itu cuma
+# jalan di sambungan aman. Jadi tombol Lokasi kelihatan rusak padahal
+# kodenya benar.
+#
+# Dua aturan, urutannya penting.
+# =====================================================================
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 1. Alamat selain domain resmi dilempar ke domain resmi, sekalian https.
+  #    Ini yang menangani alamat sementara penyedia dan alamat berbasis IP.
+  #    Sengaja 302, BUKAN 301. Pengalihan permanen disimpan browser dan sulit
+  #    ditarik kembali, dan alamat sementara itu masih berguna buat memeriksa
+  #    sesuatu langsung ke server tanpa lewat DNS.
+  RewriteCond %{HTTP_HOST} !^(www\.)?envirocircle\.info$ [NC]
+  RewriteRule ^(.*)$ https://envirocircle.info/$1 [R=302,L]
+
+  # 2. Sudah di domain resmi tapi masih http, naikkan ke https.
+  #    Yang ini 301 dan memang seharusnya permanen. Sertifikatnya diperbarui
+  #    AutoSSL sendiri, jadi tidak ada alasan turun lagi ke http.
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+</IfModule>
+
 # Daftar isi folder MENYALA bawaan di hostingan ini. Tanpa baris ini, folder
 # data yang tidak punya index membalas 200 dan memajang seluruh nama
 # berkasnya ke siapa saja.
