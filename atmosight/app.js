@@ -612,6 +612,13 @@ const lightLabels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/ser
 let frames = [];
 let current = 0;
 let velocityLayer = null;
+/* Penanda urutan permintaan medan angin. Sejak partikel angin TIDAK LAGI
+   ditunggu sebelum peta tampil, dua permintaan bisa berjalan bersamaan waktu
+   slider digeser cepat. Tanpa penanda ini, yang datang belakangan belum tentu
+   yang paling baru, dan partikel frame lama bisa menimpa frame yang sedang
+   tampil. Tiap permintaan mengambil nomor, dan hasilnya dibuang kalau nomornya
+   sudah bukan yang terakhir. */
+let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
 // Jarak antar langkah waktu, dalam JAM. GFS 3 jam, WRF Citarum 1 jam.
 // Dipakai untuk mengubah laju hujan (mm/jam) jadi akumulasi. Dulu dipatok 3
@@ -912,6 +919,29 @@ function setActiveLayer(layerKey) {
   updateHash();
 }
 
+/* Memasang atau memperbarui lapisan partikel angin.
+   Dipisah dari showFrame supaya bisa dipanggil belakangan, sesudah datanya
+   tiba, tanpa menahan peta tampil. Lihat komentar panjang di showFrame. */
+function pasangAngin(data) {
+  if (!velocityLayer) {
+    velocityLayer = L.velocityLayer({
+      displayValues: false,
+      displayOptions: {
+        velocityType: "Angin", position: "bottomleft", emptyString: "Tidak ada data",
+        angleConvention: "bearingCW", speedUnit: "kt", directionString: "Arah", speedString: "Kecepatan",
+      },
+      data,
+      minVelocity: 0, maxVelocity: 25, velocityScale: 0.012,
+      particleAge: 90, particleMultiplier: 1 / 260, lineWidth: 1.1,
+      colorScale: [particleColor()], frameRate: 24,
+    });
+    velocityLayer.addTo(map);
+  } else {
+    if (!map.hasLayer(velocityLayer)) velocityLayer.addTo(map);
+    velocityLayer.setData(data);
+  }
+}
+
 async function showFrame(i) {
   current = (i + frames.length) % frames.length;
   const frame = frames[current];
@@ -931,25 +961,29 @@ async function showFrame(i) {
   // Ikut LEVEL: di stratosfer pakai medan angin 70 hPa agar konsisten dengan heatmap.
   const vsrc = (mapLevel === "strato") ? windVelStrato : windVelByTime;
   const vj = vsrc[frame.valid_time];
+  /* TIDAK DITUNGGU. Ini yang dulu membuat layar "Memuat data cuaca" bertahan
+     lama sekali di Atmosight.
+
+     Berkas medan angin GFS itu 4,58 MB, jauh lebih besar dari gambar layernya
+     yang cuma 77 sampai 315 KB. Karena dulu di-await, dan init pun me-await
+     showFrame, seluruh layar tertahan sampai berkas 4,58 MB itu selesai
+     diunduh DAN di-parse. Padahal petanya sendiri sudah siap digambar jauh
+     sebelum itu.
+
+     Sekarang gambarnya tampil dulu, partikel anginnya menyusul begitu datanya
+     tiba. Yang dilihat orang jadi peta dalam hitungan detik, bukan layar
+     memuat selama belasan detik. Di sambungan lambat bedanya bukan detik lagi.
+
+     Kegagalannya sengaja ditelan. Partikel angin itu hiasan di atas peta,
+     bukan datanya sendiri, jadi gagal memuatnya tidak boleh merusak apa pun.
+     Sebelumnya galat di sini melempar keluar dari showFrame dan menggagalkan
+     seluruh init. */
+  const seq = ++velSeq;
   if (vj) {
-    const data = await loadVelocity(vj);
-    if (!velocityLayer) {
-      velocityLayer = L.velocityLayer({
-        displayValues: false,
-        displayOptions: {
-          velocityType: "Angin", position: "bottomleft", emptyString: "Tidak ada data",
-          angleConvention: "bearingCW", speedUnit: "kt", directionString: "Arah", speedString: "Kecepatan",
-        },
-        data,
-        minVelocity: 0, maxVelocity: 25, velocityScale: 0.012,
-        particleAge: 90, particleMultiplier: 1 / 260, lineWidth: 1.1,
-        colorScale: [particleColor()], frameRate: 24,
-      });
-      velocityLayer.addTo(map);
-    } else {
-      if (!map.hasLayer(velocityLayer)) velocityLayer.addTo(map);
-      velocityLayer.setData(data);
-    }
+    loadVelocity(vj).then((data) => {
+      if (seq !== velSeq) return;   // sudah pindah frame, buang yang telat
+      pasangAngin(data);
+    }).catch(() => { /* partikel gagal, peta tetap jalan */ });
   } else if (velocityLayer && map.hasLayer(velocityLayer)) {
     map.removeLayer(velocityLayer);
   }
@@ -2472,6 +2506,13 @@ function showLoadMsg(msg, asHtml) {
    Pesannya sengaja menyebut PERINTAHNYA, bukan cuma bilang data tidak ada.
    Orang yang membuka salinan ini biasanya baru pertama kali melihatnya. */
 function modeKosong() {
+  /* Bilah bawah dan penyembunyi fitur model dipanggil DI SINI juga.
+     Keduanya tidak bisa dipanggil sebelum katalog ditarik, sebab setupHP
+     memakai const yang dideklarasikan jauh di bawah. Jadi jalur mode kosong
+     harus memanggilnya sendiri, kalau tidak antarmuka HP-nya mati dan orang
+     yang masuk ke model tanpa data terjebak tanpa bilah bawah. */
+  try { setupHP(); terapkanFiturModel(); } catch (e) { console.warn("setel antarmuka:", e); }
+
   // Pesannya beda tergantung datanya diambil dari mana. Kalau menumpang
   // sumber jauh lalu 404, itu BUKAN "belum dimasak", itu sumbernya yang
   // hilang, dan menyuruh orang menjalankan pipeline cuma menyesatkan.
@@ -2555,9 +2596,22 @@ async function init() {
 
      setupLevelSelect TIDAK ikut dipindah, dia memang perlu katalog untuk
      tahu ada tidaknya data stratosfer. */
+  /* CUMA dropdown MODEL yang dipanggil sedini ini, dan itu disengaja.
+
+     setupHP dan terapkanFiturModel SEMPAT ikut dipindah ke sini, dan itu
+     MERUSAK Atmosight sama sekali. setupHP memakai LB_SEKSI, sebuah const
+     yang dideklarasikan ratusan baris di bawah, jadi memanggilnya sedini ini
+     melempar ReferenceError, cannot access before initialization. Init mati
+     di situ sebelum sempat menarik katalog, dan yang tampil layar memuat
+     selamanya tanpa pesan galat apa pun.
+
+     Jadi dua itu dikembalikan ke tempat semula, dan supaya jalur mode kosong
+     tidak lagi menjebak, keduanya dipanggil juga dari modeKosong sebelum dia
+     kembali. Lebih bertele tapi benar.
+
+     setupModelSelect aman di sini, dia cuma membaca daftar MODELS yang sudah
+     dideklarasikan di kepala berkas. */
   setupModelSelect();      // dropdown MODEL, WAJIB duluan supaya tidak terjebak
-  setupHP();               // bilah bawah + chip parameter + kotak keterangan (HP)
-  terapkanFiturModel();    // sembunyikan fitur yang tak punya data di model ini
 
   try {
     // MODE KOSONG. Salinan untuk ditinjau dan salinan yang baru dipasang di
@@ -2627,6 +2681,8 @@ async function init() {
     const windS = cat.layers["wind_strato"];
     if (windS) windS.frames.forEach((f) => { if (f.velocity_json) windVelStrato[f.valid_time] = f.velocity_json; });
 
+    setupHP();               // bilah bawah + chip parameter + kotak keterangan (HP)
+    terapkanFiturModel();    // sembunyikan fitur yang tak punya data di model ini
     setupLevelSelect();      // hidupkan dropdown LEVEL kalau data strato ada
 
     // Bingkai tampilan = kotak inti (VIEW_CORE) yang diperlebar pada sumbu yang

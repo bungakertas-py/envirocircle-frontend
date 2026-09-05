@@ -558,6 +558,11 @@ const lightLabels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/ser
 let frames = [];
 let current = 0;
 let velocityLayer = null;
+/* Penanda urutan permintaan medan angin. Sejak partikel angin TIDAK LAGI
+   ditunggu sebelum peta tampil, dua permintaan bisa berjalan bersamaan waktu
+   slider digeser cepat, dan yang datang belakangan belum tentu yang terbaru.
+   Tiap permintaan mengambil nomor, hasilnya dibuang kalau bukan yang terakhir. */
+let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
 let dataBounds = null;      // L.latLngBounds domain data (pusat sel; utk klik & batas pan)
 let imageBounds = null;     // L.latLngBounds TEPI sel — hanya untuk menempatkan pratinjau
@@ -853,6 +858,29 @@ function setActiveLayer(layerKey) {
   updateHash();
 }
 
+/* Memasang atau memperbarui lapisan partikel angin.
+   Dipisah dari showFrame supaya bisa dipanggil belakangan, sesudah datanya
+   tiba, tanpa menahan peta tampil. */
+function pasangAngin(data) {
+  if (!velocityLayer) {
+    velocityLayer = L.velocityLayer({
+      displayValues: false,
+      displayOptions: {
+        velocityType: "Angin", position: "bottomleft", emptyString: "Tidak ada data",
+        angleConvention: "bearingCW", speedUnit: "kt", directionString: "Arah", speedString: "Kecepatan",
+      },
+      data,
+      minVelocity: 0, maxVelocity: 25, velocityScale: 0.012,
+      particleAge: 90, particleMultiplier: 1 / 260, lineWidth: 1.1,
+      colorScale: [particleColor()], frameRate: 24,
+    });
+    velocityLayer.addTo(map);
+  } else {
+    if (!map.hasLayer(velocityLayer)) velocityLayer.addTo(map);
+    velocityLayer.setData(data);
+  }
+}
+
 async function showFrame(i) {
   current = (i + frames.length) % frames.length;
   const frame = frames[current];
@@ -876,25 +904,18 @@ async function showFrame(i) {
      di semua layer, bukan hiasan layer angin, jadi tanpa dia kartunya justru
      berhenti terbaca sebagai app yang asli. Itu yang dicari kartu hidup. */
   const vj = vsrc[frame.valid_time];
+  /* TIDAK DITUNGGU, sama seperti di Atmosight. Medan angin di sini 1,79 MB,
+     jauh lebih besar dari gambar layernya. Dulu di-await, dan init pun
+     me-await showFrame, jadi seluruh layar tertahan sampai berkas itu selesai
+     diunduh dan di-parse padahal petanya sudah siap digambar.
+     Sekarang gambarnya tampil dulu, partikelnya menyusul.
+     Kegagalannya ditelan, partikel itu hiasan di atas peta bukan datanya. */
+  const seq = ++velSeq;
   if (vj) {
-    const data = await loadVelocity(vj);
-    if (!velocityLayer) {
-      velocityLayer = L.velocityLayer({
-        displayValues: false,
-        displayOptions: {
-          velocityType: "Angin", position: "bottomleft", emptyString: "Tidak ada data",
-          angleConvention: "bearingCW", speedUnit: "kt", directionString: "Arah", speedString: "Kecepatan",
-        },
-        data,
-        minVelocity: 0, maxVelocity: 25, velocityScale: 0.012,
-        particleAge: 90, particleMultiplier: 1 / 260, lineWidth: 1.1,
-        colorScale: [particleColor()], frameRate: 24,
-      });
-      velocityLayer.addTo(map);
-    } else {
-      if (!map.hasLayer(velocityLayer)) velocityLayer.addTo(map);
-      velocityLayer.setData(data);
-    }
+    loadVelocity(vj).then((data) => {
+      if (seq !== velSeq) return;   // sudah pindah frame, buang yang telat
+      pasangAngin(data);
+    }).catch(() => { /* partikel gagal, peta tetap jalan */ });
   } else if (velocityLayer && map.hasLayer(velocityLayer)) {
     map.removeLayer(velocityLayer);
   }
