@@ -619,6 +619,22 @@ html, body {
   pointer-events: auto;
 }
 .fresh-ico { font-size: 15px; line-height: 1; }
+/* Asal data + tanda segar, menempel di badge "Last update".
+
+   Tanahnya INK, bukan merah badge. Sengaja. Badge-nya sendiri merah, jadi dot
+   merah di atasnya tidak akan terbaca sama sekali, dan justru dot merah itu
+   yang paling perlu kelihatan. */
+.fresh-src {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 7px 3px 6px; background: var(--ink); color: #fff;
+  font-size: 9px; letter-spacing: .09em; text-transform: uppercase;
+}
+.fresh-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #9a9a9a;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .4);
+}
+.fresh-badge[data-segar="ya"]    .fresh-dot { background: #3ddc84; }
+.fresh-badge[data-segar="tidak"] .fresh-dot { background: #ff4d43; }
 /* Akurasi model. Warna & bentuk mengikuti badge arsip, bedanya rata KIRI
    supaya sejajar dengan tepi kiri slider, bukan tepi kanan. */
 .acc-badge { left: 0; right: auto; cursor: help; }
@@ -1043,6 +1059,13 @@ html, body {
   .fresh-badge.open { gap: 6px; padding: 5px 6px 5px 8px; }
   .fresh-badge.open #fresh-text { display: inline; }
   .fresh-badge.open .fresh-chev { display: inline; }
+  /* Di HP badge menciut jadi ikon saja, TAPI dot-nya tetap kelihatan. Itu
+     justru gunanya, sekali lirik tahu datanya baru atau tidak. Yang ikut
+     sembunyi cuma tulisan sumbernya. */
+  .fresh-badge #fresh-src-text { display: none; }
+  .fresh-badge .fresh-src { padding: 3px; gap: 0; }
+  .fresh-badge.open #fresh-src-text { display: inline; }
+  .fresh-badge.open .fresh-src { padding: 3px 7px 3px 6px; gap: 5px; }
   .acc-badge { position: static; align-self: flex-start; padding: 5px 8px; }
 
   /* panel detail titik = full-screen */

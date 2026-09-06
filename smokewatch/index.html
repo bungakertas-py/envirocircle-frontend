@@ -301,6 +301,14 @@
           <div id="data-fresh" class="fresh-badge" title="Waktu inisiasi model GFS terakhir">
             <span class="material-symbols-outlined fresh-ico">error</span>
             <span class="mono" id="fresh-text"></span>
+            <!-- Asal data + tanda segar. Dot HIJAU berarti datanya dimasak hari
+                 ini, MERAH berarti belum ada kiriman baru hari ini. Labelnya
+                 menyebut asalnya: "cirrus" itu server ITERA lewat hostingan ini
+                 sendiri, "cadangan" itu keluaran yang tersaji di GitHub Pages. -->
+            <span class="fresh-src" id="fresh-src">
+              <i class="fresh-dot" aria-hidden="true"></i>
+              <span id="fresh-src-text">cirrus</span>
+            </span>
             <span class="material-symbols-outlined fresh-chev">chevron_right</span>
           </div>
           <div class="tl-btns">

@@ -136,6 +136,9 @@ const DATA_JAUH = "https://bungakertas-py.github.io/atmosight/backend/data/outpu
    Cuma berlaku untuk GFS. Model lain memakai path relatifnya sendiri, sebab
    keluarannya memang tidak ada di repo lama itu. */
 let DATA_BASE = MODEL.base;
+/* Sumber yang akhirnya menang, dipakai badge di pojok slider. Ditaruh di sini
+   supaya nilainya sudah ada sebelum katalog diambil, bukan menunggu DOM. */
+let SUMBER_DEKAT = true;
 
 async function ambilKatalog() {
   const urut = [MODEL.base];
@@ -159,6 +162,8 @@ function pakaiSumber(base) {
   /* Ditulis ke <html> supaya bisa diperiksa tanpa membuka console, dan supaya
      dump DOM waktu menguji deploy bisa membuktikan sumbernya yang mana. */
   document.documentElement.dataset.sumber = dekat ? "dekat" : "jauh";
+  SUMBER_DEKAT = dekat;
+  tandaiSumber();
   console.info(`[data] sumber ${dekat ? "LOKAL" : "menumpang"}, ${base}`);
 }
 window.__sumberData = () => DATA_BASE;
@@ -1625,6 +1630,43 @@ function reopenPoint() {
 // Waktu inisiasi model (run_time GFS) dalam WIB — jam & tanggal. Kredibilitas:
 // user tahu kapan data terakhir diperbarui.
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+// Tanda ASAL DATA di badge "Last update".
+//
+// "cirrus" berarti berkasnya diambil dari hostingan ini sendiri, yaitu hasil
+// masakan server ITERA yang didorong ke sini tiap malam. "cadangan" berarti
+// catalog lokalnya menjawab 404 dan situs sedang menumpang ke keluaran yang
+// tersaji di GitHub Pages. Cuma GFS dan CAMS yang punya cadangan itu.
+function tandaiSumber() {
+  const el = $("fresh-src-text"); if (!el) return;
+  el.textContent = SUMBER_DEKAT ? "cirrus" : "cadangan";
+  const wadah = $("fresh-src");
+  if (wadah) {
+    wadah.title = SUMBER_DEKAT
+      ? "Data dari server cirrus, lewat hostingan ini sendiri"
+      : "Data lokal tidak ada, situs memakai keluaran cadangan di GitHub Pages";
+  }
+}
+
+// Dot HIJAU kalau data yang tersaji dimasak HARI INI menurut kalender WIB,
+// MERAH kalau tidak.
+//
+// Patokannya generated_at, yaitu kapan pipeline selesai memasak, bukan run_time
+// yang bisa mundur belasan jam dari itu. Run 12Z kemarin yang dimasak dan
+// dikirim dini hari tadi itu kiriman HARI INI, dan mestinya hijau.
+//
+// SATU HAL YANG PERLU DISADARI. Antara tengah malam dan kiriman malam itu
+// mendarat, sekitar pukul 02.00 WIB, tandanya memang merah walau tidak ada
+// yang rusak. Itu bukan cacat, itu memang arti pertanyaannya, "hari ini sudah
+// ada kiriman atau belum", bukan "umur datanya berapa jam".
+function segarHariIni(cat) {
+  const t = cat?.generated_at || cat?.run_time;
+  if (!t) return false;
+  const d = toWIB(t), kini = toWIB(new Date().toISOString());
+  return d.getUTCFullYear() === kini.getUTCFullYear()
+      && d.getUTCMonth() === kini.getUTCMonth()
+      && d.getUTCDate() === kini.getUTCDate();
+}
+
 function updateFreshness() {
   const el = $("fresh-text"); if (!el || !catalog?.run_time) return;
   const w = toWIB(catalog.run_time);
@@ -1634,6 +1676,15 @@ function updateFreshness() {
   // Model arsip (WRF Citarum) tanggalnya 2018-2019. Kalau ditulis "Last update"
   // begitu saja orang mengira situsnya basi. Ditandai terang terangan.
   el.textContent = catalog.arsip ? `ARSIP : ${tgl}` : `Last update : ${tgl}`;
+  const badge = $("data-fresh");
+  // Model arsip tanggalnya MEMANG lama. Kalau ditandai merah, orang mengira
+  // situsnya rusak padahal itu justru isi yang dijanjikan. Jadi dibiarkan abu.
+  if (badge) {
+    badge.dataset.segar = catalog.arsip
+      ? "arsip"
+      : (segarHariIni(catalog) ? "ya" : "tidak");
+  }
+  tandaiSumber();
 }
 
 // Badge AKURASI. Angkanya statis, dihitung sekali di backend lawan pos hujan,
