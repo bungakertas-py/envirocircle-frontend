@@ -651,17 +651,6 @@ section { padding: 30px 0; }
   display: block; filter: grayscale(1) contrast(1.05);
 }
 
-/* Ubin yang belum ada isinya. Cyan pekat sebesar itu terlalu berteriak untuk
-   sesuatu yang kosong, malah terbaca seperti gambar gagal muat. Jadi dibuat
-   bergaris miring, terbaca sebagai tempat yang disediakan dan belum diisi. */
-.team-photo--kosong {
-  background:
-    repeating-linear-gradient(-45deg, var(--lime) 0 6px, transparent 6px 14px),
-    var(--ink);
-  opacity: .55;
-  transition: opacity .18s ease;
-}
-
 /* ==== Disorot, barisnya DIANGKAT lalu MAJU KE DEPAN ====
    Dua gerakan berurutan, seperti berkas ditarik naik dari rak lalu dibawa
    maju. Naiknya memakai transform, majunya diwakili z-index yang meloncat
@@ -687,7 +676,6 @@ section { padding: 30px 0; }
 .team-row:not(:last-child):hover { transform: translateY(calc(-1 * var(--angkat))); }
 .team-row:hover .team-name { color: var(--ink); }
 .team-row:hover .team-photo { background: var(--ink); border-color: var(--ink); }
-.team-row:hover .team-photo--kosong { opacity: 1; }
 
 /* ---- Footer ---- */
 footer {
