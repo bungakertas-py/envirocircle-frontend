@@ -1,18 +1,37 @@
 {
   "name": "Smokewatch — Peta Kualitas Udara Indonesia",
   "short_name": "Smokewatch",
-  "description": "Peta cuaca interaktif Indonesia dari model GFS: angin, hujan, suhu, kelembapan, awan, dan tekanan.",
+  "description": "Indeks Standar Pencemar Udara dan sebaran PM2.5, PM10, CO, NO2, SO2, O3, serta kabut asap untuk seluruh Indonesia.",
   "lang": "id",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#eef1f4",
-  "theme_color": "#fcf8f8",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "favicon.svg", "type": "image/svg+xml", "sizes": "any" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
   ]
 }
