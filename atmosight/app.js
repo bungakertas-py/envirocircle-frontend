@@ -273,9 +273,23 @@ const BASE_OF = { wind_strato: "wind_surface", temp_strato: "temp_surface" };
 function resolveLayer(base) {
   return (mapLevel === "strato" && STRATO_OF[base]) ? STRATO_OF[base] : base;
 }
+/* SATU SAKLAR untuk seluruh ketinggian di atas permukaan.
+
+   Diminta user 9 Sep 2026, semua model difokuskan ke PERMUKAAN dulu. GFS
+   sebenarnya PUNYA data 70 hPa dan sudah jalan, tapi kalau cuma GFS yang
+   punya ketinggian kedua, pemilihnya jadi tidak seragam antar model dan
+   ceritanya susah dijelaskan. Jadi dimatikan tampilannya, bukan dihapus.
+
+   Datanya TIDAK disentuh sama sekali, wind_strato dan temp_strato tetap ada
+   di server. Menyalakannya lagi cukup mengubah baris ini jadi true, tidak ada
+   yang lain yang perlu diubah, dan jangan lupa mengeluarkan 70 hPa dari
+   LEVEL_PAJANGAN supaya tidak muncul dua kali. */
+const LEVEL_ATAS_HIDUP = false;
+
 // Apakah data stratosfer ada di katalog (kalau belum diregen, dropdown tetap mati).
 function stratoAvailable() {
-  return !!(catalog && catalog.layers && (catalog.layers.wind_strato || catalog.layers.temp_strato));
+  return LEVEL_ATAS_HIDUP
+      && !!(catalog && catalog.layers && (catalog.layers.wind_strato || catalog.layers.temp_strato));
 }
 
 // Redupkan tombol yang tak tersedia di level aktif (di strato: hanya Angin & Suhu).
@@ -448,22 +462,53 @@ function terapkanFiturModel() {
   if (MODEL_ID === "wrf9") document.body.classList.add("model-private");
 }
 
+/* KETINGGIAN PAJANGAN. Dipamerkan supaya rencananya kelihatan, tapi MATI dan
+   tidak bisa dipilih. Tidak ada datanya, tidak ada pipeline, dan situs ini
+   memang belum bisa membacanya kalaupun dikirim.
+
+   Polanya sama persis dengan MODEL_PAJANGAN di Smokewatch, dan alasannya juga
+   sama. Orang jadi tahu ini bukan aplikasi yang cuma punya satu ketinggian,
+   dan kami tidak perlu menjanjikan apa apa lewat kalimat.
+
+   Urutannya menurut KETINGGIAN, bukan menurut angka tekanan, jadi makin ke
+   bawah daftar makin tinggi tempatnya di atmosfer. Angka tekanan justru
+   mengecil ke arah sana, dan daftar yang diurutkan menurut angka akan terbaca
+   terbalik oleh orang yang terbiasa membaca peta udara atas. */
+const LEVEL_PAJANGAN = [
+  { label: "900 hPa" },
+  { label: "700 hPa" },
+  { label: "500 hPa" },
+  { label: "200 hPa" },
+  /* 70 hPa DATANYA SUDAH ADA di GFS, tapi ikut dipajang sampai seluruh model
+     punya ketinggian. Lihat LEVEL_ATAS_HIDUP. */
+  { label: "70 hPa" },
+];
+
 function setupLevelSelect() {
   const sel = $("level-select");
   const bar = document.querySelector(".level-bar");
-  if (!stratoAvailable()) {   // data strato belum ada -> matikan pemilih level
-    if (sel) { sel.disabled = true; sel.innerHTML = '<option value="surface">Permukaan</option>'; }
-    if (bar) bar.style.display = "none";
-    return;
-  }
+  const adaStrato = stratoAvailable();
+
   if (sel) {
+    /* Dropdown SELALU hidup sekarang, bukan cuma waktu data strato ada.
+       Isinya minimal Permukaan plus daftar pajangan, dan itu sudah cukup
+       jadi alasan dropdown-nya ditampilkan. */
     sel.disabled = false;
-    sel.innerHTML = '<option value="surface">Permukaan</option>'
-                  + '<option value="strato">Stratosfer, 70 hPa</option>';
+    sel.innerHTML =
+      '<option value="surface">Permukaan</option>'
+      + (adaStrato ? '<option value="strato">Stratosfer, 70 hPa</option>' : "")
+      + LEVEL_PAJANGAN.map((l) =>
+          `<option disabled>${l.label}</option>`).join("");
     sel.value = mapLevel;
     sel.addEventListener("change", () => setLevel(sel.value));
   }
-  // HP: tombol level + toggle buka-tutup (sama seperti dropdown Parameter)
+
+  /* HP: bilah tombol level. Yang di sini CUMA ketinggian yang benar benar
+     ada, pajangan tidak ikut. Bilahnya sempit dan tombol mati di layar
+     sekecil itu lebih terbaca sebagai rusak daripada sebagai rencana.
+     Kalau strato belum ada, tidak ada yang bisa dipilih, jadi bilahnya
+     disembunyikan seperti sebelumnya. */
+  if (bar) bar.style.display = adaStrato ? "" : "none";
   document.querySelectorAll(".level-btn[data-level]").forEach((b) =>
     b.addEventListener("click", () => setLevel(b.dataset.level)));
   $("level-toggle")?.addEventListener("click", () =>
@@ -1801,12 +1846,20 @@ function restoreFromHash() {
   const p = new URLSearchParams(h);
   const l = p.get("l");
   if (l && catalog.layers[l] && l !== activeLayer) {
-    if (BASE_OF[l] && stratoAvailable()) {   // layer versi strato -> aktifkan level dulu
-      mapLevel = "strato";
-      applyLevelUI();
-      syncLevelControls();
+    /* Tautan lama bisa saja menunjuk wind_strato. Selama ketinggian atas
+       dimatikan, tautan itu DIABAIKAN, bukan dipaksa tampil, kalau tidak
+       petanya menampilkan data 70 hPa sedangkan pemilihnya menulis
+       Permukaan. */
+    if (BASE_OF[l] && !stratoAvailable()) {
+      /* dilewati dengan sengaja */
+    } else {
+      if (BASE_OF[l]) {   // layer versi strato -> aktifkan level dulu
+        mapLevel = "strato";
+        applyLevelUI();
+        syncLevelControls();
+      }
+      setActiveLayer(l);
     }
-    setActiveLayer(l);
   }
   const t = p.get("t");
   if (t && frames) {
