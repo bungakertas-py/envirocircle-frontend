@@ -1117,11 +1117,10 @@ function exportSkewTPng() {
     c.width = cw * s; c.height = ch * s;
     const x = c.getContext("2d");
     x.scale(s, s);
-    x.fillStyle = "#fcf8f8"; x.fillRect(0, 0, cw, ch);         // latar
-    x.fillStyle = "#1c1b1b"; x.fillRect(M + SH, M + SH, W, H); // bayangan keras
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, cw, ch);         // latar
     x.fillStyle = "#ffffff"; x.fillRect(M, M, W, H);           // latar plot putih
     x.drawImage(img, M, M, W, H);
-    x.lineWidth = 3; x.strokeStyle = "#1c1b1b"; x.strokeRect(M + 1.5, M + 1.5, W - 3, H - 3);
+    x.lineWidth = 1; x.strokeStyle = "rgba(51,51,51,.35)"; x.strokeRect(M + 0.5, M + 0.5, W - 1, H - 1);
     c.toBlob((b) => {
       if (!b) return;
       const nm = (sharedPoint && sharedPoint.name) ? sharedPoint.name.replace(/[^\w-]+/g, "_")
@@ -1291,7 +1290,14 @@ function chartSeries(pd, lat, lon) {
 }
 
 function chartSVG(spec) {
-  const { values, color, type, times, daily } = spec;
+  /* WARNA DERET DIPAKSA TINTA, 8 Sep 2026, ikut rebranding.
+     Tiap grafik di panel ini cuma punya SATU deret, jadi warnanya tidak
+     membedakan apa apa, dia murni hiasan. Beda dengan legenda di peta,
+     di sana warna itu tangga nilai dan artinya hilang kalau dibuang.
+     Kalau suatu saat grafiknya berisi lebih dari satu deret, kembalikan
+     `color` dari spec dan beri tiap deret warnanya sendiri. */
+  const { values, type, times, daily } = spec;
+  const color = "#333333";
   const n = values.length;
   if (!n) return "";
   // Padding asimetris: kiri utk label sumbu-Y, bawah utk label waktu sumbu-X.
@@ -1336,12 +1342,12 @@ function chartSVG(spec) {
     // Garis digambar 2x: klip kiri "kini" = solid, klip kanan = putus-putus.
     body += `<clipPath id="cpPast"><rect x="0" y="0" width="${sx.toFixed(1)}" height="${H}"/></clipPath>` +
             `<clipPath id="cpFut"><rect x="${sx.toFixed(1)}" y="0" width="${(W - sx).toFixed(1)}" height="${H}"/></clipPath>`;
-    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" clip-path="url(#cpPast)"/>`;
-    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="5 4" opacity="0.8" clip-path="url(#cpFut)"/>`;
+    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" clip-path="url(#cpPast)"/>`;
+    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="5 4" opacity="0.55" clip-path="url(#cpFut)"/>`;
   }
 
   // ---- sumbu X & Y + tick label (tanpa grid) ----
-  const AX = `stroke="#1c1b1b" stroke-width="1.4"`;
+  const AX = `stroke="rgba(51,51,51,.35)" stroke-width="1"`;
   let axes = `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${y0}" ${AX}/>` +
              `<line x1="${padL}" y1="${y0}" x2="${padL + plotW}" y2="${y0}" ${AX}/>`;
   for (const tv of [hi, (lo + hi) / 2, lo]) {
@@ -1365,18 +1371,18 @@ function chartSVG(spec) {
     }
     // garis acuan real-time di batas solid/forecast (tanpa teks — dijelaskan legenda)
     if (sx > padL + 1 && sx < padL + plotW - 1)
-      axes += `<line x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="#e8590c" stroke-width="1" stroke-dasharray="2 3" opacity="0.75"/>`;
+      axes += `<line x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="rgba(51,51,51,.5)" stroke-width="1" stroke-dasharray="2 3" opacity="0.9"/>`;
   }
 
   return `<svg class="pt-meteo" viewBox="0 0 ${W} ${H}" width="100%">` +
-    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="#ffffff" stroke="#1c1b1b" stroke-width="2"/>` +
+    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="#ffffff" stroke="rgba(51,51,51,.2)" stroke-width="1"/>` +
     axes + body + `</svg>`;
 }
 
 // Legenda bawah frame grafik: garis solid = kondisi sekarang, putus = forecast.
 function chartLegend(color) {
   const line = (dash) => `<svg width="24" height="8" viewBox="0 0 24 8">` +
-    `<line x1="1" y1="4" x2="23" y2="4" stroke="${color}" stroke-width="2.5"${dash ? ` stroke-dasharray="5 4"` : ""}/></svg>`;
+    `<line x1="1" y1="4" x2="23" y2="4" stroke="${color}" stroke-width="1.6"${dash ? ` stroke-dasharray="5 4"` : ""}/></svg>`;
   return `<div class="chart-legend">` +
     `<span class="chl-key">${line(false)}Kondisi Sekarang</span>` +
     `<span class="chl-key">${line(true)}<i>Forecast</i></span></div>`;
@@ -1561,7 +1567,7 @@ function renderPoint(pd, lat, lon) {
     `<div class="pt-sec">PRAKIRAAN 3 HARI</div><div class="fc-cards">${dailyCards(times, temp, rain, cloud, ci)}</div>`;
   const spec = chartSeries(pd, lat, lon);
   $("pt-body").innerHTML = extras +
-    `<div class="pt-sec">${spec.label.toUpperCase()} <span>${spec.unit}</span></div>${chartSVG(spec)}${chartLegend(spec.color)}` +
+    `<div class="pt-sec">${spec.label.toUpperCase()} <span>${spec.unit}</span></div>${chartSVG(spec)}${chartLegend("#333333")}` +
     `<div class="pt-sec">DATA PER-JAM (WIB)</div>` +
     `<div class="pt-table-wrap"><table class="pt-table"><thead><tr>` +
     kolom.map(([h]) => `<th>${h}</th>`).join("") +
@@ -2855,7 +2861,9 @@ async function init() {
     const placeFreshBadge = () => {
       if (!freshBadge) return;
       const hp = window.matchMedia("(max-width: 640px)").matches;
-      const host = document.querySelector(hp ? ".legend-col" : ".timeline");
+      /* Desktop: ke blok status di kiri atas, di bawah identitas. Dulu ke
+         ".timeline" di bilah bawah, dipindah 9 Sep 2026 atas permintaan user. */
+      const host = document.querySelector(hp ? ".legend-col" : ".status");
       if (host && freshBadge.parentElement !== host) host.insertBefore(freshBadge, host.firstChild);
     };
     placeFreshBadge();
