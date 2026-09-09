@@ -2809,3 +2809,33 @@ body { font-weight: 200; }
 }
 /* Jaraknya naik dari 4 ke 8. */
 .ui-bottom { gap: 8px; }
+
+/* =====================================================================
+   SATUAN TIDAK BOLEH DIBESARKAN HURUFNYA
+
+   Dilaporkan user, legenda polutan menampilkan MG/M3 padahal backend
+   mengirim µg/m³. Ini SALAHKU, bukan salah backend maupun kode lama.
+   Lapis rebranding memasang text-transform uppercase di label label kecil
+   supaya seragam, dan aturan itu kena juga ke kotak satuan.
+
+   Yang terjadi, huruf µ (U+00B5 MICRO SIGN) kalau dibesarkan oleh CSS
+   dipetakan Unicode ke Μ (U+039C GREEK CAPITAL MU), dan bentuk Μ Yunani
+   sama persis dengan M Latin. Jadi µg/m³ terbaca Mg/m³.
+
+   Ini bukan soal enak dilihat. Satuan SI itu peka huruf besar kecil. µ
+   berarti mikro, sepersejuta. M berarti mega, sejuta. Mg/m³ salah dengan
+   selisih 10 pangkat 12 dari yang dimaksud. Hal yang sama merusak hPa jadi
+   HPA dan J/kg jadi J/KG di Atmosight.
+
+   Jadi tiap tempat yang memuat SATUAN dikecualikan. Yang isinya akronim
+   seperti ISPU dan AQI tetap terbaca huruf besar sebab memang ditulis huruf
+   besar di sumbernya, bukan dibesarkan CSS.
+
+   Pangkat tiga memakai ³ (U+00B3) dan mikro memakai µ (U+00B5), dua duanya
+   aksara sungguhan, bukan huruf u atau angka 3 biasa. Sudah begitu sejak
+   awal di app.js dan di keluaran backend, tinggal jangan dirusak di sini.
+   ===================================================================== */
+.legend-head { text-transform: none; }
+/* .pt-sec dibesarkan hurufnya, dan satuan di dalamnya ikut terbawa lewat
+   pewarisan, jadi harus dimatikan tegas di anaknya. */
+.pt-sec span { text-transform: none; }
