@@ -25,6 +25,12 @@ const MODELS = {
   wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 9 km" },
 };
 
+/* Folder WRF meteo milik Atmosight. Dipakai CUMA untuk meminjam medan angin,
+   lihat pinjamAnginMeteo(). Keluaran kimia tidak memasak medan angin sendiri
+   padahal dua duanya lahir dari run yang sama, jadi anginnya diambil dari
+   sebelah, bukan dibiarkan kosong. */
+const WRF_METEO_BASE = "../backend/atmosight/data/output/wrfchem_9km_meteo/";
+
 /* Ejaan "WRFCHEM" tanpa hubung itu maunya pemilik, padahal chip di kartu
    Showcase landing menulis "WRF-Chem". Dua tempat itu memang sengaja tidak
    sama, jangan diseragamkan sendiri. */
@@ -807,9 +813,14 @@ async function loadAdmin() {
   }
 }
 
+/* Basis berkas medan angin. Biasanya sama dengan DATA_BASE, dan dibiarkan
+   null selama memang begitu. Yang mengubahnya cuma pinjamAnginMeteo(). */
+let VEL_BASE = null;
+const velBase = () => VEL_BASE || DATA_BASE;
+
 async function loadVelocity(vj) {
   if (dataCache.has(vj)) return dataCache.get(vj);
-  const res = await fetch(DATA_BASE + vj);
+  const res = await fetch(velBase() + vj);
   if (!res.ok) throw new Error("Gagal memuat " + vj);
   const data = await res.json();
   dataCache.set(vj, data);
@@ -884,6 +895,73 @@ function pasangAngin(data) {
     if (!map.hasLayer(velocityLayer)) velocityLayer.addTo(map);
     velocityLayer.setData(data);
   }
+}
+
+/* =====================================================================
+   MEMINJAM MEDAN ANGIN DARI FOLDER METEO
+
+   Keluaran WRF-Chem kimia isinya polutan saja, tidak ada satu pun
+   velocity_json di katalognya, jadi partikel anginnya mati sama sekali
+   sedangkan CAMS punya. Padahal anginnya ADA, cuma tersimpan di pohon
+   sebelah, sebab kimia dan meteo itu dua keluaran dari SATU run yang sama
+   di server ITERA.
+
+   Jadi katalog meteo ikut diambil dan medan anginnya ditempelkan ke frame
+   kimia lewat valid_time. Dicocokkan pakai WAKTU BERLAKU, bukan nomor urut
+   frame, sebab jumlah framenya memang beda. Kimia mulai dari jam nol run
+   sedangkan angin baru mulai jam ke-6, jadi enam jam pertama kimia tidak
+   dapat angin dan itu memang dibiarkan, showFrame sudah tahu cara melepas
+   lapisannya kalau framenya tidak punya.
+
+   TIDAK DITUNGGU dan kegagalannya ditelan, sama seperti berkas anginnya
+   sendiri. Ini hiasan di atas peta, bukan datanya, jadi folder meteo yang
+   belum dikirim atau 404 tidak boleh merusak apa pun.
+   ===================================================================== */
+function pinjamAnginMeteo() {
+  fetch(WRF_METEO_BASE + "catalog.json")
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error("catalog meteo " + r.status))))
+    .then((cm) => {
+      const w = (cm.layers || {}).wind_surface;
+      if (!w || !w.frames) return;
+
+      /* Cakupan WAJIB sama persis. Kalau tidak, partikelnya akan menggambar
+         angin di tempat yang salah, dan itu jauh lebih buruk daripada tidak
+         ada partikel sama sekali. Dijaga di sini, bukan dianggap benar
+         cuma karena dua duanya bernama 9 km.
+         run_time sengaja TIDAK dijaga. Kalau meteo tertinggal satu run,
+         jam yang beririsan tetap angin yang benar untuk jam itu, yang
+         terjadi cuma jumlah frame berangin berkurang sendiri. */
+      const a = (catalog.region || {}).bounds, b = (cm.region || {}).bounds;
+      if (!a || !b || a.length !== 4 || b.length !== 4 ||
+          b.some((v, i) => Math.abs(v - a[i]) > 1e-6)) {
+        console.warn("Angin meteo dilewati, cakupannya beda dari kimia");
+        return;
+      }
+
+      let n = 0;
+      w.frames.forEach((f) => {
+        if (f.velocity_json && !windVelByTime[f.valid_time]) {
+          windVelByTime[f.valid_time] = f.velocity_json;
+          n++;
+        }
+      });
+      if (!n) return;
+      VEL_BASE = WRF_METEO_BASE;
+
+      /* Frame yang SEDANG tampil dipasangi anginnya sekarang juga. Tanpa ini
+         partikelnya baru muncul waktu orang menggeser slider, sebab showFrame
+         untuk frame ini sudah lewat waktu katalog meteo masih diambil.
+         Yang dipanggil cuma bagian anginnya, bukan showFrame utuh, supaya
+         tidak menggambar ulang peta yang sudah benar. */
+      const fr = frames && frames[current];
+      const vj = fr && windVelByTime[fr.valid_time];
+      if (!vj) return;
+      const seq = ++velSeq;
+      loadVelocity(vj)
+        .then((data) => { if (seq === velSeq) pasangAngin(data); })
+        .catch(() => { /* partikel gagal, peta tetap jalan */ });
+    })
+    .catch(() => { /* folder meteo tidak terjangkau, partikel dilewati saja */ });
 }
 
 async function showFrame(i) {
@@ -3061,6 +3139,10 @@ async function init() {
     // polutan, jadi partikelnya ikut di SEMUA parameter tanpa perlu tombol angin.
     Object.values(cat.layers || {}).forEach((L) =>
       (L.frames || []).forEach((f) => { if (f.velocity_json) windVelByTime[f.valid_time] = f.velocity_json; }));
+
+    /* WRF-Chem kimia tidak membawa medan angin sendiri, jadi dipinjam dari
+       folder meteo milik Atmosight. Cuma model itu, CAMS sudah punya. */
+    if (MODEL_ID === "wrfchem") pinjamAnginMeteo();
 
     setupModelSelect();   // dropdown MODEL: CAMS <-> WRFCHEM
     setupLevelSelect();   // hidupkan dropdown LEVEL kalau data strato ada
