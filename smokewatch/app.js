@@ -1647,13 +1647,27 @@ function seriesPlotSVG(vals, times, unit, daily, warna, pita, baku, namaY) {
 
 // ================= ARSIP RIWAYAT (grafik tren harian per kota) =================
 // Backend menabung tiap hari (7 polutan + ISPU, rata-rata harian per kota) lalu
-// menggabungnya jadi data/arsip/harian.json. Grafik tren muncul di popup titik
+// menggabungnya jadi arsip/harian.json. Grafik tren muncul di popup titik
 // saat yang diklik sebuah KOTA (namanya cocok dengan daftar arsip).
+//
+// DIAMBIL DARI FOLDER MODEL DULU, 9 Sep 2026. Sebelumnya alamatnya dipatok
+// "data/arsip/harian.json" yang RELATIF TERHADAP HALAMAN, bukan terhadap
+// folder model. Akibatnya dua hal, dan dua duanya salah.
+//
+// Satu, CAMS dan WRF-Chem memakai arsip yang SAMA PERSIS, padahal riwayat itu
+// keluaran model dan dua model tidak mungkin punya riwayat yang identik.
+// Dua, berkasnya tinggal di repo frontend jadi BEKU, tidak pernah diperbarui
+// oleh pipeline mana pun.
+//
+// Sekarang folder model dicoba dulu. Kalau server belum mengirimnya, dia
+// mundur ke berkas lama supaya grafiknya tidak hilang mendadak. Begitu server
+// mengirim, dia pindah sendiri tanpa ada yang perlu diubah.
 let arsipData = null, arsipLoading = null, arsipIdxByName = null;
 function loadArsip() {
   if (arsipData) return Promise.resolve(arsipData);
   if (!arsipLoading) {
-    arsipLoading = fetch("data/arsip/harian.json")
+    arsipLoading = fetch(DATA_BASE + "arsip/harian.json")
+      .then((r) => (r.ok ? r : fetch("data/arsip/harian.json")))
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d && d.places) {
