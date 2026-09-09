@@ -3218,7 +3218,9 @@ async function init() {
     const placeFreshBadge = () => {
       if (!freshBadge) return;
       const hp = window.matchMedia("(max-width: 640px)").matches;
-      const host = document.querySelector(hp ? ".legend-col" : ".timeline");
+      /* Desktop: ke blok status di kiri atas, di bawah identitas. Dulu ke
+         ".timeline" di bilah bawah, dipindah 9 Sep 2026 ikut rebranding. */
+      const host = document.querySelector(hp ? ".legend-col" : ".status");
       if (host && freshBadge.parentElement !== host) host.insertBefore(freshBadge, host.firstChild);
     };
     placeFreshBadge();

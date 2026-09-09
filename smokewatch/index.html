@@ -35,7 +35,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <!-- Geologica, satu keluarga untuk seluruh app. Archivo Black, Space Grotesk,
+       dan JetBrains Mono DIBUANG 9 Sep 2026 bersama gaya neubrutalism-nya. -->
+  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -47,14 +49,49 @@
     <div id="ui">
       <!-- ============ TOP ============ -->
       <div class="ui-top">
-        <!-- kiri: layer + model -->
-        <div class="col">
-          <!-- brand + panah pindah ke Atmosight (kontainer saudara, geser ke kanan) -->
+        <!-- ============ SCRIM ============
+             Bidang selebar header yang MENGGELAPKAN apa pun di belakangnya
+             lewat backdrop-filter, lalu dipudarkan ke bawah pakai mask. Jadi
+             dia mengikuti latar, bukan menimpanya dengan satu warna mati.
+             Peta polusi bisa biru laut, bisa merah pekat di layer ISPU, dan
+             tulisan putih di atasnya tetap terbaca di dua duanya. -->
+        <div class="scrim" aria-hidden="true"></div>
+        <!-- Kembarannya, dibalik ke atas. Menaungi jam berlaku, kotak slider,
+             dan legenda yang sekarang berdiri langsung di atas peta. -->
+        <div class="scrim scrim--bawah" aria-hidden="true"></div>
+
+        <!-- ============ STATUS DATA ============
+             Badge "Last update" DIPINDAH dari bilah bawah ke sini, sama
+             dengan Atmosight. Tanpa isian, cuma garis, sebab dia keterangan
+             bukan tombol.
+             CATATAN, app.js punya placeFreshBadge() yang MEMINDAHKAN badge ini
+             sendiri tiap layar berubah ukuran. Tujuan desktopnya harus ikut
+             diubah ke ".status", kalau tidak dia ditarik balik ke bilah bawah. -->
+        <div class="status">
+          <div id="data-fresh" class="fresh-badge" title="Waktu inisiasi model GFS terakhir">
+            <span class="material-symbols-outlined fresh-ico">error</span>
+            <span class="mono" id="fresh-text"></span>
+            <!-- Asal data + tanda segar. Dot HIJAU berarti datanya dimasak hari
+                 ini, MERAH berarti belum ada kiriman baru hari ini. Labelnya
+                 menyebut asalnya: "cirrus" itu server ITERA lewat hostingan ini
+                 sendiri, "cadangan" itu keluaran yang tersaji di GitHub Pages. -->
+            <span class="fresh-src" id="fresh-src">
+              <i class="fresh-dot" aria-hidden="true"></i>
+              <span id="fresh-src-text">cirrus</span>
+            </span>
+            <span class="material-symbols-outlined fresh-chev">chevron_right</span>
+          </div>
+        </div>
+
+        <!-- ============ IDENTITAS, POJOK KIRI ATAS ============
+             Tidak ada kotak, tidak ada bingkai, tidak ada bayangan. Yang
+             menaunginya cuma scrim di atas. -->
+        <div class="ident">
           <div class="brand-row">
             <div class="panel brand">
               <svg class="brand-logo" viewBox="0 0 48 48" width="38" height="38" aria-hidden="true">
-                <rect x="2" y="2" width="44" height="44" rx="13" fill="#00f5ff" stroke="#050a14" stroke-width="4"/>
-                <g transform="translate(9.9 9.9) scale(1.175)" fill="#002021">
+                <rect x="2" y="2" width="44" height="44" rx="13" fill="none" stroke="currentColor" stroke-width="2.4"/>
+                <g transform="translate(9.9 9.9) scale(1.175)" fill="currentColor">
                   <path d="M21,6.5c-1.66,0-3,1.34-3,3c0,0.07,0,0.14,0.01,0.21l-2.03,0.68c-0.64-1.21-1.82-2.09-3.22-2.32V5.91 C14.04,5.57,15,4.4,15,3c0-1.66-1.34-3-3-3S9,1.34,9,3c0,1.4,0.96,2.57,2.25,2.91v2.16c-1.4,0.23-2.58,1.11-3.22,2.32L5.99,9.71 C6,9.64,6,9.57,6,9.5c0-1.66-1.34-3-3-3s-3,1.34-3,3s1.34,3,3,3c1.06,0,1.98-0.55,2.52-1.37l2.03,0.68 c-0.2,1.29,0.17,2.66,1.09,3.69l-1.41,1.77C6.85,17.09,6.44,17,6,17c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3 c0-0.68-0.22-1.3-0.6-1.8l1.41-1.77c1.36,0.76,3.02,0.75,4.37,0l1.41,1.77C15.22,18.7,15,19.32,15,20c0,1.66,1.34,3,3,3s3-1.34,3-3 s-1.34-3-3-3c-0.44,0-0.85,0.09-1.23,0.26l-1.41-1.77c0.93-1.04,1.29-2.4,1.09-3.69l2.03-0.68c0.53,0.82,1.46,1.37,2.52,1.37 c1.66,0,3-1.34,3-3S22.66,6.5,21,6.5z M3,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C4,10.05,3.55,10.5,3,10.5z M6,21 c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C7,20.55,6.55,21,6,21z M11,3c0-0.55,0.45-1,1-1s1,0.45,1,1c0,0.55-0.45,1-1,1 S11,3.55,11,3z M12,15c-1.38,0-2.5-1.12-2.5-2.5c0-1.38,1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5C14.5,13.88,13.38,15,12,15z M18,19 c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C17,19.45,17.45,19,18,19z M21,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1 s1,0.45,1,1C22,10.05,21.55,10.5,21,10.5z"/>
                 </g>
               </svg>
@@ -62,34 +99,14 @@
                 <strong>Smokewatch</strong>
                 <span>Sebaran Polutan · Tim Envirocircle</span>
               </div>
-              <!-- Dulu tombol tanda seru yang membuka kartu Tentang. Diminta user jadi
-                   rumah yang memulangkan ke landing. Sengaja <a>, bukan <button>,
-                   supaya bisa dibuka di tab baru dan alamatnya kelihatan di bilah
-                   status. "../" benar di dua tempat sekaligus, di GitHub Pages
-                   /envirocircle/atmosight/ dan nanti di envirocircle.info/atmosight/.
-                   AKIBATNYA bagian #about jadi tidak punya pintu masuk lagi. -->
-              <a href="../" class="brand-info" title="Kembali ke Envirocircle"
-                 aria-label="Kembali ke landing page Envirocircle"><span class="material-symbols-outlined">home</span></a>
-              <button id="nav-arrow" class="nav-arrow" aria-label="Aplikasi lain" title="Aplikasi lain"><span class="material-symbols-outlined">chevron_right</span></button>
-            </div>
-            <!-- Kontainer saudara, tersembunyi sampai panah ditekan. Dulu berisi dua,
-                 Kertas Fenomena DIBUANG atas permintaan user sebab dia proyek lain
-                 dan bukan bagian dari Envirocircle. -->
-            <div class="sibling-links">
-              <a class="sibling-link" href="../atmosight/" title="Buka Atmosight (peta cuaca interaktif Indonesia)">
-                <span class="material-symbols-outlined pl-ico">partly_cloudy_day</span>
-                <span class="pl-txt">
-                  <strong>Atmosight</strong>
-                  <span>Angin, hujan, suhu, tekanan</span>
-                </span>
-                <span class="material-symbols-outlined pl-go">arrow_forward</span>
-              </a>
             </div>
           </div>
-
-          <!-- Wadah catatan siklon + ITCZ. Keduanya mengalir dalam kolom flex agar
-               saat satu banner memuai (dropdown), yang lain terdorong turun.
-               Desktop: absolute (mengambang tengah-atas). HP: mengalir di bawah brand. -->
+        </div>
+        <!-- Banner siklon, ITCZ, dan TITIK API. Di luar kolom kiri, sebab
+             kolom itu sekarang tinggal di dalam kartu Parameter yang bisa
+             tertutup, sedangkan banner ini harus tetap terlihat.
+             Siklon dan ITCZ memang disembunyikan CSS di app ini, yang benar
+             benar dipakai cuma banner titik api. -->
           <div class="notes">
           <div id="cyc-note" class="cyc-note">
             <div class="cyc-note-top">
@@ -140,7 +157,20 @@
           </div>
 
           </div>
-
+        <!-- ============ KARTU TEPI KIRI ============
+             Pola "Stock Information" dari raja.co.id. Tulang punggung tipis
+             menempel di tepi layar, labelnya diputar 90 derajat, badannya
+             melebar keluar waktu ditekan. Peta tetap penuh waktu tertutup.
+             Dua kartu bertumpuk tegak di satu rel, Parameter lalu Model. -->
+        <div class="rel rel--kiri">
+        <aside class="sisi sisi--kiri" id="sisi-param">
+          <button type="button" class="sisi-spine" id="spine-param"
+                  aria-controls="sisi-param" aria-expanded="false">
+            <span class="material-symbols-outlined sisi-ico">tune</span>
+            <span class="sisi-lbl">Parameter</span>
+          </button>
+          <div class="sisi-body">
+        <div class="col">
           <div class="layer-bar">
             <!-- HP: kepala dropdown "Parameter" (desktop disembunyikan) -->
             <button id="param-toggle" class="param-toggle" aria-label="Parameter polutan">
@@ -204,9 +234,21 @@
               <button class="layer-btn dd-btn" data-layer="dt_no2" data-tip="Daya tampung NO2">NO<sub>2</sub></button>
             </div>
           </div>
+        </div>
+          </div>
+        </aside>
 
-          <!-- HP-only: pemilih LEVEL, di bawah Parameter, mekanisme buka-tutup sama.
-               Desktop pakai dropdown LEVEL di panel .selects; kontainer ini display:none. -->
+        <!-- Kartu MODEL, tombolnya sendiri, letaknya PERSIS DI BAWAH kartu
+             Parameter. Karena dua duanya duduk di satu rel berkolom, tinggi
+             kartu Parameter yang berubah tidak pernah menimpa tombol Model. -->
+        <aside class="sisi sisi--kiri" id="sisi-model">
+          <button type="button" class="sisi-spine" id="spine-model"
+                  aria-controls="sisi-model" aria-expanded="false">
+            <span class="material-symbols-outlined sisi-ico">layers</span>
+            <span class="sisi-lbl">Model</span>
+          </button>
+          <div class="sisi-body">
+            <div class="col col-model">
           <div class="level-bar">
             <button id="level-toggle" class="param-toggle" aria-label="Level ketinggian">
               <span class="material-symbols-outlined param-ico">height</span>
@@ -251,23 +293,59 @@
               </div>
             </div>
           </div>
+            </div>
+          </div>
+        </aside>
         </div>
-
-        <!-- kanan: lang + zoom + kontrol -->
+        <!-- ============ ALAT PETA, KANAN ATAS ============
+             Menu header, pencarian, bahasa, dan zoom. Dikeluarkan dari kartu
+             Fitur sebab empat ini dipakai terus menerus, bukan sesekali.
+             Kotak carinya langsung bisa diketik. Tombol cari lamanya tetap ada
+             di markup tapi disembunyikan, app.js masih memasang pendengar. -->
+        <div class="alat">
+          <div class="alat-baris">
+            <!-- Menu header, pola yang sama persis dengan menu di landing.
+                 Id LAMA DIPERTAHANKAN, app.js masih memasang pendengar di
+                 #nav-arrow. Panahnya sudah tidak menyimpan kartu apa apa lagi,
+                 dia langsung menuju Atmosight. -->
+            <nav class="alat-nav">
+              <a href="../" class="brand-info" title="Kembali ke Envirocircle">Home</a>
+              <a href="../atmosight/" id="nav-arrow" class="nav-arrow"
+                 title="Buka Atmosight, peta cuaca interaktif">Go to Atmosight</a>
+            </nav>
+          <div class="search-wrap">
+            <button id="search-btn" class="icon-btn" aria-label="Cari kota / kabupaten" data-tip="Cari"><span class="material-symbols-outlined">search</span></button>
+            <div id="search-box" class="search-box">
+              <input id="search-input" type="text" placeholder="Cari kota atau kabupaten" autocomplete="off" />
+              <div id="search-results" class="search-results"></div>
+            </div>
+          </div>
+          <div class="lang">
+            <button class="active">ID</button>
+            <button disabled title="Segera">EN</button>
+          </div>
+          </div>
+          <div class="zoom">
+            <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
+            <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
+          </div>
+        <!-- ============ KARTU TEPI KANAN, FITUR ============
+             Kembaran kartu kiri, menempel di tepi kanan. Tombolnya SENGAJA
+             terpisah dari yang kiri, jadi Parameter dan Fitur tidak pernah
+             saling menutup. -->
+        <aside class="sisi sisi--kanan" id="sisi-fitur">
+          <button type="button" class="sisi-spine" id="spine-fitur"
+                  aria-controls="sisi-fitur" aria-expanded="false">
+            <span class="material-symbols-outlined sisi-ico">widgets</span>
+            <span class="sisi-lbl">Fitur</span>
+          </button>
+          <div class="sisi-body">
         <div class="col items-end">
           <!-- HP: kepala dropdown kontrol (desktop disembunyikan) -->
           <button id="ctrl-toggle" class="ctrl-toggle" aria-label="Kontrol peta">
             <span class="material-symbols-outlined ctrl-ico">more_horiz</span>
             <span class="material-symbols-outlined ctrl-caret">expand_more</span>
           </button>
-          <div class="lang">
-            <button class="active">ID</button>
-            <button disabled title="Segera">EN</button>
-          </div>
-          <div class="zoom">
-            <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
-            <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
-          </div>
           <button id="geo-btn" class="icon-btn" aria-label="Udara di lokasi saya" data-tip="Lokasi"><span class="material-symbols-outlined">my_location</span></button>
           <div class="city-wrap">
             <button id="city-toggle" class="icon-btn" aria-label="Ikon kondisi per kota" data-tip="Kondisi"><span class="material-symbols-outlined">partly_cloudy_day</span></button>
@@ -284,13 +362,9 @@
           </div>
           <button id="share-btn" class="icon-btn" aria-label="Bagikan tampilan ini" data-tip="Bagikan"><span class="material-symbols-outlined">share</span></button>
           <button id="fs-btn" class="icon-btn" aria-label="Layar penuh" data-tip="Layar Penuh"><span class="material-symbols-outlined">fullscreen</span></button>
-          <div class="search-wrap">
-            <button id="search-btn" class="icon-btn" aria-label="Cari kota / kabupaten" data-tip="Cari"><span class="material-symbols-outlined">search</span></button>
-            <div id="search-box" class="search-box">
-              <input id="search-input" type="text" placeholder="Cari kota / kabupaten…" autocomplete="off" />
-              <div id="search-results" class="search-results"></div>
-            </div>
+        </div>
           </div>
+        </aside>
         </div>
       </div>
 
@@ -298,19 +372,6 @@
       <div class="ui-bottom">
         <!-- timeline / slider — bawah kiri -->
         <div class="panel timeline">
-          <div id="data-fresh" class="fresh-badge" title="Waktu inisiasi model GFS terakhir">
-            <span class="material-symbols-outlined fresh-ico">error</span>
-            <span class="mono" id="fresh-text"></span>
-            <!-- Asal data + tanda segar. Dot HIJAU berarti datanya dimasak hari
-                 ini, MERAH berarti belum ada kiriman baru hari ini. Labelnya
-                 menyebut asalnya: "cirrus" itu server ITERA lewat hostingan ini
-                 sendiri, "cadangan" itu keluaran yang tersaji di GitHub Pages. -->
-            <span class="fresh-src" id="fresh-src">
-              <i class="fresh-dot" aria-hidden="true"></i>
-              <span id="fresh-src-text">cirrus</span>
-            </span>
-            <span class="material-symbols-outlined fresh-chev">chevron_right</span>
-          </div>
           <div class="tl-btns">
             <button id="play-btn" class="tl-btn" title="Play/Pause"><span class="material-symbols-outlined" id="play-icon">play_arrow</span></button>
           </div>
@@ -439,8 +500,8 @@
       </div>
       <div class="sk-center">
         <svg class="sk-mark" viewBox="0 0 48 48" width="60" height="60" aria-hidden="true">
-          <rect x="2" y="2" width="44" height="44" rx="13" fill="#00f5ff" stroke="#050a14" stroke-width="4"/>
-                <g transform="translate(9.9 9.9) scale(1.175)" fill="#002021">
+          <rect x="2" y="2" width="44" height="44" rx="13" fill="none" stroke="currentColor" stroke-width="2.4"/>
+                <g transform="translate(9.9 9.9) scale(1.175)" fill="currentColor">
                   <path d="M21,6.5c-1.66,0-3,1.34-3,3c0,0.07,0,0.14,0.01,0.21l-2.03,0.68c-0.64-1.21-1.82-2.09-3.22-2.32V5.91 C14.04,5.57,15,4.4,15,3c0-1.66-1.34-3-3-3S9,1.34,9,3c0,1.4,0.96,2.57,2.25,2.91v2.16c-1.4,0.23-2.58,1.11-3.22,2.32L5.99,9.71 C6,9.64,6,9.57,6,9.5c0-1.66-1.34-3-3-3s-3,1.34-3,3s1.34,3,3,3c1.06,0,1.98-0.55,2.52-1.37l2.03,0.68 c-0.2,1.29,0.17,2.66,1.09,3.69l-1.41,1.77C6.85,17.09,6.44,17,6,17c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3 c0-0.68-0.22-1.3-0.6-1.8l1.41-1.77c1.36,0.76,3.02,0.75,4.37,0l1.41,1.77C15.22,18.7,15,19.32,15,20c0,1.66,1.34,3,3,3s3-1.34,3-3 s-1.34-3-3-3c-0.44,0-0.85,0.09-1.23,0.26l-1.41-1.77c0.93-1.04,1.29-2.4,1.09-3.69l2.03-0.68c0.53,0.82,1.46,1.37,2.52,1.37 c1.66,0,3-1.34,3-3S22.66,6.5,21,6.5z M3,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C4,10.05,3.55,10.5,3,10.5z M6,21 c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C7,20.55,6.55,21,6,21z M11,3c0-0.55,0.45-1,1-1s1,0.45,1,1c0,0.55-0.45,1-1,1 S11,3.55,11,3z M12,15c-1.38,0-2.5-1.12-2.5-2.5c0-1.38,1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5C14.5,13.88,13.38,15,12,15z M18,19 c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C17,19.45,17.45,19,18,19z M21,10.5c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1 s1,0.45,1,1C22,10.05,21.55,10.5,21,10.5z"/>
                 </g>
         </svg>
@@ -476,6 +537,7 @@
   <script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.1/dist/shp.min.js"></script>
   <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="sisi.js" defer></script>
   <script src="app.js"></script>
   <script src="wilayah.js"></script>
 </body>

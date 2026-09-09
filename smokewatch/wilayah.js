@@ -341,7 +341,7 @@
     if (polyLayer) { M.removeLayer(polyLayer); polyLayer = null; }
     var fc = { type: "FeatureCollection", features: polygons.map(function (rings) {
       return { type: "Feature", geometry: { type: "Polygon", coordinates: rings } }; }) };
-    polyLayer = L.geoJSON(fc, { style: { color: "#111", weight: 2, fillColor: "#d2ed26", fillOpacity: 0.18 } }).addTo(M);
+    polyLayer = L.geoJSON(fc, { style: { color: "#333333", weight: 1.6, fillColor: "#333333", fillOpacity: 0.12 } }).addTo(M);
     M.fitBounds([[bbox[1], bbox[0]], [bbox[3], bbox[2]]], { padding: [24, 24] });
   }
 
@@ -391,7 +391,7 @@
     var M = theMap(); if (!M) return;
     bersihPreview();
     var lls = llArr();
-    draw.prev = (tutup ? L.polygon(lls, { color: "#111", weight: 2, fillColor: "#d2ed26", fillOpacity: 0.18 })
+    draw.prev = (tutup ? L.polygon(lls, { color: "#333333", weight: 1.6, fillColor: "#333333", fillOpacity: 0.12 })
                        : L.polyline(lls, { color: "#111", weight: 2, dashArray: "5,5" })).addTo(M);
     draw.handles = L.layerGroup().addTo(M);
     draw.ring.forEach(function (p, k) {
@@ -562,111 +562,158 @@
   function bangunUI() {
     // CSS
     var st = document.createElement("style");
+    /* GAYA DIREBRANDING 9 September 2026, ikut seluruh app.
+       Berkas ini menyuntik CSS-nya sendiri ke <head> SESUDAH style.css, jadi
+       lapis rebranding di sana tidak bisa menjangkaunya, dan kelas .dtw-*
+       memang tidak dipakai di mana pun kecuali di sini. Karena itu yang
+       diperbaiki markupnya langsung, bukan ditimpa dari luar.
+
+       Yang berubah cuma nilai gaya. Tidak ada satu baris logika pun yang
+       disentuh, dan seluruh nama kelas dipertahankan.
+
+       Token --bw, --shadow, dan --lime memang sudah ikut berubah lewat
+       :root, tapi CADANGAN di dalam var(...) di sini masih memakai angka
+       neubrutalism, dan yang lebih berbahaya --lime sekarang berisi TINTA.
+       Tombol yang dulu kuning berhuruf gelap jadi blok hitam berhuruf gelap
+       alias tidak terbaca. Jadi semua isian eksplisit ditulis ulang. */
+    var TINTA = "var(--ink,#333)";
+    var GARIS = "0.7px solid var(--ink-20,rgba(51,51,51,.2))";
+    var HURUF = "var(--font-ui,Geologica,system-ui,sans-serif)";
     st.textContent = [
       ".dtw-wrap{position:relative;pointer-events:auto}",
       "#dtw-panel{position:fixed;top:0;right:0;height:100%;width:380px;max-width:92vw;",
-      "  background:var(--surface,#fff);color:var(--ink,#171a21);border-left:var(--bw,3px) solid var(--ink,#171a21);",
-      "  box-shadow:var(--shadow,-6px 0 0 rgba(0,0,0,.12));transform:translateX(101%);",
-      "  transition:transform .25s ease;z-index:1200;display:flex;flex-direction:column;font-size:14px}",
+      "  background:var(--paper,#fff);color:" + TINTA + ";border-left:" + GARIS + ";",
+      "  box-shadow:none;transform:translateX(101%);",
+      "  transition:transform .25s ease;z-index:1200;display:flex;flex-direction:column;",
+      "  font-family:" + HURUF + ";font-size:13px;font-weight:200;letter-spacing:.02em}",
       "#dtw-panel.open{transform:translateX(0)}",
       "#dtw-panel .dtw-head{display:flex;align-items:center;justify-content:space-between;gap:8px;",
-      "  padding:14px 16px;border-bottom:var(--bw,3px) solid var(--ink,#171a21)}",
-      "#dtw-panel .dtw-head h3{margin:0;font:800 16px/1.2 'Archivo Black',system-ui,sans-serif}",
-      "#dtw-panel .dtw-x{border:0;background:none;font-size:22px;cursor:pointer;line-height:1;color:inherit}",
+      "  padding:14px 16px;border-bottom:" + GARIS + "}",
+      "#dtw-panel .dtw-head h3{margin:0;font:300 12px/1.2 " + HURUF + ";letter-spacing:.14em;text-transform:uppercase}",
+      "#dtw-panel .dtw-x{border:0;background:none;font-size:20px;cursor:pointer;line-height:1;color:var(--ink-50,rgba(51,51,51,.5))}",
+      "#dtw-panel .dtw-x:hover{color:" + TINTA + "}",
       "#dtw-panel .dtw-body{overflow:auto;padding:14px 16px;flex:1}",
       ".dtw-input{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}",
-      ".dtw-lbl{font-weight:600;font-size:12.5px}",
+      ".dtw-lbl{font-weight:300;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-50,rgba(51,51,51,.5))}",
       ".dtw-file-row{display:flex;align-items:center;gap:8px;min-width:0}",
-      ".dtw-file-btn{display:inline-flex;align-items:center;gap:6px;border:var(--bw,3px) solid var(--ink,#171a21);",
-      "  background:var(--surface,#fff);color:inherit;font:600 13px 'Space Grotesk',system-ui,sans-serif;",
-      "  padding:7px 11px;cursor:pointer;box-shadow:var(--shadow,3px 3px 0 rgba(0,0,0,.12));white-space:nowrap}",
-      ".dtw-file-btn:hover{background:var(--lime,#d2ed26)}",
-      ".dtw-file-btn .material-symbols-outlined{font-size:18px}",
-      ".dtw-fname{font-size:12px;color:var(--ink-soft,#4a5262);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}",
-      ".dtw-or{font-size:10.5px;color:var(--ink-faint,#7b8494);text-align:center;text-transform:uppercase;letter-spacing:.12em}",
-      ".dtw-hint{font-size:11px;color:var(--ink-soft,#4a5262);line-height:1.5}",
-      ".dtw-draw-on{background:var(--lime,#d2ed26)!important}",
+      /* Tombol sekunder: pil bergaris, isian baru muncul waktu disorot. Pola
+         yang sama dengan setiap tombol lain di app ini. */
+      ".dtw-file-btn{display:inline-flex;align-items:center;gap:7px;border:" + GARIS + ";border-radius:999px;",
+      "  background:transparent;color:var(--ink-70,rgba(51,51,51,.7));",
+      "  font:200 12px " + HURUF + ";letter-spacing:.06em;text-transform:uppercase;",
+      "  padding:8px 14px;cursor:pointer;box-shadow:none;white-space:nowrap;",
+      "  transition:color .18s ease,border-color .18s ease}",
+      ".dtw-file-btn:hover{background:transparent;color:" + TINTA + ";border-color:" + TINTA + "}",
+      ".dtw-file-btn .material-symbols-outlined{font-size:17px}",
+      ".dtw-fname{font-size:11px;color:var(--ink-50,rgba(51,51,51,.5));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}",
+      ".dtw-or{font-size:10px;color:var(--ink-50,rgba(51,51,51,.5));text-align:center;text-transform:uppercase;letter-spacing:.14em}",
+      ".dtw-hint{font-size:11px;color:var(--ink-50,rgba(51,51,51,.5));line-height:1.6}",
+      /* Keadaan TERPILIH, satu satunya yang boleh berisian. */
+      ".dtw-draw-on{background:" + TINTA + "!important;color:var(--paper,#fff)!important;border-color:" + TINTA + "!important}",
       ".dtw-tools{display:flex;gap:8px}.dtw-tools>button{flex:1;justify-content:center}",
-      ".dtw-icon-btn{display:inline-flex;align-items:center;justify-content:center;border:var(--bw,3px) solid var(--ink,#171a21);",
-      "  background:var(--surface,#fff);color:inherit;padding:6px;cursor:pointer;box-shadow:var(--shadow,3px 3px 0 rgba(0,0,0,.12));line-height:0}",
-      ".dtw-icon-btn:hover{background:#ffd7d1;color:#c0392b}.dtw-icon-btn .material-symbols-outlined{font-size:18px}",
-      ".dtw-judul{font:800 13px/1.2 'Archivo Black',system-ui,sans-serif;margin:6px 0 8px}",
-      ".dtw-reset{width:100%;margin-top:16px;border:var(--bw,3px) solid var(--ink,#171a21);background:var(--surface,#fff);color:inherit;",
-      "  font:700 14px 'Space Grotesk',system-ui,sans-serif;padding:11px;cursor:pointer;box-shadow:var(--shadow,4px 4px 0 rgba(0,0,0,.15));",
+      ".dtw-icon-btn{display:inline-flex;align-items:center;justify-content:center;border:" + GARIS + ";border-radius:999px;",
+      "  background:transparent;color:var(--ink-70,rgba(51,51,51,.7));padding:8px;cursor:pointer;box-shadow:none;line-height:0}",
+      ".dtw-icon-btn:hover{background:transparent;color:" + TINTA + ";border-color:" + TINTA + "}",
+      ".dtw-icon-btn .material-symbols-outlined{font-size:17px}",
+      ".dtw-judul{font:300 12px/1.2 " + HURUF + ";letter-spacing:.12em;text-transform:uppercase;margin:6px 0 10px}",
+      ".dtw-reset{width:100%;margin-top:16px;border:" + GARIS + ";border-radius:999px;background:transparent;",
+      "  color:var(--ink-70,rgba(51,51,51,.7));",
+      "  font:200 12px " + HURUF + ";letter-spacing:.1em;text-transform:uppercase;padding:11px;cursor:pointer;box-shadow:none;",
       "  display:inline-flex;align-items:center;justify-content:center;gap:8px}",
-      ".dtw-reset:hover{background:#ffd7d1;color:#c0392b}",
-      ".dtw-dot{display:block;width:12px;height:12px;border-radius:50%;background:#111;border:2px solid #fff;box-shadow:0 0 0 1px #111;cursor:pointer}",
-      ".dtw-mid{width:10px;height:10px;background:#fff;border:2px dashed #111;box-shadow:none;opacity:.9}",
+      ".dtw-reset:hover{background:transparent;color:" + TINTA + ";border-color:" + TINTA + "}",
+      /* Gagang poligon di peta. Tetap bulat hitam putih, itu memang penanda
+         posisi dan bukan perabot bergaya. */
+      ".dtw-dot{display:block;width:11px;height:11px;border-radius:50%;background:" + TINTA + ";border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(51,51,51,.5);cursor:pointer}",
+      ".dtw-mid{width:9px;height:9px;background:#fff;border:1.2px dashed " + TINTA + ";box-shadow:none;opacity:.9;border-radius:50%}",
       ".leaflet-marker-icon.dtw-h{background:none;border:none}",
-      ".dtw-btn{border:var(--bw,3px) solid var(--ink,#171a21);background:var(--lime,#d2ed26);",
-      "  font:700 14px 'Space Grotesk',system-ui,sans-serif;padding:9px 14px;cursor:pointer;",
-      "  box-shadow:var(--shadow,4px 4px 0 rgba(0,0,0,.15))}",
-      ".dtw-btn:disabled{opacity:.45;cursor:not-allowed}",
-      ".dtw-status{font-size:12.5px;color:var(--ink-soft,#4a5262);min-height:1.2em}",
-      ".dtw-status.err{color:#c0392b}",
-      ".dtw-sum{display:flex;gap:10px;margin:4px 0 10px}",
-      ".dtw-sum>div{flex:1;border:1px solid var(--line,#dce0e8);border-radius:8px;padding:8px 10px}",
-      ".dtw-sum .dtw-k{display:block;font-size:11px;color:var(--ink-soft,#4a5262)}",
-      ".dtw-sum b{font-size:16px}",
-      ".dtw-grup{margin:16px 0 6px;font:800 12px/1 'Archivo Black',sans-serif;text-transform:uppercase;",
-      "  letter-spacing:.05em;border-bottom:2px solid var(--line,#dce0e8);padding-bottom:5px}",
+      /* Tindakan UTAMA. Di gaya ini yang membedakan tindakan utama memang
+         isian tinta, bukan ukuran atau warna menyala. */
+      ".dtw-btn{border:0.7px solid " + TINTA + ";border-radius:999px;background:" + TINTA + ";color:var(--paper,#fff);",
+      "  font:200 12px " + HURUF + ";letter-spacing:.1em;text-transform:uppercase;padding:10px 18px;cursor:pointer;",
+      "  box-shadow:none;transition:opacity .2s ease}",
+      ".dtw-btn:hover:not(:disabled){opacity:.84}",
+      /* Dimatikan = pil KOSONG berhuruf pucat, bukan pil terisi yang
+         dipudarkan. Isian tinta yang diberi opacity .3 jatuh jadi blok
+         kelabu pekat, dan itu justru lebih menarik mata daripada tombol
+         yang hidup di sekitarnya. */
+      ".dtw-btn:disabled{background:transparent;color:var(--ink-20,rgba(51,51,51,.2));"
+        + "border-color:var(--ink-20,rgba(51,51,51,.2));opacity:1;cursor:not-allowed}",
+      ".dtw-status{font-size:11.5px;color:var(--ink-50,rgba(51,51,51,.5));min-height:1.2em}",
+      /* Galat ditandai HURUFNYA yang memekat, bukan warna merah. Sama dengan
+         cara app ini menandai suhu maksimum dan nilai kritis. */
+      ".dtw-status.err{color:" + TINTA + ";font-weight:300}",
+      ".dtw-sum{display:flex;gap:10px;margin:4px 0 12px}",
+      ".dtw-sum>div{flex:1;border:" + GARIS + ";border-radius:4px;padding:9px 11px}",
+      ".dtw-sum .dtw-k{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-50,rgba(51,51,51,.5))}",
+      ".dtw-sum b{font-size:17px;font-weight:200;letter-spacing:.01em}",
+      ".dtw-grup{margin:18px 0 6px;font:300 11px/1 " + HURUF + ";text-transform:uppercase;",
+      "  letter-spacing:.14em;border-bottom:" + GARIS + ";padding-bottom:7px}",
       ".dtw-item{margin:10px 0 14px}",
       ".dtw-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px}",
-      ".dtw-lab{font-weight:600}.dtw-val{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}",
-      ".dtw-val i{font-style:normal;font-weight:400;font-size:11px;color:var(--ink-soft,#4a5262)}",
-      ".dtw-tag{font-size:11.5px;font-weight:700}",
-      ".dtw-plot{margin-top:4px}.dtw-plot svg{max-width:100%;height:auto}",
-      ".dtw-note{font-size:11.5px;color:var(--ink-soft,#4a5262);margin-top:14px;line-height:1.5}",
-      ".dtw-warn{color:#c0392b;font-size:13px}.dtw-muted{color:var(--ink-soft,#4a5262)}",
+      ".dtw-lab{font-weight:200;letter-spacing:.02em}",
+      ".dtw-val{font-weight:300;font-variant-numeric:tabular-nums;white-space:nowrap}",
+      ".dtw-val i{font-style:normal;font-weight:200;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-50,rgba(51,51,51,.5))}",
+      ".dtw-tag{font-size:10px;font-weight:300;letter-spacing:.08em;text-transform:uppercase}",
+      ".dtw-plot{margin-top:6px}.dtw-plot svg{max-width:100%;height:auto}",
+      ".dtw-note{font-size:11px;color:var(--ink-50,rgba(51,51,51,.5));margin-top:16px;line-height:1.6}",
+      ".dtw-warn{color:" + TINTA + ";font-size:12px;font-weight:300}",
+      ".dtw-muted{color:var(--ink-50,rgba(51,51,51,.5))}",
       // Toggle hanya tampil saat layer daya tampung aktif (kelas .dtw-on)
       ".dtw-wrap{display:none}.dtw-wrap.dtw-on{display:block}",
       "@media(max-width:640px){.col.items-end>.dtw-wrap.dtw-on{display:none}.ctrl-open>.dtw-wrap.dtw-on{display:block}}",
-      // Alarm merah MENCOLOK tapi mulus: glow kuat + denyut skala + cincin 'ping'
-      // yang memancar. Bayangan neubrutalist tombol dipertahankan di keyframe.
-      // Berhenti saat panel dibuka; hormati prefers-reduced-motion.
-      "@keyframes dtwGlow{0%,100%{box-shadow:var(--shadow,4px 4px 0 rgba(0,0,0,.15)),0 0 8px 2px rgba(224,49,49,.55)}" +
-        "50%{box-shadow:var(--shadow,4px 4px 0 rgba(0,0,0,.15)),0 0 24px 10px rgba(224,49,49,1)}}",
-      "@keyframes dtwBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}",
-      "@keyframes dtwPing{0%{transform:scale(1);opacity:.85}70%,100%{transform:scale(2.2);opacity:0}}",
-      ".dtw-wrap.dtw-on #dtw-toggle{position:relative;z-index:1;animation:dtwGlow 1.3s ease-in-out infinite,dtwBeat 1.3s ease-in-out infinite}",
-      ".dtw-wrap.dtw-on #dtw-toggle::after{content:'';position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;border:2.5px solid rgba(224,49,49,.85);animation:dtwPing 1.3s ease-out infinite}",
+      /* Penarik perhatian. Dulu alarm MERAH mencolok, glow plus denyut plus
+         cincin memancar. Isinya dipertahankan, sebab tanpa itu tombol ini
+         memang tidak pernah ketemu, tapi warnanya jadi tinta dan tenaganya
+         diturunkan. Yang menarik mata sekarang GERAKANNYA, bukan warnanya. */
+      "@keyframes dtwGlow{0%,100%{box-shadow:0 0 0 0 rgba(51,51,51,.28)}" +
+        "50%{box-shadow:0 0 0 5px rgba(51,51,51,.10)}}",
+      "@keyframes dtwBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}",
+      "@keyframes dtwPing{0%{transform:scale(1);opacity:.5}70%,100%{transform:scale(2);opacity:0}}",
+      ".dtw-wrap.dtw-on #dtw-toggle{position:relative;z-index:1;animation:dtwGlow 1.6s ease-in-out infinite,dtwBeat 1.6s ease-in-out infinite}",
+      ".dtw-wrap.dtw-on #dtw-toggle::after{content:'';position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;border:1px solid rgba(255,255,255,.7);animation:dtwPing 1.6s ease-out infinite}",
       ".dtw-wrap.dtw-on #dtw-toggle.active{animation:none}",
       ".dtw-wrap.dtw-on #dtw-toggle.active::after{animation:none;border:0}",
-      // Label callout 'Hitung Daya Tampung' di samping toggle: TEKS merah polos
-      // (tanpa kotak), berdenyut merah senada. Bayangan gelap tipis biar kebaca di
-      // atas peta. Klik = buka panel.
-      "@keyframes dtwCallout{0%,100%{opacity:.7;text-shadow:0 1px 3px rgba(0,0,0,.35),0 0 4px rgba(224,49,49,.35)}" +
-        "50%{opacity:1;text-shadow:0 1px 3px rgba(0,0,0,.35),0 0 14px rgba(224,49,49,.95)}}",
+      /* Label di samping toggle. Teks polos berdenyut, sekarang putih sebab
+         dia berdiri langsung di atas peta, sama dengan alat peta lain. */
+      "@keyframes dtwCallout{0%,100%{opacity:.62}50%{opacity:1}}",
       ".dtw-callout{display:none;position:absolute;top:50%;right:calc(100% + 12px);transform:translateY(-50%);",
-      "  white-space:nowrap;font:800 13px 'Space Grotesk',system-ui,sans-serif;color:#e0312e;cursor:pointer;",
-      "  animation:dtwCallout 1.3s ease-in-out infinite}",
+      "  white-space:nowrap;font:200 12px " + HURUF + ";letter-spacing:.08em;text-transform:uppercase;",
+      "  color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);cursor:pointer;",
+      "  animation:dtwCallout 1.6s ease-in-out infinite}",
       ".dtw-wrap.dtw-on .dtw-callout{display:block}",
       ".dtw-wrap.dtw-on #dtw-toggle.active ~ .dtw-callout{display:none}",
       "@media(max-width:640px){.dtw-callout{display:none!important}}",
       "@media(prefers-reduced-motion:reduce){.dtw-wrap.dtw-on #dtw-toggle,.dtw-wrap.dtw-on #dtw-toggle::after,.dtw-callout{animation:none}}",
-      // ---- Pamflet penjelasan (screenshot UI ASLI, neubrutalism SUDUT SIKU) ----
-      ".dtw-modal{position:fixed;inset:0;z-index:1400;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);padding:16px}",
+      // ---- Pamflet penjelasan ----
+      ".dtw-modal{position:fixed;inset:0;z-index:1400;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px}",
       ".dtw-modal.open{display:flex}",
-      ".dtw-card{background:var(--surface,#fff);color:var(--ink,#171a21);border:var(--bw,3px) solid var(--ink,#171a21);",
-      "  box-shadow:var(--shadow,10px 10px 0 rgba(0,0,0,.22));width:min(980px,96vw);max-height:94vh;",
-      "  display:flex;flex-direction:column;overflow:hidden}",
-      ".dtw-p-head{flex:none;padding:15px 50px 12px 22px;border-bottom:var(--bw,3px) solid var(--ink,#171a21);position:relative}",
-      ".dtw-p-eyebrow{font:800 11px 'Space Grotesk',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#e0312e}",
-      ".dtw-p-title{font:800 clamp(18px,2.4vw,25px)/1.1 'Archivo Black',system-ui,sans-serif;margin:6px 0 0;text-wrap:balance}",
-      ".dtw-p-sub{margin:7px 0 0;font-size:13px;color:var(--ink-soft,#4a5262);line-height:1.5;max-width:72ch}",
-      ".dtw-p-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:2px solid var(--ink,#171a21);background:var(--surface,#fff);font-size:18px;line-height:0;cursor:pointer;color:inherit}",
-      ".dtw-p-x:hover{background:#ffd7d1;color:#c0392b}",
-      ".dtw-p-body{flex:1;overflow-y:auto;padding:16px 22px}",
-      ".dtw-hero{border:2px solid var(--ink,#171a21);overflow:hidden;background:#12161d;line-height:0}",
+      ".dtw-card{background:var(--paper,#fff);color:" + TINTA + ";border:" + GARIS + ";border-radius:6px;",
+      "  box-shadow:0 18px 50px rgba(0,0,0,.14);width:min(980px,96vw);max-height:94vh;",
+      "  font-family:" + HURUF + ";display:flex;flex-direction:column;overflow:hidden}",
+      ".dtw-p-head{flex:none;padding:18px 54px 14px 22px;border-bottom:" + GARIS + ";position:relative}",
+      ".dtw-p-eyebrow{font:300 11px " + HURUF + ";letter-spacing:.14em;text-transform:uppercase;color:var(--ink-50,rgba(51,51,51,.5))}",
+      ".dtw-p-title{font:300 clamp(18px,2.4vw,25px)/1.2 " + HURUF + ";letter-spacing:.06em;text-transform:uppercase;margin:8px 0 0;text-wrap:balance}",
+      ".dtw-p-sub{margin:9px 0 0;font-size:13px;font-weight:200;color:var(--ink-70,rgba(51,51,51,.7));line-height:1.7;max-width:72ch}",
+      ".dtw-p-x{position:absolute;top:14px;right:14px;width:30px;height:30px;border:" + GARIS + ";border-radius:999px;",
+      "  background:transparent;font-size:16px;line-height:0;cursor:pointer;color:var(--ink-50,rgba(51,51,51,.5))}",
+      ".dtw-p-x:hover{background:var(--ink-5,rgba(51,51,51,.05));color:" + TINTA + ";border-color:" + TINTA + "}",
+      ".dtw-p-body{flex:1;overflow-y:auto;padding:18px 22px}",
+      ".dtw-hero{border:" + GARIS + ";border-radius:4px;overflow:hidden;background:#f7f7f6;line-height:0}",
       ".dtw-hero img{display:block;width:100%;height:auto}",
-      ".dtw-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}",
-      ".dtw-s{display:flex;gap:9px;align-items:flex-start}",
-      ".dtw-s .n{flex:none;width:24px;height:24px;background:#e0312e;color:#fff;border:2px solid var(--ink,#171a21);font:800 12px 'Archivo Black',system-ui,sans-serif;display:flex;align-items:center;justify-content:center}",
-      ".dtw-s-t{font-weight:700;font-size:12.5px;margin:0 0 1px}.dtw-s-d{font-size:11.5px;color:var(--ink-soft,#4a5262);line-height:1.4;margin:0}",
-      ".dtw-p-foot{flex:none;padding:13px 22px;border-top:var(--bw,3px) solid var(--ink,#171a21);display:flex;gap:10px}",
-      ".dtw-p-cta{flex:1;border:var(--bw,3px) solid var(--ink,#171a21);background:var(--lime,#d2ed26);color:var(--ink,#171a21);font:800 14px 'Space Grotesk',system-ui,sans-serif;padding:11px;cursor:pointer;box-shadow:var(--shadow,4px 4px 0 rgba(0,0,0,.15))}",
-      ".dtw-p-cta:hover{filter:brightness(.96)}",
-      ".dtw-p-later{border:var(--bw,3px) solid var(--ink,#171a21);background:var(--surface,#fff);color:inherit;font:700 14px 'Space Grotesk',system-ui,sans-serif;padding:11px 16px;cursor:pointer}.dtw-p-later:hover{background:#f0f2f5}",
+      ".dtw-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}",
+      ".dtw-s{display:flex;gap:10px;align-items:flex-start}",
+      ".dtw-s .n{flex:none;width:24px;height:24px;border-radius:999px;background:transparent;color:" + TINTA + ";",
+      "  border:" + GARIS + ";font:200 11px " + HURUF + ";display:flex;align-items:center;justify-content:center}",
+      ".dtw-s-t{font-weight:300;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 3px}",
+      ".dtw-s-d{font-size:11.5px;font-weight:200;color:var(--ink-50,rgba(51,51,51,.5));line-height:1.6;margin:0}",
+      ".dtw-p-foot{flex:none;padding:14px 22px;border-top:" + GARIS + ";display:flex;gap:10px}",
+      ".dtw-p-cta{flex:1;border:0.7px solid " + TINTA + ";border-radius:999px;background:" + TINTA + ";color:var(--paper,#fff);",
+      "  font:200 12px " + HURUF + ";letter-spacing:.1em;text-transform:uppercase;padding:12px;cursor:pointer;box-shadow:none;",
+      "  transition:opacity .2s ease}",
+      ".dtw-p-cta:hover{filter:none;opacity:.84}",
+      ".dtw-p-later{border:" + GARIS + ";border-radius:999px;background:transparent;color:var(--ink-70,rgba(51,51,51,.7));",
+      "  font:200 12px " + HURUF + ";letter-spacing:.1em;text-transform:uppercase;padding:12px 18px;cursor:pointer}",
+      ".dtw-p-later:hover{background:transparent;color:" + TINTA + ";border-color:" + TINTA + "}",
       "@media(max-width:680px){.dtw-steps{grid-template-columns:1fr}}"
     ].join("\n");
     document.head.appendChild(st);
