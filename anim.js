@@ -67,12 +67,22 @@
     var cs = getComputedStyle(h1);
     var m = document.createElement("canvas").getContext("2d");
     m.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
-    var mi = m.measureText("i"), ms = m.measureText("\u0131"), mp = m.measureText(".");
+    /* "\u0131" tidak diukur lagi sejak rumus pusat titik diperbaiki. */
+    var mi = m.measureText("i"), mp = m.measureText(".");
     if (!mi.actualBoundingBoxAscent || !mi.fontBoundingBoxAscent) return null;
 
-    /* Daerah titik "i" = antara puncak ink "i" dan puncak ink "ı". */
-    var pusatTitik = mi.actualBoundingBoxAscent
-                   - (mi.actualBoundingBoxAscent - ms.actualBoundingBoxAscent) / 2;
+    /* Pusat titik huruf "i" = setengah tinggi ink titik di bawah puncak "i".
+       DIPERBAIKI 8 Sep 2026 waktu font pindah ke Geologica. Rumus lamanya
+       mengambil TENGAH TENGAH antara puncak ink "i" dan puncak ink "ı", dan
+       itu salah, sebab daerah di antara keduanya bukan cuma titiknya, tapi
+       titik DITAMBAH celah di bawahnya. Hasilnya titik selalu mendarat
+       setengah celah terlalu rendah. Di Space Grotesk celahnya sempit jadi
+       tidak ketahuan, di Geologica celahnya lebar dan titiknya kelihatan
+       menempel di batang huruf i.
+       Tinggi ink titik diambil dari glif titik "." itu sendiri. Di hampir
+       semua huruf, titik huruf i dan titik kalimat memang glif yang sama. */
+    var tinggiTitik = mp.actualBoundingBoxAscent + mp.actualBoundingBoxDescent;
+    var pusatTitik = mi.actualBoundingBoxAscent - tinggiTitik / 2;
     /* Pusat ink titik "." kalau ia digambar duduk di baseline. */
     var pusatPeriod = mp.actualBoundingBoxAscent
                     - (mp.actualBoundingBoxAscent + mp.actualBoundingBoxDescent) / 2;
@@ -395,10 +405,19 @@
   var hero = document.querySelector(".hero");
   if (!bar || !hero) return;
 
+  /* Yang diukur BUKAN dasar hero lagi, tapi puncak bagian sesudahnya.
+     Sejak bagian bagiannya saling menumpuk, hero menempel di puncak layar dan
+     dasarnya berhenti bergerak. Ukuran lama akan membeku di angka setinggi
+     layar dan bidang bar tidak akan pernah menyala, padahal Team latarnya
+     tinta pekat dan barnya justru paling butuh bidang di situ.
+     Puncak Showcase itu titik yang sama persis dengan dasar hero dulu, jadi
+     ambangnya tidak berubah sama sekali. */
+  var lanjut = document.querySelector("#showcase") || hero;
+
   var nunggu = false;
   function periksa() {
     nunggu = false;
-    bar.classList.toggle("padat", hero.getBoundingClientRect().bottom <= bar.offsetHeight);
+    bar.classList.toggle("padat", lanjut.getBoundingClientRect().top <= bar.offsetHeight);
   }
   /* Digandeng ke rAF supaya tidak menghitung ulang tiap kejadian gulir. */
   function jadwal() { if (!nunggu) { nunggu = true; requestAnimationFrame(periksa); } }
@@ -406,6 +425,38 @@
   periksa();
   window.addEventListener("scroll", jadwal, { passive: true });
   window.addEventListener("resize", jadwal);
+})();
+
+/* =====================================================================
+   Bagian yang menumpuk, titik lengket Showcase.
+
+   Hero dan Team tingginya pas satu layar jadi urusannya selesai di CSS.
+   Showcase tidak, isinya lebih tinggi dari layar, dan sticky tidak punya cara
+   menuliskan "berhentilah waktu ujung bawahmu sampai di dasar layar" tanpa
+   tahu tingginya. Yang bisa cuma angka, top negatif setinggi kelebihannya.
+   Jadi tingginya diukur di sini lalu ditaruh di --sc-lengket.
+
+   Diukur ulang tiap ukurannya berubah, sebab tinggi bagian ini ikut lebar
+   layar, korselnya memakai vw, dan paddingnya memakai vh. ResizeObserver
+   menangkap semuanya sekaligus, termasuk font yang baru selesai dimuat.
+   ===================================================================== */
+(function () {
+  "use strict";
+  var sec = document.querySelector("#showcase");
+  if (!sec) return;
+
+  function ukur() {
+    /* Tidak pernah positif. Kalau suatu saat isinya muat satu layar, nilainya
+       jadi 0 dan bagian ini menempel di puncak seperti hero, bukan melompat. */
+    var atas = Math.min(0, window.innerHeight - sec.offsetHeight);
+    sec.style.setProperty("--sc-lengket", Math.round(atas) + "px");
+  }
+
+  ukur();
+  window.addEventListener("resize", ukur);
+  if (window.ResizeObserver) new ResizeObserver(ukur).observe(sec);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(ukur);
+  window.addEventListener("load", ukur);
 })();
 
 /* =====================================================================

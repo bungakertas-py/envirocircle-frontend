@@ -25,11 +25,15 @@
   <meta name="twitter:title" content="Envirocircle — Peta atmosfer dan lingkungan Indonesia" />
   <meta name="twitter:description" content="Dua peta untuk Indonesia, cuaca dan kualitas udara, dari model atmosfer terbuka. Diolah otomatis tiap hari." />
   <meta name="twitter:image" content="https://envirocircle.info/og-image.jpg" />
-  <meta name="theme-color" content="#fffff6" />
+  <meta name="theme-color" content="#ffffff" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <!-- Geologica, satu keluarga untuk seluruh halaman. Space Grotesk dan
+       JetBrains Mono DIBUANG 8 Sep 2026 bersama gaya neubrutalism-nya.
+       Variable font, jadi satu berkas menanggung berat 100 sampai 900, dan
+       yang dipakai di sini cuma yang ringan, 200 dan 300. -->
+  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
@@ -106,8 +110,12 @@
 
     <section id="showcase">
       <div class="wrap">
-        <span class="section-head" data-sc>Showcase</span>
-        <h2 class="sc-title" data-sc>Dua peta, satu <span class="glow">sumber</span>.</h2>
+        <!-- Pola kepala bagian yang sama dengan Team, label kecil lalu judul
+             lalu garis rambut. Pembungkusnya yang menggambar garisnya. -->
+        <div class="sec-head">
+          <span class="section-head" data-sc>Showcase</span>
+          <h2 class="sc-title" data-sc>Dua peta, satu <span class="glow">sumber</span>.</h2>
+        </div>
         <p class="sc-lead" data-sc>Keduanya berdiri di atas model atmosfer yang terbuka dan gratis, dari model sedunia sampai model wilayah yang dijalankan sendiri. Diolah otomatis tiap hari, lalu disajikan sebagai peta yang bisa dibaca tanpa latar belakang teknis.</p>
 
         <!-- Korsel. Satu kartu lanskap di tengah, tetangganya mengintip
@@ -188,10 +196,8 @@
     <section id="team">
       <div class="wrap">
         <div class="team-head">
-          <div>
-            <span class="section-head" data-sc>Team</span>
-            <h2 class="team-title" data-sc>Meet our team.</h2>
-          </div>
+          <span class="section-head" data-sc>Team</span>
+          <h2 class="team-title" data-sc>Meet our team.</h2>
         </div>
 
         <!-- Urutannya Alvin, Andreas, Farras. -->

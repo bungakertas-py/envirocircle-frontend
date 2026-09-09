@@ -1,310 +1,304 @@
 /* =====================================================================
-   Envirocircle — Landing platform
-   Neubrutalist, palet Deep Sea Telemetry (sama dengan Atmos & Plume).
-   Warna dari token :root, border 3px, bayangan keras 6px, sudut siku.
+   Envirocircle, landing.
+
+   GAYA DIGANTI TOTAL 8 September 2026. Yang sebelumnya di sini neubrutalism,
+   garis 3px, bayangan keras nol blur, isian cyan, tombol yang turun menempel
+   waktu ditekan. Semua itu DIBUANG, bukan dilunakkan. Jangan dipasang lagi
+   sepotong sepotong, dua bahasa itu tidak bisa hidup di satu halaman.
+
+   Acuannya raja.co.id, dibongkar langsung dari CSS-nya, bukan ditebak.
+   Yang diambil empat hal.
+     1. Satu keluarga huruf untuk segalanya, Geologica.
+     2. Berat huruf RINGAN semua. Judul 300, badan 200, terkecil 100.
+        Tidak ada yang tebal.
+     3. Judul HURUF BESAR dengan jarak huruf 0,1em. Ini yang paling menentukan
+        rasanya. Tanpa jarak selebar itu, huruf besar tipis cuma terbaca
+        seperti teriakan.
+     4. Bentuk dibuat dari RUANG KOSONG dan GARIS RAMBUT 0,7px, bukan dari
+        border dan bayangan. Tidak ada box-shadow di berkas ini, sengaja.
+
+   Warnanya monokrom penuh, diminta user. Hitamnya BUKAN hitam murni tapi
+   #333333, itu nilai --raja-black asli mereka (oklch 32,11% tanpa chroma).
+   Turunannya cuma satu warna itu dengan transparansi bertingkat, 70 persen
+   untuk badan teks, 50 persen untuk yang redup, 20 persen untuk garis, 5
+   persen untuk bidang. Hijau aksen mereka kalau chroma-nya dibuang jatuh
+   tepat di #818181, jadi kelabu setengah itulah padanan aksen di sini.
    ===================================================================== */
+
 :root {
-  /* Palet Deep Sea Telemetry, terang, putihnya #FFFFF6.
-     Semua yang dulu putih sekarang satu nilai ini, --paper, --surface, dan
-     --white. Kartu dan pil jadi sewarna dengan halaman, dan itu disengaja,
-     yang membentuk mereka tinggal garis 3px dan bayangan kerasnya. Justru
-     lebih neubrutalis daripada dibedakan pakai warna.
-     Tangga di bawahnya ikut rona yang sama, sedikit kehijauan, sebab #FFFFF6
-     condong kuning. Kalau tangganya dibiarkan kebiruan seperti palet asli,
-     chip dan kartu akan terlihat kotor di atas latar ini. */
-  --ink: #050a14;
-  --paper: #fffff6;
-  --surface: #fffff6;
-  --surface-low: #f5f4e8;
-  --surface-high: #ebeadd;
-  --surface-highest: #dbdaca;
-  --white: #fffff6;
-  --primary: #00696e;
-  --on-primary: #fffff6;
-  --lime: #00f5ff;
-  --on-lime: #002021;
-  --variant: #3a494a;
-  /* Tiga entri Deep Sea Telemetry yang sebelumnya menganggur, diangkat jadi
-     token supaya pita kontur bisa memakai kode ASLI paletnya, bukan
-     campuran karangan. Nama di berkas palet ada di komentar tiap baris. */
-  --lime-hi: #63f7ff;       /* primary-fixed */
-  --lime-dim: #00dce5;      /* inverse-primary */
-  --primary-deep: #004f53;  /* on-primary-fixed-variant */
+  /* ---- Satu warna, banyak tingkat ---- */
+  --ink: #333333;
+  --paper: #ffffff;
+  --ink-70: rgba(51, 51, 51, .7);
+  --ink-50: rgba(51, 51, 51, .5);
+  --ink-20: rgba(51, 51, 51, .2);
+  --ink-5:  rgba(51, 51, 51, .05);
 
-  /* SATU margin kiri kanan untuk SELURUH halaman. Diminta user, sebelumnya
-     tiap bagian punya angkanya sendiri (hero 3.2vw, Showcase 24px terkurung
-     1080px, tim 1.8vw, footer 24px) dan tepinya jadi tidak segaris.
-     Ganti angka ini saja, semua bagian ikut. Nilai HP ada di media query. */
-  --gutter: 3.2vw;
+  /* Kebalikannya, dipakai HANYA di pita gelap bagian Team. */
+  --sisi: #333333;
+  --sisi-teks: #ffffff;
+  --sisi-70: rgba(255, 255, 255, .7);
+  --sisi-50: rgba(255, 255, 255, .5);
+  --sisi-20: rgba(255, 255, 255, .2);
 
-  --bw: 3px;
-  --shadow: 6px 6px 0 0 var(--ink);
-  --shadow-sm: 4px 4px 0 0 var(--ink);
+  /* Garis rambut. 0,7px, bukan 1px. Angka aslinya memang begitu, dan bedanya
+     kelihatan, 1px sudah terbaca sebagai garis yang disengaja sedangkan
+     0,7px terbaca sebagai batas yang nyaris tidak ada. */
+  --rambut: 0.7px;
 
-  /* Neubrutalism membulat. Garis tetap tebal dan bayangan tetap keras,
-     yang berubah cuma sudutnya. Ini KHUSUS landing, app peta tetap siku. */
-  --radius: 16px;
-  --radius-sm: 10px;
-  --radius-pill: 999px;
+  /* ---- PITA KONTUR HERO ----
+     Nama nama di bawah ini WARISAN, isinya sekarang kelabu semua. hero.js
+     membaca --lime-hi, --lime, --lime-dim, --primary, --primary-deep, dan
+     --paper lewat getComputedStyle untuk menyusun tangga warna konturnya.
+     Jadi kanvas hero jadi monokrom TANPA menyentuh satu baris pun JS-nya.
+     JANGAN diganti namanya, dan jangan dipakai untuk apa pun selain ini.
+     Urutannya wajib makin gelap dari atas ke bawah. */
+  --lime-hi:      #ececec;
+  --lime:         #dbdbdb;
+  --lime-dim:     #c6c6c6;
+  --primary:      #9d9d9d;
+  --primary-deep: #787878;
 
-  /* Judul besar sekarang Space Grotesk 700, sama dengan huruf badan.
-     Dulu Archivo Black. Space Grotesk cuma sampai berat 700, jadi tiap
-     pemakai --font-display WAJIB menyebut font-weight: 700 sendiri, sebab
-     body sudah disetel 500 dan div tidak tebal dengan sendirinya. */
-  --font-display: "Space Grotesk", system-ui, sans-serif;
-  --font-ui: "Space Grotesk", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* ---- Margin halaman ----
+     Tangga aslinya raja, px-4 lalu 10 lalu 14 lalu 20 dalam satuan Tailwind,
+     yaitu 16, 40, 56, 80 px. Sengaja px mati, bukan vw. Di gaya begini yang
+     menahan halaman itu ruang kosong yang KONSISTEN, dan vw membuatnya ikut
+     meregang sehingga irama antar layar tidak pernah sama. */
+  --gutter: 16px;
+
+  --font-sans: "Geologica", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+
+@media (min-width: 640px)  { :root { --gutter: 40px; } }
+@media (min-width: 1024px) { :root { --gutter: 56px; } }
+@media (min-width: 1280px) { :root { --gutter: 80px; } }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
-/* Bar beku setinggi 70px. Tanpa ini, tepi atas bagian yang dituju jangkar
-   akan tersembunyi di baliknya. */
-/* 78px. Bar 70 lalu sisakan sedikit udara. Pita cyan sudah dibuang jadi
-   tidak ada yang perlu ditambahkan lagi. */
-section[id] { scroll-margin-top: 78px; }
+/* Bar beku setinggi 70px, sisakan sedikit udara di bawahnya. */
+section[id] { scroll-margin-top: 86px; }
+
 body {
   margin: 0; background: var(--paper); color: var(--ink);
-  font-family: var(--font-ui); font-weight: 500; line-height: 1.5;
+  font-family: var(--font-sans); font-weight: 200; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 a { color: inherit; text-decoration: none; }
+
+/* Ikon Material ikut ditipiskan. Bawaannya berat 500 dan di antara huruf
+   seringan ini dia langsung terbaca sebagai benda asing. */
 .material-symbols-outlined {
-  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 40;
+  font-variation-settings: "FILL" 0, "wght" 200, "GRAD" 0, "opsz" 24;
 }
 
-/* Dipakai #tentang, #showcase, dan footer. Paddingnya token, jadi ketiganya
-   segaris dengan hero dan bagian tim. Batas 1560 px menahan supaya di layar
-   sangat lebar isinya tidak jadi raksasa. Di 1440 yang mengatur paddingnya,
-   di 1920 batas 1560 yang kena. Blok teks di dalamnya punya max-width
-   sendiri sendiri, jadi barisnya tetap enak dibaca. */
-.wrap { width: 100%; max-width: 1560px; margin: 0 auto; padding: 0 var(--gutter); }
+/* ---- Batang gulir ----
+   Ikut dibuang gaya bloknya. Yang sekarang setipis mungkin, alur bening,
+   gagang kelabu 20 persen berbentuk pil. Dia perabot, bukan hiasan.
+   Aturan webkit dan aturan standar SENGAJA dipisah. Sudah diuji di Chrome,
+   begitu scrollbar-color ikut tertulis di elemen yang sama, seluruh aturan
+   ::-webkit-scrollbar diabaikan dan yang muncul batang gulir bawaan. */
+html::-webkit-scrollbar { width: 10px; height: 10px; }
+html::-webkit-scrollbar-track { background: transparent; }
+html::-webkit-scrollbar-thumb {
+  background: var(--ink-20); border-radius: 999px;
+  border: 3px solid var(--paper);
+}
+html::-webkit-scrollbar-thumb:hover { background: var(--ink-50); }
+html::-webkit-scrollbar-button { display: none; }
+@supports not selector(::-webkit-scrollbar) {
+  html { scrollbar-width: thin; scrollbar-color: var(--ink-20) transparent; }
+}
 
-/* ---- Bilah atas (terbuka, tanpa kotak) ---- */
-.topbar {
-  position: sticky; top: 0; z-index: 20; background: var(--paper);
-}
-.topbar .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-mark {
-  width: 34px; height: 34px; display: grid; place-items: center;
-  background: var(--lime); color: var(--on-lime);
-  border: var(--bw) solid var(--ink); box-shadow: var(--shadow-sm);
-  border-radius: var(--radius-sm);
-}
-.brand-mark .material-symbols-outlined { font-size: 20px; }
-.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -.01em; }
-.nav { display: flex; gap: 8px; }
-.nav a {
-  font-family: var(--font-mono); font-weight: 700; font-size: 12px;
-  letter-spacing: .04em; text-transform: uppercase; padding: 8px 12px;
-  border: var(--bw) solid transparent;
-}
-.nav a:hover { background: var(--lime); color: var(--on-lime); border-color: var(--ink); box-shadow: var(--shadow-sm); }
+/* =====================================================================
+   TANGGA HURUF
+   Angkanya diambil bulat bulat dari kelas raja, text-h1 sampai text-b2.
+   ===================================================================== */
+.t-h1, .t-t1, .t-t2, .t-t3 { text-transform: uppercase; font-weight: 300; margin: 0; }
+.t-h1 { font-size: 48px; line-height: 58px; letter-spacing: .1em; }
+.t-t1 { font-size: 38px; line-height: 48px; letter-spacing: .1em; }
+.t-t2 { font-size: 28px; line-height: 1;    letter-spacing: .1em; }
+.t-t3 { font-size: 24px; line-height: 36px; letter-spacing: .05em; }
+.t-k1 { font-size: 16px; line-height: 18px; letter-spacing: .8px; font-weight: 300; }
+.t-b1 { font-size: 16px; line-height: 28px; letter-spacing: .8px; font-weight: 200; }
+.t-b2 { font-size: 14px; line-height: 22px; font-weight: 200; }
 
-/* ---- Hero (gelap sinematik, dua canvas beranimasi) ---- */
+@media (max-width: 1024px) {
+  .t-h1 { font-size: 38px; line-height: 48px; }
+  .t-t1 { font-size: 36px; }
+  .t-t2 { font-size: 24px; }
+  .t-t3 { font-size: 22px; line-height: 32px; }
+  .t-k1 { font-size: 14px; line-height: 16px; }
+  .t-b1 { font-size: 16px; line-height: 26px; }
+}
+@media (max-width: 640px) {
+  .t-h1 { font-size: 32px; line-height: 42px; }
+  .t-t1 { font-size: 32px; }
+  .t-t2 { font-size: 20px; }
+  .t-t3 { font-size: 18px; line-height: 28px; }
+  .t-k1 { font-size: 12px; line-height: 1; }
+  .t-b1 { font-size: 14px; line-height: 22px; }
+  .t-b2 { font-size: 12px; line-height: 20px; }
+}
+
+/* ---- Kerangka ---- */
+.wrap { width: 100%; margin: 0 auto; padding: 0 var(--gutter); }
+section { padding: 0; }
+
+/* ---- Kepala bagian, pola yang diulang di SELURUH halaman ----
+   Label kecil kelabu, judul huruf besar berjarak lebar, lalu garis rambut
+   selebar konten. Tiga baris ini yang bikin halaman terasa satu tangan.
+   Jangan bikin variasi kepala bagian yang lain. */
+.sec-head {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 10px; padding: 16px 0; margin-bottom: 40px;
+  border-bottom: var(--rambut) solid var(--ink-20);
+}
+.section-head {
+  display: block;
+  font-size: 16px; line-height: 18px; letter-spacing: .8px; font-weight: 300;
+  color: var(--ink-50); text-transform: none;
+}
+/* Kata yang ditandai. Di acuan warnanya hijau, dan hijau itu LEBIH TERANG
+   dari tulisannya. Jadi padanan monokromnya kelabu yang lebih terang, bukan
+   yang lebih pekat. */
+.glow { color: var(--ink-50); }
+
+/* =====================================================================
+   TOP BAR
+   ===================================================================== */
+.hero-top {
+  position: fixed; z-index: 50; top: 0; left: 0; right: 0;
+  background: transparent;
+}
+.hero-bar {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; height: 70px;
+  padding: 0 var(--gutter);
+}
+/* Bidangnya putih polos, tanpa blur, tanpa warna. Muncul begitu hero
+   terlewat, kelas .padat dipasang anim.js. */
+.hero-bar::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background: var(--paper);
+  border-bottom: var(--rambut) solid var(--ink-20);
+  opacity: 0; transition: opacity .3s ease;
+}
+.hero-bar > * { position: relative; z-index: 1; }
+.hero-top.padat .hero-bar::before { opacity: 1; }
+
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+/* Kotak lambang DIBUANG isian dan bayangannya. Yang tersisa cuma ikonnya,
+   sebesar hurufnya, sewarna hurufnya. */
+.brand-mark { display: grid; place-items: center; color: var(--ink); }
+.brand-mark .material-symbols-outlined { font-size: 22px; }
+.brand-name {
+  font-size: 16px; font-weight: 300; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink);
+}
+
+/* Menu. Tiap butir dapat GARIS RAMBUT DI ATASNYA, itu ciri paling kentara
+   dari bar acuan dan yang bikin menunya terbaca sebagai kolom, bukan deretan
+   tautan biasa. */
+.hero-nav { display: flex; align-items: stretch; gap: 34px; }
+.hero-nav a {
+  font-size: 14px; font-weight: 200; letter-spacing: .06em;
+  text-transform: none; color: var(--ink-50);
+  border-top: var(--rambut) solid var(--ink-20);
+  padding-top: 10px;
+  transition: color .18s ease, border-color .18s ease;
+}
+.hero-nav a:hover { color: var(--ink); border-top-color: var(--ink); }
+.hero-nav a[role="button"] { cursor: pointer; }
+
+/* =====================================================================
+   HERO
+   Kanvasnya TIDAK disentuh, dua duanya tetap jalan. Yang berubah cuma warna
+   pitanya, dan itu pun lewat token di :root, bukan lewat JS.
+   ===================================================================== */
 .hero {
-  position: relative; width: 100%; height: 100vh; min-height: 600px; max-height: 940px;
-  overflow: hidden; background: var(--paper); color: var(--ink); isolation: isolate;
+  position: relative; z-index: 1;
+  width: 100%; height: 100vh; min-height: 600px; max-height: 940px;
+  overflow: hidden; background: var(--paper); color: var(--ink);
+  isolation: isolate;
+}
+
+/* ---- Bagian yang saling menumpuk waktu digulir ----
+   Hero diam di tempat, Showcase naik menutupinya, lalu Showcase ikut diam
+   dan Team naik menutupi Showcase. Semuanya position: sticky, tanpa skrip.
+
+   Hero pakai top 0 sebab tingginya pas satu layar. Showcase TIDAK BISA pakai
+   top 0, isinya lebih tinggi dari satu layar dan dasarnya akan terkunci di
+   luar layar. Yang dipakai top bernilai NEGATIF setinggi kelebihannya,
+   diukur anim.js. Jangan tergoda memakai bottom 0, sudah diuji di Chrome,
+   untuk elemen yang lebih tinggi dari layar aturan itu tidak menahan apa apa.
+
+   Hero DILEWATI di layar pendek, sebab min-height 600 membuatnya lebih
+   tinggi dari layarnya sendiri dan dasarnya jadi tak terjangkau. */
+@media (min-height: 620px) {
+  .hero { position: sticky; top: 0; }
 }
 .hero-contour, .hero-wind { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hero-contour { z-index: 1; }
 .hero-wind { z-index: 2; }
 
-/* navbar overlay */
-.hero-top {
-  /* DIBEKUKAN, dan latarnya TIDAK ADA sampai dibutuhkan.
-     Bidang hitamnya digambar di .hero-bar::before, bukan di sini, sebab yang
-     harus memudar cuma bidangnya. Kalau opacity dipasang di elemen ini,
-     tulisan dan lambangnya ikut pudar. */
-  position: fixed; z-index: 50; top: 0; left: 0; right: 0;
-  background: transparent;
-}
-/* Brand kiri, menu MENTOK KANAN. Diminta user. Dulu tiga kolom dengan menu
-   di tengah dan kolom ketiga kosong sebagai penyeimbang, penyeimbang itu
-   sudah tidak perlu lagi dan penandanya ikut dibuang dari index.html. */
-.hero-bar {
-  position: relative;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 20px; height: 70px;
-  /* TANPA garis tinta, dan sejak sekarang tanpa pita cyan juga.
-     Dua duanya dibuang atas permintaan user. */
-  /* SATU SATUNYA yang tidak memakai --gutter mentah, dan ini disengaja.
-     Lambang bar harus segaris dengan huruf P pada "Precise", padahal baris
-     judul itu sendiri digeser 2% dari lebar isi hero. Jadi angkanya
-     gutter + 2% x (100vw - 2 x gutter) = 0.96 x gutter + 2vw.
-     Sekarang DITURUNKAN dari token, bukan angka mati 5.072vw, jadi begitu
-     --gutter diganti bar ini ikut sendiri dan lambangnya tetap di atas P.
-     Kalau mau bar ini pun bermargin sama persis, syaratnya geseran 2% pada
-     .hero-title .hl-1 dibuang dulu. */
-  padding: 0 calc(0.96 * var(--gutter) + 2vw);
-}
-/* BIDANG BAR, dan dia LAPIS PALING BAWAH.
-   Susunannya diminta user, paling atas tombol dan lambang, di bawahnya baru
-   bidang ini. Digambar lewat ::before supaya tidak menambah elemen di markup,
-   dan menembus tepi ke tepi sebab bar memang begitu.
-   Yang memudar cuma bidang ini, bukan seluruh bar. Kalau opacity dipasang di
-   .hero-top, tulisan dan lambangnya ikut pudar dan itu bukan yang diminta.
-
-   CYAN TEMBUS PANDANG plus blur, diminta user. Dulu --ink pekat.
-   Perhatikan, 75 persennya ada di WARNANYA lewat color-mix, BUKAN di opacity
-   elemennya. Kalau ditaruh di opacity, blur-nya ikut diencerkan dan hasilnya
-   bukan kaca buram tapi kabut tipis. Opacity elemen tetap dipakai untuk
-   memudarkan masuk keluar, dari 0 ke 1.
-   Baris background pertama itu cadangan buat browser tanpa color-mix,
-   hasilnya cyan pekat tanpa tembus pandang, jelek tapi tidak rusak. */
-.hero-bar::before {
-  content: ""; position: absolute; inset: 0; z-index: 0;
-  background: var(--lime);
-  background: color-mix(in srgb, var(--lime) 75%, transparent);
-  /* Satu angka ini yang mengatur seberapa buram kacanya. */
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  opacity: 0;
-  transition: opacity .3s ease;
-}
-/* Isi bar dinaikkan di atas bidangnya. Tanpa ini bidang hitam menutupi
-   tulisan, sebab dia digambar belakangan. */
-.hero-bar > * { position: relative; z-index: 1; }
-
-/* Muncul waktu disorot, DAN waktu hero sudah terlewat. Kelas .padat dipasang
-   JS, lihat anim.js. Dua duanya memakai jalur yang sama supaya transisinya
-   tidak pernah bertabrakan. */
-.hero-bar:hover::before,
-.hero-top.padat .hero-bar::before { opacity: 1; }
-
-/* ---- Warna isi bar, dan kenapa hampir semuanya TIDAK berubah lagi ----
-
-   Sejak bidangnya jadi cyan, seluruh pembalikan warna yang dulu ada di sini
-   DIBUANG, bukan disesuaikan. Alasannya, cyan itu warna TERANG, hampir
-   seterang kertas. Jadi latar di belakang tulisan sekarang terang di dua
-   duanya, waktu bidangnya belum muncul yang di belakang hero putih, waktu
-   sudah muncul yang di belakang cyan. Tulisan gelap benar di dua duanya.
-
-   Dulu berbeda sebab bidangnya --ink yang gelap pekat, jadi tulisan memang
-   HARUS berbalik terang. Kalau aturan lama itu dibiarkan, tulisan --paper
-   akan mendarat di atas cyan dan praktis hilang, rasio kontrasnya cuma
-   sekitar 1,4 banding 1.
-
-   Yang tersisa cuma SATU pembalikan, isian lambangnya. Lihat di bawah. */
-.hero-bar .brand-name { color: var(--ink); }
-
-/* ISIAN LAMBANG, dan ini SATU SATUNYA yang masih harus dibalik.
-   Kotak lambang isinya --lime, warna yang sama persis dengan bidang bar
-   sekarang. Cyan di atas cyan itu sama saja dengan tidak digambar, kotaknya
-   lenyap dan yang tersisa cuma garis tepinya.
-   Jadi begitu bidangnya muncul, isian kotaknya dibalik jadi --paper supaya
-   bentuknya tetap terbaca. Garis tepi dan bayangannya TETAP --ink, jangan
-   ikut dibalik, dua duanya justru yang menjaga kotaknya kelihatan.
-   Ini jebakan yang sama dengan tinta-di-atas-tinta yang sudah kena tiga
-   kali, cuma warnanya yang berganti. */
-.brand-mark { transition: background-color .3s ease; }
-.hero-bar:hover .brand-mark,
-.hero-top.padat .brand-mark { background: var(--paper); }
-/* Susunan dan gaya menu mengikuti acuan yang dikirim user.
-   Ini SATU SATUNYA tempat yang keluar dari pola "label kecil itu mono huruf
-   besar". Di acuan menunya huruf biasa, agak besar, dan redup, jadi di sini
-   pakai --font-ui dan --variant. Pola mono huruf besar tetap berlaku di
-   tempat lain. */
-.hero-nav { display: flex; gap: 30px; }
-.hero-nav a {
-  font-family: var(--font-ui); font-weight: 700; font-size: 16px;
-  letter-spacing: 0; text-transform: none; color: var(--variant);
-  transition: color .12s ease;
-}
-.hero-nav a:hover { color: var(--ink); }
-.hero-nav a[role="button"] { cursor: pointer; }
-/* .live dan .live-dot sekarang TIDAK DIPAKAI, penandanya sudah dicabut dari
-   index.html waktu top bar dirapikan jadi 3 menu. Aturannya sengaja
-   ditinggal supaya gampang dipasang lagi kalau berubah pikiran. */
-.live { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
-.live-dot { width: 9px; height: 9px; background: var(--lime); border: 2px solid var(--ink); border-radius: 50%; animation: livepulse 1.8s ease-in-out infinite; }
-
-/* ---- Isi hero, tagline raksasa lalu satu tombol di bawah kanan ----
-   Sengaja TIDAK memakai .wrap, sebab teksnya harus menembus lebar layar
-   seperti di acuan, bukan terkurung 1080 px. */
 .hero-inner {
   position: absolute; z-index: 10; inset: 0;
   display: flex; flex-direction: column; justify-content: flex-end;
-  padding: 96px var(--gutter) 6vh; gap: 4.5vh; pointer-events: none;
+  padding: 96px var(--gutter) 64px; gap: 40px; pointer-events: none;
 }
 .hero-inner a { pointer-events: auto; }
 
+/* Judul hero. Ukurannya DITURUNKAN jauh dari yang lama, dulu 18,7vw sampai
+   370px. Di gaya seringan ini huruf sebesar itu berubah jadi bidang hitam,
+   bukan tulisan, dan seluruh ruang kosong yang jadi inti gayanya hilang.
+
+   Bentuknya SENGAJA tetap huruf kecil, tidak ikut aturan huruf besar seperti
+   judul lain. Alasannya satu, animasi titik huruf i cuma hidup di huruf
+   kecil, dan user minta animasi hero dipertahankan. Kalau suatu saat mau
+   ikut acuan sepenuhnya, tambahkan text-transform: uppercase di sini, dan
+   sadari titiknya akan mati. */
 .hero-title {
-  font-family: var(--font-display); font-weight: 700; font-size: clamp(44px, 18.7vw, 370px);
-  line-height: .82; letter-spacing: -.035em; margin: 0;
-  /* Tinta lagi. "Precise" dan titik setelah "Forecast" ikut warna ini,
-     yang teal cuma kata "Forecast" lewat .glow. */
+  font-weight: 200;
+  font-size: clamp(40px, 8.6vw, 124px);
+  line-height: 1.06; letter-spacing: .06em; margin: 0;
   color: var(--ink);
 }
-/* tiap baris blok sendiri supaya bisa masuk bergiliran, dan bisa digeser
-   sendiri sendiri seperti di acuan */
 .hero-title .hl { display: block; }
 .hero-title .hl-in { display: block; }
-/* Potongan judul. inline-block WAJIB, transform tidak berlaku pada elemen
-   inline biasa. Tidak ada spasi di antara potongan di HTML, jadi lebarnya
-   tetap sama dengan kata utuh. */
 .hero-title .pc { display: inline-block; }
-/* Batang i tanpa titik. Titiknya menyusul, dibawa dari "Forecast." */
-.hero-title .pc-i { }
 .hero-title .fc-dot { color: var(--ink); }
-/* Slot titik menampung DUA titik di tempat yang sama persis. Yang pertama
-   ditendang huruf t dan pergi jadi titik huruf i, yang kedua di-stamp
-   belakangan sebagai penggantinya. Yang kedua absolut di 0,0 slot, jadi titik
-   awal gambarnya sama dengan yang pertama tanpa menambah lebar baris.
-   .fc-dot2 SENGAJA tidak berkelas .pc. Dengan begitu dia tetap tersembunyi di
-   jalur tanpa animasi, di mana titik aslinya memang tidak ke mana mana. */
 .hero-title .fc-slot { display: inline-block; position: relative; }
-.hero-title .fc-dot2 {
-  position: absolute; left: 0; top: 0;
-  color: var(--ink); opacity: 0;
-}
-/* Angka ini hasil MENGUKUR lebar huruf Archivo Black, bukan tebakan.
-   Rasio lebar per 1px font pada Space Grotesk 700, letter-spacing -.035em:
-   "Precise" 3.2670, "Forecast." 4.2100. Archivo Black dulu 3.8820 dan 4.8341,
-   jadi huruf ini 13 persen lebih ramping dan ukurannya dinaikkan 16.3 -> 18.7vw
-   supaya ujung kanannya berhenti di tempat yang sama.
-   Sekarang baris 2 yang lebih panjang (dulu sebaliknya), jadi indentnya
-   turun dari 22% ke 10% supaya ujung kanannya tetap menyisakan udara
-   yang sama seperti versi lama, sekitar 120 px pada layar 1440. */
-.hero-title .hl-1 { margin-left: 2%; }
-.hero-title .hl-2 { margin-left: 10%; }
-.hero-title .glow { color: var(--primary); }
+.hero-title .fc-dot2 { position: absolute; left: 0; top: 0; color: var(--ink); opacity: 0; }
+/* Indent baris DIBUANG. Itu peninggalan judul raksasa yang harus dipatahkan
+   iramanya. Blok kiri rata lebih tenang dan lebih dekat ke acuan. */
+.hero-title .hl-1 { margin-left: 0; }
+.hero-title .hl-2 { margin-left: 0; }
 
-.hero-foot { display: flex; justify-content: flex-end; }
+.hero-foot { display: flex; justify-content: flex-start; }
 
-/* ---- Tombol pil, neubrutalis tapi membulat penuh ---- */
+/* ---- Tombol pil ----
+   Satu satunya bentuk tombol di halaman ini. Garis rambut, sudut penuh
+   membulat, huruf kecil dan ringan, ikon panah di kanan. Tidak ada isian,
+   tidak ada bayangan, tidak ada yang bergerak turun waktu ditekan. */
 .pill {
-  display: inline-flex; align-items: center; cursor: pointer;
-  font-family: var(--font-ui); font-weight: 700; white-space: nowrap;
-  background: var(--surface); color: var(--ink);
-  border: var(--bw) solid var(--ink); border-radius: var(--radius-pill);
-  box-shadow: var(--shadow);
-  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  display: inline-flex; align-items: center; gap: 12px; cursor: pointer;
+  font-weight: 200; white-space: nowrap;
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--ink-20); border-radius: 999px;
+  transition: border-color .2s ease, background .2s ease;
 }
-.pill:hover { transform: translate(3px, 3px); box-shadow: var(--shadow-sm); background: var(--lime); color: var(--on-lime); }
-.pill:active { transform: translate(6px, 6px); box-shadow: none; }
-.pill-ico {
-  display: grid; place-items: center; flex: none;
-  background: var(--lime); color: var(--on-lime);
-  border: 2px solid var(--ink); border-radius: 50%;
-}
-.pill:hover .pill-ico { background: var(--surface); }
-
-.pill--lg { font-size: clamp(17px, 1.5vw, 22px); gap: 16px; padding: 10px 10px 10px 28px; }
-.pill--lg .pill-ico { width: 2.05em; height: 2.05em; }
-.pill--lg .material-symbols-outlined { font-size: 1.15em; }
-
-.pill--sm { font-size: 13px; gap: 10px; padding: 6px 6px 6px 16px; box-shadow: var(--shadow-sm); }
-.pill--sm:hover { box-shadow: 2px 2px 0 0 var(--ink); }
-.pill--sm .pill-ico { width: 2em; height: 2em; }
-.pill--sm .material-symbols-outlined { font-size: 1.1em; }
-
-@keyframes livepulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.pill:hover { border-color: var(--ink); background: var(--ink-5); }
+.pill-ico { display: grid; place-items: center; flex: none; }
+.pill--lg { font-size: 14px; letter-spacing: .06em; padding: 12px 24px; }
+.pill--lg .material-symbols-outlined { font-size: 18px; }
+.pill--sm { font-size: 12px; letter-spacing: .04em; padding: 8px 18px; }
+.pill--sm .material-symbols-outlined { font-size: 16px; }
 
 /* ---- Keadaan awal animasi GSAP ----
-   Hanya berlaku kalau JS hidup. Kalau JS mati atau gagal, teksnya tetap tampil. */
+   Hanya berlaku kalau JS hidup, kalau tidak teksnya tetap tampil. */
 .js-anim .hero-top [data-anim="top"],
 .js-anim .hero-inner [data-anim="fade"],
 .js-anim .hero-title .pc,
@@ -318,485 +312,250 @@ a { color: inherit; text-decoration: none; }
   .js-anim [data-sc] { opacity: 1; }
 }
 
-/* .btn sekarang TIDAK DIPAKAI markup mana pun. Tombol Buka Atmosight dan Buka
-   Smokewatch dibuang atas permintaan user, dan tugasnya diambil alih .sc-nama.
-   Aturannya sengaja ditinggal, dia komponen dasar dan bagian #tentang serta
-   footer yang masih hidden hampir pasti membutuhkannya waktu dibuka nanti. */
-.btn {
-  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
-  font-family: var(--font-ui); font-weight: 700; font-size: 15px; border-radius: var(--radius-pill);
-  padding: 12px 22px; border: var(--bw) solid var(--ink); box-shadow: var(--shadow);
-  background: var(--surface); color: var(--ink); transition: transform .1s ease, box-shadow .1s ease;
+/* =====================================================================
+   SHOWCASE
+   ===================================================================== */
+#showcase {
+  padding: 88px 0 112px;
+  /* Titik lengketnya DIUKUR anim.js, lihat blok "Bagian yang menumpuk" di
+     sana. Kalau skripnya gagal, nilainya auto dan bagian ini bergulir biasa,
+     tidak ada yang rusak, cuma tumpukannya hilang. */
+  position: sticky; top: var(--sc-lengket, auto); z-index: 2;
+  /* Latarnya WAJIB pekat, dia menutupi hero. */
+  background: var(--paper);
+  /* Warnanya sama dengan hero, jadi tepinya perlu ditandai. Cukup garis
+     rambut, bukan garis tebal, dan TANPA sudut membulat. */
+  border-top: var(--rambut) solid var(--ink-20);
 }
-.btn:hover { transform: translate(3px, 3px); box-shadow: var(--shadow-sm); }
-.btn:active { transform: translate(6px, 6px); box-shadow: none; }
-.btn--primary { background: var(--lime); color: var(--on-lime); }
-.btn .material-symbols-outlined { font-size: 20px; }
-
-/* ---- Bagian umum ---- */
-section { padding: 30px 0; }
-.section-head {
-  display: inline-block; font-family: var(--font-mono); font-weight: 700;
-  font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--variant);
-  border-bottom: var(--bw) solid var(--ink); padding-bottom: 6px; margin-bottom: 22px;
-}
-
-/* ---- Apa itu Envirocircle (terbuka, teks mengalir di latar polos) ---- */
-.about-band { padding: 8px 0 6px; }
-.about-band h2 { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 4.4vw, 40px); margin: 0 0 14px; line-height: 1.03; max-width: 820px; }
-.about-band h2 .glow { color: var(--primary); }
-.about-band p { margin: 0 0 12px; font-size: clamp(16px, 1.9vw, 18px); max-width: 780px; }
-.about-band p:last-child { margin-bottom: 0; }
-
-/* ---- Showcase, dua kartu produk ----
-   Rasanya sengaja MINIMALIS di atas kerangka neubrutalism. Yang dipertahankan
-   cuma tiga hal yang bikin gaya ini kenal, garis 3px, bayangan keras nol blur,
-   dan tombol yang turun menempel waktu ditekan. Selain itu dikosongkan.
-   Yang dibuang dari rancangan awal: pil label di dalam sampul, dua chip, dan
-   satu kalimat panjang di tiap kartu. Sampulnya jadi satu ikon di atas bidang
-   warna lembut, bukan blok warna penuh yang menjerit. */
-#showcase { padding: 13vh 0 15vh; }
-
-/* Showcase TIDAK punya aturan margin sendiri lagi. Dulu ditimpa
-   `max-width: 1560px; padding: 0 3.2vw` supaya kartunya tidak kekecilan,
-   sekarang angka itu sudah jadi bawaan .wrap jadi tidak ada yang perlu
-   ditimpa. Hasilnya sama, kartu 647 px di layar 1440. */
 
 .sc-title {
-  font-family: var(--font-display); font-weight: 700;
-  font-size: clamp(30px, 4.6vw, 54px); line-height: 1.02; letter-spacing: -.02em;
-  margin: 0 0 14px; max-width: 15ch;
+  font-size: 28px; line-height: 1; letter-spacing: .1em; font-weight: 300;
+  text-transform: uppercase; margin: 0; max-width: 24ch;
 }
-.sc-title .glow { color: var(--primary); }
 .sc-lead {
-  margin: 0 0 52px; max-width: 52ch;
-  font-size: clamp(15px, 1.5vw, 17px); color: var(--variant);
+  margin: 0 0 56px; max-width: 62ch;
+  font-size: 16px; line-height: 28px; letter-spacing: .8px; font-weight: 200;
+  color: var(--ink-70);
 }
 
-/* ---- Korsel Showcase ----
-   Satu kartu lanskap di tengah, tetangganya mengintip terpotong di kanan,
-   keterangannya di bawah. Acuannya Showcase gsap.com.
-
-   Yang memotong tetangga itu .sc-layar dengan overflow hidden, dan dia
-   sengaja MENEMBUS margin halaman lewat margin negatif sebesar --gutter.
-   Kalau dia berhenti di margin, tetangganya terpotong di tengah halaman dan
-   tidak terbaca sebagai "masih ada lagi di luar layar". */
-/* Lebarnya DIPATOK JS, tepat selebar satu kartu ditambah sela ditambah
-   seperdelapan kartu. Dengan begitu tetangganya terpotong pas di seperdelapan
-   dan tidak ada ruang kosong menganga di antaranya.
-   Dulu blok ini menembus tepi layar lewat margin negatif. Itu memaksa kartu
-   ikut selebar layar, dan begitu kartunya dikecilkan supaya keterangan dan
-   tombol muat, tetangganya jadi kelihatan hampir seluruhnya. Dua duanya
-   keluhan user, dan sumbernya satu, lebar wadah yang dipaksa penuh. */
-.sc-korsel { position: relative; margin: 0 auto; }
-.sc-layar {
-  overflow: hidden;
-  padding: 10px 0 22px;   /* ruang buat bayangan keras, kalau 0 dia ikut terpotong */
-}
-/* Rel digeser lewat transform yang dihitung JS, BUKAN lewat scroll. Dengan
-   transform, geraknya bisa dikasih pantulan dan tidak bisa diseret setengah
-   jalan lalu berhenti di antara dua kartu. */
+/* ---- Korsel ----
+   Mekanismenya TIDAK diubah sama sekali, cuma bajunya. Lebar .sc-layar
+   dipatok anim.js selebar satu kartu ditambah sela ditambah seperdelapan
+   kartu, jadi tetangganya terpotong pas. */
+/* RATA KIRI, bukan di tengah. Lebarnya dipatok anim.js lewat maxWidth, dan
+   dengan margin auto sisanya dibagi dua sehingga kartu dan keterangannya
+   menjorok ke dalam, tidak segaris dengan judul bagian di atasnya. Di gaya
+   ini yang menahan halaman itu satu tepi kiri yang sama untuk semuanya. */
+.sc-korsel { position: relative; margin: 0; }
+.sc-layar { overflow: hidden; padding: 0 0 8px; }
 .sc-rel {
-  display: flex; align-items: stretch;
-  gap: 3vw;
+  display: flex; align-items: stretch; gap: 3vw;
   will-change: transform;
-  /* Cadangan kalau GSAP gagal dimuat atau pengguna memilih reduced-motion.
-     Waktu GSAP yang menggerakkan, properti ini tidak mengganggu sebab yang
-     dipakai transform juga dan durasinya jauh lebih pendek dari tweennya. */
   transition: transform .45s cubic-bezier(.22,.74,.28,1);
 }
-/* Batas tingginya DILEPAS lagi, kembali ke ukuran semula. Dulu dipasang
-   supaya tombol Buka Atmosight tidak jatuh di bawah lipatan. Tombol itu
-   sekarang sudah tidak ada dan keterangannya jauh lebih pendek, jadi
-   alasannya gugur dan kartunya boleh besar lagi. */
-.sc-slide {
-  flex: 0 0 auto;
-  width: min(64vw, 1000px);
-  margin: 0;
-}
-/* Kartu lanskap. Gambarnya 1400x875, rasio 1,6, jadi memang sudah lanskap
-   dan tidak perlu dipaksa aspect-ratio. */
+.sc-slide { flex: 0 0 auto; width: min(64vw, 1000px); margin: 0; }
+
+/* Kartu. Bingkainya garis rambut saja, siku, tanpa bayangan. */
 .sc-shot {
-  border: var(--bw) solid var(--ink);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  position: relative; display: block;
+  border: var(--rambut) solid var(--ink-20);
   overflow: hidden; line-height: 0;
-  transition: opacity .35s ease;
+  transition: opacity .35s ease, border-color .35s ease;
 }
 .sc-shot img { width: 100%; height: auto; display: block; }
-.sc-shot--atmos { background: #e6feff; }
-.sc-shot--smoke { background: #ddf2ee; }
+/* Alas kartu sebelum app-nya termuat. Dulu dua warna berbeda per produk,
+   sekarang satu kelabu paling tipis untuk dua duanya. */
+.sc-shot--atmos, .sc-shot--smoke { background: var(--ink-5); }
 
-/* ---- Kartu Showcase memuat app-nya SUNGGUHAN ----
-   Bukan tangkapan layar. Di dalam kartu ada iframe berisi Atmosight dan
-   Smokewatch yang betul betul jalan, dengan data hari ini.
-
-   BINGKAINYA DIRENDER PADA UKURAN DESKTOP 1400x875 LALU DIKECILKAN pakai
-   transform, bukan diberi lebar sebesar kartunya. Ini bagian yang paling
-   mudah salah. Kalau iframe-nya dibiarkan selebar kartu, app di dalamnya
-   membaca dirinya sebagai layar sempit dan pindah ke tata letak HP, lengkap
-   dengan bilah bawah dan legenda tegak. Yang tampil jadi bentuk yang sama
-   sekali lain dari kartu yang dia gantikan. Dengan dirender lebar lalu
-   dikecilkan, hasilnya persis tangkapan layar lama, cuma hidup.
-
-   1400x875 itu ukuran gambar poster yang dia timpa, rasionya 1,6, jadi
-   tingginya otomatis pas dan tidak ada yang perlu disamakan tangan.
-   Angka skalanya dihitung anim.js, sebab lebar kartu ikut vw. */
-/* display:block WAJIB. Kartunya sekarang <a>, dan <a> itu inline, sedangkan
-   aturan .sc-shot di atas memakai overflow:hidden yang tidak berlaku benar
-   pada elemen inline. */
-.sc-shot { position: relative; display: block; }
+/* ---- Kartu memuat app-nya SUNGGUHAN ----
+   Bukan tangkapan layar. BINGKAINYA DIRENDER PADA UKURAN DESKTOP 1400x875
+   LALU DIKECILKAN pakai transform, bukan diberi lebar sebesar kartunya.
+   Ini bagian yang paling mudah salah. Kalau iframe-nya dibiarkan selebar
+   kartu, app di dalamnya membaca dirinya sebagai layar sempit dan pindah ke
+   tata letak HP. Angka skalanya dihitung anim.js. */
 .sc-bingkai {
   position: absolute; top: 0; left: 0;
   width: 1400px; height: 875px;
   border: 0; display: block;
   transform-origin: top left;
-  /* Poster di bawahnya baru dilepas setelah app-nya betul betul siap, kalau
-     tidak ada sekejap kartu kosong berwarna alas peta. */
   opacity: 0; transition: opacity .45s ease;
-  /* Isinya tidak boleh menadah tetikus sama sekali. Yang menadah tudung di
-     atasnya, dan tudung itu bagian dari tautan. */
   pointer-events: none;
 }
 .sc-bingkai.siap { opacity: 1; }
-/* Bingkai yang sedang DIJEDA. display:none, BUKAN visibility atau opacity.
-   Cuma display:none yang membuat dokumen di dalam iframe tidak punya
-   kesempatan menggambar, dan itu yang menghentikan gelung partikel di
-   dalamnya. visibility:hidden dan opacity:0 tetap membiarkannya menggambar
-   penuh, cuma hasilnya tidak ditampilkan, jadi tidak menghemat apa apa.
-   App-nya TIDAK dimuat ulang, dokumennya tetap hidup di memori, jadi bangun
-   lagi tidak menarik data apa pun.
-   Kapan dipasangnya diatur anim.js, lihat blok JEDA di sana. */
+/* Bingkai yang DIJEDA. display:none, BUKAN visibility atau opacity. Cuma
+   display:none yang membuat dokumen di dalam iframe berhenti menggambar. */
 .sc-bingkai.jeda { display: none; }
-/* Tudung penadah klik. Menutup seluruh kartu di atas bingkai, dan karena dia
-   di dalam <a>, klik di mana pun membuka app-nya. Sekalian ini yang bikin
-   tombol tombol di dalam kartu tidak berfungsi, tanpa perlu melumpuhkan
-   apa pun di dalam app-nya. */
+/* Tudung penadah klik, menutup seluruh kartu di atas bingkai. */
 .sc-tudung { position: absolute; inset: 0; z-index: 3; }
-/* Yang bukan kartu aktif diredupkan, jadi jelas mana yang sedang dibicarakan
-   keterangan di bawah. Bukan disembunyikan, dia justru harus terlihat sebagai
-   ajakan untuk digeser. */
-.sc-slide:not(.aktif) .sc-shot { opacity: .45; }
+.sc-slide:not(.aktif) .sc-shot { opacity: .35; }
 
-/* Panah. Mengambang di atas kartu, gaya pil neubrutalis yang sama dengan
-   tombol lain, jadi ditekan pun terasa turun. */
+/* Panah. Lingkaran bergaris rambut, persis pola tombol geser di acuan.
+   Mengambang setengah di luar tepi korsel. */
 .sc-panah {
   position: absolute; top: 50%; transform: translateY(-50%);
-  z-index: 5; width: 54px; height: 54px;
+  z-index: 5; width: 48px; height: 48px;
   display: grid; place-items: center; cursor: pointer;
-  background: var(--surface); color: var(--ink);
-  border: var(--bw) solid var(--ink);
-  border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-sm);
-  transition: transform .1s ease, box-shadow .1s ease, opacity .2s ease;
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--ink-20); border-radius: 999px;
+  transition: border-color .2s ease, background .2s ease, opacity .2s ease;
 }
-/* Setengah menggantung di luar tepi korsel. Korselnya sekarang lebih sempit
-   dari halaman, jadi ruang di kiri kanannya lega dan panahnya tidak menutupi
-   petanya. */
-.sc-panah--kiri  { left: -27px; }
-.sc-panah--kanan { right: -27px; }
-.sc-panah:hover { background: var(--lime); color: var(--on-lime); }
-.sc-panah:active { transform: translateY(-50%) translate(3px, 3px); box-shadow: none; }
-/* Mati di ujung. Dibuat pudar dan tidak bisa ditekan, bukan disembunyikan,
-   supaya tata letaknya tidak melompat waktu ujungnya tercapai. */
-.sc-panah[disabled] { opacity: .28; cursor: default; box-shadow: none; }
-.sc-panah[disabled]:hover { background: var(--surface); color: var(--ink); }
-.sc-panah .material-symbols-outlined { font-size: 28px; }
+.sc-panah--kiri  { left: -24px; }
+.sc-panah--kanan { right: -24px; }
+.sc-panah:hover { border-color: var(--ink); background: var(--ink-5); }
+.sc-panah[disabled] { opacity: .3; cursor: default; }
+.sc-panah[disabled]:hover { border-color: var(--ink-20); background: var(--paper); }
+.sc-panah .material-symbols-outlined { font-size: 22px; }
 
-/* Keterangan di bawah kartu. Yang tidak aktif disembunyikan, dan aturan ini
-   WAJIB, sebab .sc-kap itu display flex dan flex mengalahkan bawaan browser
-   untuk atribut hidden. */
-/* Nama produk SEBARIS dengan daftar modelnya. Diminta user, dan memang lebih
-   masuk akal, chip itu menerangkan produk di sebelahnya jadi tidak perlu
-   turun baris. align-items baseline supaya chip duduk sejajar dengan garis
-   dasar huruf, bukan sejajar tengah kotak yang jauh lebih tinggi. */
-.sc-judul { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; }
-
-/* Nama produk ADALAH tombolnya sekarang. Tombol Buka Atmosight dan Buka
-   Smokewatch dibuang, diminta user, dan namanya yang menggantikan tugasnya.
-   Kotaknya ada dari awal tapi tembus pandang, jadi tata letaknya tidak
-   melompat waktu disorot. Yang berubah cuma isian warnanya.
-   Bayangan kerasnya baru muncul waktu disorot, itu yang bikin dia terasa
-   naik ke depan, sejalan dengan tombol lain di halaman ini. */
-.sc-nama {
-  font-family: var(--font-display); font-weight: 700;
-  font-size: clamp(26px, 2.6vw, 36px); line-height: 1; letter-spacing: -.01em;
-  color: var(--ink); text-decoration: none;
-  padding: 10px 16px;
-  border: var(--bw) solid var(--ink);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  box-shadow: 0 0 0 0 var(--ink);
-  transition: background .22s ease, color .22s ease,
-              box-shadow .16s ease, transform .16s ease;
-}
-.sc-nama:hover {
-  background: var(--lime);
-  color: var(--on-lime);
-  box-shadow: var(--shadow-sm);
-  transform: translate(-3px, -3px);
-}
-/* Ditekan, dia turun menempel. Aturan fisik yang sama dengan .btn dan .pill,
-   jangan dibedakan, itu yang bikin gaya ini terasa satu bahasa. */
-.sc-nama:active { transform: translate(0, 0); box-shadow: none; }
-
-.card-desc { margin: 16px 0 0; font-size: 16px; line-height: 1.6; color: var(--variant); max-width: 46ch; }
-
-/* min-height turun dari 210 ke 130. Isinya sekarang cuma dua baris, dan
-   angka lama menyisakan lubang kosong di bawahnya. Tetap perlu ADA supaya
-   tata letak tidak melompat waktu berganti produk, keterangan Smokewatch
-   chip-nya lima dan bisa membungkus jadi dua baris di layar sempit. */
-/* perspective WAJIB ada di induknya, kalau tidak rotationX cuma memipihkan
-   keterangan lurus lurus, bukan memutarnya. Angkanya sengaja longgar, 900 px,
-   supaya putarannya terbaca sebagai membalik dan bukan menerjang layar.
-   min-height itu yang menahan tata letak waktu keterangannya berganti,
-   tanpa dia bagian bawah halaman tersentak tiap kartu digeser. */
-.sc-ket { margin: 30px auto 0; min-height: 130px; perspective: 900px; }
+/* ---- Keterangan di bawah kartu ---- */
+.sc-ket { margin: 40px 0 0; min-height: 130px; perspective: 900px; }
 .sc-kap {
   display: flex; flex-direction: column; align-items: flex-start;
-  /* Punggungnya tidak perlu digambar, dan membiarkannya digambar bikin
-     tulisannya sekilas terbaca terbalik di tengah putaran. */
   backface-visibility: hidden;
 }
 .sc-kap[hidden] { display: none; }
+.sc-judul { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px 20px; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 0; }
+/* Nama produk. Kotaknya DIBUANG, sekarang dia judul huruf besar berjarak
+   lebar seperti judul bagian, dengan garis rambut yang muncul waktu disorot. */
+.sc-nama {
+  font-size: 28px; line-height: 1; letter-spacing: .1em; font-weight: 300;
+  text-transform: uppercase; color: var(--ink);
+  padding-bottom: 6px;
+  border-bottom: 1px solid transparent;
+  transition: border-color .2s ease;
+}
+.sc-nama:hover { border-bottom-color: var(--ink); }
+
+.card-desc {
+  margin: 20px 0 0; max-width: 56ch;
+  font-size: 16px; line-height: 28px; letter-spacing: .8px; font-weight: 200;
+  color: var(--ink-70);
+}
+
+/* Chip nama model. Pil garis rambut, huruf kecil dan ringan. */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .chip {
-  font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: .02em;
-  padding: 4px 10px; border: 2px solid var(--ink); background: var(--paper);
-  border-radius: var(--radius-pill);
+  font-size: 11px; line-height: 1; letter-spacing: .08em; font-weight: 200;
+  text-transform: uppercase; color: var(--ink-50);
+  padding: 7px 12px; border: var(--rambut) solid var(--ink-20);
+  border-radius: 999px; background: transparent;
 }
 
-/* Tombol TETAP varian beraksen. Di kartu yang sudah dikosongkan begini dia
-   satu satunya warna kuat, jadi justru jelas mana yang harus diklik.
-   Minimalis itu menyisakan yang perlu, bukan memucatkan semuanya. */
-
-
-/* ---- Tim, daftar nama berhuruf raksasa di atas latar hitam ----
-   BUKAN kartu lagi. Kartu itu bentuk paling netral, dan Showcase persis di
-   atasnya sudah memakai bentuk itu. Dua bagian berturut turut dengan bentuk
-   sama membuat halaman terasa berhenti berkembang. Hero bicara lewat huruf
-   raksasa, jadi bagian ini meneruskan bahasa yang sama.
-   Pitanya tetap MENEMBUS lebar layar sebab latarnya di <section>, sedangkan
-   isinya duduk di .wrap jadi tepinya segaris dengan sisa halaman. */
-#team { background: var(--ink); color: var(--paper); padding: 12vh 0 0; }
-
-/* .section-head yang sama dengan Showcase, cuma warnanya dibalik supaya
-   terbaca di atas tinta. Komponennya dipakai ulang, bukan dibikin baru. */
-#team .section-head { color: var(--lime); border-bottom-color: var(--paper); }
-
+/* =====================================================================
+   TIM
+   Satu satunya pita gelap di halaman, dan itu disengaja. Di acuan pun cuma
+   ada satu bidang berwarna penuh di antara halaman yang serba putih. Tanpa
+   dia halaman jadi rata dari atas sampai bawah, dan tumpukan gulir yang
+   terakhir kehilangan bedanya.
+   ===================================================================== */
+#team {
+  background: var(--sisi); color: var(--sisi-teks);
+  padding: 88px 0 0;
+  position: relative; z-index: 3;
+}
 .team-head {
-  display: flex; align-items: flex-end; justify-content: space-between;
-  gap: 30px; flex-wrap: wrap; margin: 0 0 6vh;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 10px; padding: 16px 0; margin-bottom: 48px;
+  border-bottom: var(--rambut) solid var(--sisi-20);
 }
+#team .section-head { color: var(--sisi-50); }
 .team-title {
-  font-family: var(--font-display); font-weight: 700;
-  font-size: clamp(28px, 4.4vw, 46px); line-height: 1.02;
-  letter-spacing: -.02em; margin: 0; max-width: 16ch;
+  font-size: 28px; line-height: 1; letter-spacing: .1em; font-weight: 300;
+  text-transform: uppercase; margin: 0; color: var(--sisi-teks);
 }
 
-/* Satu orang satu BARIS, dipisah garis 3px warna kertas. Sama tegasnya dengan
-   kartu tapi tanpa kotak, jadi tidak kembar dengan Showcase.
-   Garisnya --paper, bukan --ink, sebab di atas latar tinta garis tinta lenyap. */
+/* Baris nama. Fotonya TIDAK menjulur menimpa baris di atasnya lagi, itu
+   perilaku gaya lama. Sekarang dia duduk di kolomnya sendiri, rata bawah,
+   dan barisnya yang memberi ruang. */
 .team-row {
-  position: relative; display: grid; align-items: center;
-  /* Dua kolom. Peran, kalimat pengantar, dan nomor urut semuanya DIBUANG atas
-     permintaan user. Yang tersisa cuma nama dan foto. */
-  grid-template-columns: 1fr 210px;
-  gap: 24px; min-height: 190px;
-  border-top: var(--bw) solid var(--paper);
-  /* Diangkat waktu disorot, seperti berkas dicabut dari raknya.
-     ANGKATNYA bukan angka karangan. Ubin foto 250px duduk di baris setinggi
-     190px, jadi dia menjulur 60px ke atas dan menutupi 60px paling bawah foto
-     baris di atasnya. Naik setinggi 60px itulah yang membuat foto baris ini
-     terbebas dan terlihat utuh. Kalau tinggi baris atau tinggi ubin diubah,
-     angka ini WAJIB ikut.
-     Bayangannya sengaja diberi jeda 0.16s, jadi urutannya terbaca, naik dulu
-     baru maju ke depan. Kalau serempak, dua gerakan itu saling menutupi. */
-  --angkat: 60px;
-  transition: transform .32s cubic-bezier(.22, .74, .28, 1),
-              background .18s ease,
-              box-shadow .2s ease .16s;
-  will-change: transform;
+  position: relative;
+  display: grid; grid-template-columns: 1fr 190px;
+  align-items: end; gap: 32px;
+  padding: 36px 0;
+  border-top: var(--rambut) solid var(--sisi-20);
+  transition: background .2s ease;
 }
-.team-row:last-child { border-bottom: var(--bw) solid var(--paper); }
-
-/* Huruf raksasa, ini pengait ke hero. Ukurannya vw supaya ikut lebar layar. */
+/* Baris pertama TIDAK bergaris atas. Kepala bagian di atasnya sudah punya
+   garis sendiri, dan dua garis sejajar berjarak dekat terbaca sebagai salah
+   cetak, bukan sebagai pemisah. */
+/* :first-of-type TIDAK BISA dipakai di sini, dia menghitung per nama tag dan
+   .team-head kebetulan juga div, jadi yang kena justru kepala bagiannya.
+   Yang benar menunjuk baris yang berdiri PERSIS sesudah kepala bagian. */
+.team-head + .team-row { border-top: 0; }
+.team-row:last-child { border-bottom: var(--rambut) solid var(--sisi-20); }
 .team-name {
-  font-family: var(--font-display); font-weight: 700;
-  font-size: clamp(34px, 6.6vw, 104px); line-height: .9;
-  letter-spacing: -.035em; margin: 0;
-  transition: color .18s ease;
+  font-size: clamp(30px, 5vw, 68px); line-height: 1;
+  letter-spacing: .1em; font-weight: 200; text-transform: uppercase;
+  margin: 0; color: var(--sisi-70);
+  transition: color .2s ease;
 }
+.team-row:hover .team-name { color: var(--sisi-teks); }
 
-/* Foto MENEMBUS garis, kepalanya naik melewati batas baris. Gerakan yang satu
-   keluarga dengan bayangan keras, sesuatu yang keluar dari kotaknya.
-   ABSOLUT, disengaja. Kalau dia ikut mengisi grid, tinggi barisnya ditarik
-   jadi setinggi foto dan efek menembusnya hilang. Kolom keempat tetap 210px
-   jadi ruangnya sudah disediakan dan nama tidak pernah tertabrak.
-   Alasnya cyan dan itu BUKAN hiasan, ketiga potongan foto ini abu abu gelap
-   dan latarnya sudah dibuang, kalau ditaruh langsung di atas hitam badan dan
-   bajunya lenyap. Kartu putih yang dulu sebenarnya sedang mengerjakan itu. */
+/* Ubin foto. Alasnya kelabu SETENGAH, bukan terang dan bukan gelap. Dua dari
+   tiga foto itu potongan berbaju gelap dan satu berbaju putih, jadi alas
+   yang terlalu terang menenggelamkan yang putih dan alas yang terlalu gelap
+   menenggelamkan yang gelap. Kelabu setengah menampung dua duanya. */
 .team-photo {
-  position: absolute; right: 0; bottom: 0; width: 210px; height: 250px;
-  background: var(--lime); border: var(--bw) solid var(--paper);
-  border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0;
-  overflow: hidden; line-height: 0;
-  transition: background .18s ease, border-color .18s ease;
+  width: 190px; height: 230px; justify-self: end;
+  background: #b9b9b9; overflow: hidden; line-height: 0;
 }
-/* Gradasi memudar TIDAK dipakai lagi. Dulu gunanya menyembunyikan ujung foto,
-   di sini ujungnya memang dipotong tegas oleh tepi ubinnya. */
 .team-photo img {
   width: 100%; height: 100%; object-fit: cover; object-position: 50% 0%;
   display: block; filter: grayscale(1) contrast(1.05);
 }
 
-/* ==== Disorot, barisnya DIANGKAT lalu MAJU KE DEPAN ====
-   Dua gerakan berurutan, seperti berkas ditarik naik dari rak lalu dibawa
-   maju. Naiknya memakai transform, majunya diwakili z-index yang meloncat
-   plus bayangan keras yang muncul belakangan.
-   z-index butuh position, dan .team-row memang sudah position: relative.
-   Tanpa loncatan itu barisnya tetap tertimpa baris di bawahnya, sebab dalam
-   aliran normal yang belakangan digambar selalu menang.
-   Warnanya sekalian berbalik total jadi cyan dengan huruf tinta. Perubahan
-   yang setengah setengah bikin gaya ini kehilangan sifat fisiknya. */
-.team-row:hover {
-  background: var(--lime);
-  z-index: 3;
-  /* Bayangan keras nol blur, ini yang mewakili MAJU. Warnanya --primary-deep,
-     cyan yang digelapkan, BUKAN --ink. Tinta di atas pita yang juga tinta
-     sama saja dengan tidak menggambar apa apa, jebakan yang sudah kena sekali
-     waktu bayangan kartu tim dulu. */
-  box-shadow: 12px 12px 0 0 var(--primary-deep);
-}
-/* NAIKNYA cuma untuk baris yang fotonya memang tertutup, yaitu semua kecuali
-   yang terakhir. Foto baris terakhir tidak ada yang menimpa, dia sudah utuh
-   dari awal, jadi mengangkatnya cuma gerakan tanpa alasan. Sesuai permintaan
-   user, yang naik hanya Alvin dan Andreas. */
-.team-row:not(:last-child):hover { transform: translateY(calc(-1 * var(--angkat))); }
-.team-row:hover .team-name { color: var(--ink); }
-.team-row:hover .team-photo { background: var(--ink); border-color: var(--ink); }
-
-/* ---- Footer ---- */
-footer {
-  margin-top: 24px; background: var(--ink); color: var(--surface);
-  border-top: var(--bw) solid var(--ink);
-}
-footer .wrap { padding: 30px var(--gutter); display: flex; flex-wrap: wrap; gap: 20px 40px; justify-content: space-between; }
-footer .f-brand { font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--lime); }
-footer .f-note { font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: var(--surface-high); max-width: 460px; }
-footer a.f-link { color: var(--lime); border-bottom: 2px solid var(--lime); }
-
-/* ---- Responsif ---- */
-/* Tak perlu aturan 900px lagi. Ukuran dan indent judul semuanya vw dan persen,
-   jadi perbandingannya tetap sama di lebar berapa pun sampai breakpoint HP. */
-@media (max-width: 720px) {
-  /* Menu TIDAK disembunyikan lagi di HP. Dulu boleh sembunyi sebab masih ada
-     pil Get Product di top bar, sekarang menu ini satu satunya isi bar, kalau
-     ikut sembunyi barnya tinggal lambang doang. Jaraknya yang dirapatkan.
-     Diukur di 390 px, lambang 121 + 20 + tiga menu 120 = 261 px, muat lega. */
-  .live { display: none; }
-  /* Menu di tengah TIDAK MUAT di HP. Terukur, brand 131 px dan menu 120 px
-     tak bisa ditengahkan dalam ruang 338 px tanpa menabrak brand. Jadi di
-     sini polanya berubah, brand kiri menu kanan. */
-  /* Di HP tokennya 5vw, dan di lebar ini baris judul TIDAK digeser lagi
-     (hl-1 margin 0). Jadi bar boleh memakai --gutter mentah, tanpa turunan
-     0.96 x + 2vw seperti di layar lebar, dan lambang tetap segaris dengan P. */
-  :root { --gutter: 5vw; }
-  .hero-bar { padding: 0 var(--gutter); }
-  /* Pitanya tetap menembus tepi ke tepi, jadi tidak ada yang perlu disetel. */
-  .hero-nav { gap: 18px; }
-  .hero-nav a { font-size: 14px; }
-  .hero-inner { padding: 88px var(--gutter) 7vh; gap: 3.5vh; }
-  /* Di HP padding hero jadi 5vw, jadi ruang isinya 90vw bukan 93,6vw.
-     19vw dipilih supaya "Forecast." berhenti menyisakan sekitar 8vw. */
-  .hero-title { font-size: clamp(40px, 19vw, 128px); }
-  .hero-title .hl-1 { margin-left: 0; }
-  .hero-title .hl-2 { margin-left: 8%; }
-  .hero-foot { justify-content: flex-start; }
-  /* Di layar sempit foto kembali IKUT ALIRAN, absolut cuma bikin tabrakan.
-     Peran turun ke bawah nama, dan nomornya dirapatkan. */
-  .team-row { grid-template-columns: 1fr 120px; min-height: 140px; gap: 14px; }
-  /* Di layar sempit foto sudah ikut aliran, tidak ada yang menjulur dan tidak
-     ada yang tertutup, jadi tidak ada yang perlu diangkat. Yang tersisa
-     cuma warna dan bayangannya. */
-  .team-row:not(:last-child):hover { transform: none; }
-  .team-photo { position: static; grid-column: 2;
-                width: auto; height: 170px; align-self: end; }
-  .team-head { margin-bottom: 4vh; }
-  #showcase { padding: 9vh 0 11vh; }
-  /* Di HP 64vw itu kekecilan, kartunya jadi perangko. Dilebarkan sampai
-     hampir selebar layar, tetangganya cukup mengintip tipis saja. */
-  .sc-slide { width: 86vw; }
-  .sc-panah { width: 44px; height: 44px; }
-  .sc-panah .material-symbols-outlined { font-size: 22px; }
-  .sc-panah--kiri  { left: 4px; }
-  .sc-panah--kanan { right: 4px; }
-  .sc-ket { min-height: 170px; }
-  .sc-judul { gap: 10px 12px; }
-  .sc-lead { margin-bottom: 34px; }
-  .about-band { padding: 8px 0 6px; }
-}
-
-/* HP sempit, TOP BAR SAJA. Setelah "Map" jadi "Showcase" isi bar tumbuh jadi
-   351 px dan itu LUBER mulai 375 px ke bawah, iPhone SE dan mini kena.
-   Dengan aturan di bawah isinya jadi 298,5 px dan muat sampai 320 px.
-   Diukur, bukan ditaksir, sebab Chrome headless memaksa lebar minimum 504 px
-   jadi layar sempit memang tidak bisa dipotret langsung. Cara mengukurnya,
-   isi blok ini disalin jadi berkas CSS biasa lalu ditempel di halaman probe. */
-@media (max-width: 430px) {
-  /* SATU SATUNYA pengecualian yang tersisa. Bar saja yang dirapatkan jadi
-     3vw supaya isinya muat, --gutter halaman TETAP 5vw. Kalau token yang
-     diturunkan, seluruh halaman ikut sempit padahal yang luber cuma bar. */
-  .hero-bar { padding: 0 3vw; }
-  .brand { gap: 8px; }
-  .brand-mark { width: 30px; height: 30px; }
-  .brand-mark .material-symbols-outlined { font-size: 18px; }
-  .hero-bar .brand-name { font-size: 17px; }
-  .hero-nav { gap: 12px; }
-  .hero-nav a { font-size: 13px; }
-}
+/* =====================================================================
+   FOOTER, masih hidden di markup
+   ===================================================================== */
+footer { background: var(--paper); color: var(--ink); border-top: var(--rambut) solid var(--ink-20); }
+footer .wrap { padding: 40px var(--gutter); display: flex; flex-wrap: wrap; gap: 20px 40px; justify-content: space-between; }
+footer .f-brand { font-size: 16px; font-weight: 300; letter-spacing: .12em; text-transform: uppercase; }
+footer .f-note { font-size: 14px; line-height: 22px; font-weight: 200; color: var(--ink-50); max-width: 460px; }
+footer a.f-link { color: var(--ink); border-bottom: var(--rambut) solid var(--ink-20); }
 
 /* =====================================================================
-   Ilustrasi vektor hero (cuaca + kualitas udara), neubrutalis + animasi
+   BAGIAN TENTANG, masih hidden di markup
    ===================================================================== */
-.hero-art { width: 100%; display: block; }
-.hero-art svg { width: 100%; height: auto; display: block; overflow: visible; }
+.about-band { padding: 8px 0 6px; }
+.about-band h2 {
+  font-size: 28px; line-height: 1.2; letter-spacing: .1em; font-weight: 300;
+  text-transform: uppercase; margin: 0 0 20px; max-width: 24ch;
+}
+.about-band p {
+  margin: 0 0 14px; max-width: 62ch;
+  font-size: 16px; line-height: 28px; letter-spacing: .8px; color: var(--ink-70);
+}
+.about-band p:last-child { margin-bottom: 0; }
 
-/* garis tegas khas neubrutalis */
-.ha-stroke { stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-.ha-fill-surface { fill: var(--surface); }
-.ha-fill-sky { fill: var(--surface-low); }
-.ha-fill-island { fill: var(--surface-highest); }
-.ha-fill-cyan { fill: var(--lime); }
-.ha-fill-teal { fill: var(--primary); }
-.ha-fill-ink { fill: var(--ink); }
-
-/* animasi (matikan kalau pengguna minta gerak minimal) */
-.ha-cloud-a { animation: ha-drift 9s ease-in-out infinite; }
-.ha-cloud-b { animation: ha-drift 12s ease-in-out infinite reverse; }
-.ha-sun { transform-box: fill-box; transform-origin: center; animation: ha-spin 26s linear infinite; }
-.ha-rain { animation: ha-rain 1.6s linear infinite; }
-.ha-rain-2 { animation: ha-rain 1.6s linear infinite; animation-delay: .5s; }
-.ha-rain-3 { animation: ha-rain 1.6s linear infinite; animation-delay: 1s; }
-.ha-wind { stroke-dasharray: 22 16; animation: ha-flow 2.2s linear infinite; }
-.ha-wind-2 { stroke-dasharray: 18 14; animation: ha-flow 3s linear infinite; }
-.ha-part { animation: ha-rise 4.2s ease-in infinite; }
-.ha-part-2 { animation: ha-rise 5s ease-in infinite; animation-delay: 1.1s; }
-.ha-part-3 { animation: ha-rise 4.6s ease-in infinite; animation-delay: 2.2s; }
-.ha-ring { transform-box: fill-box; transform-origin: center; animation: ha-pulse 2.4s ease-out infinite; }
-.ha-wave { stroke-dasharray: 8 6; animation: ha-flow 3.4s linear infinite; }
-
-@keyframes ha-drift { 0%,100% { transform: translateX(-10px); } 50% { transform: translateX(12px); } }
-@keyframes ha-spin { to { transform: rotate(360deg); } }
-@keyframes ha-rain { 0% { transform: translateY(-4px); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(24px); opacity: 0; } }
-@keyframes ha-flow { to { stroke-dashoffset: -76; } }
-@keyframes ha-rise { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(-96px); opacity: 0; } }
-@keyframes ha-pulse { 0% { transform: scale(.6); opacity: .9; } 100% { transform: scale(2.1); opacity: 0; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .ha-cloud-a, .ha-cloud-b, .ha-sun, .ha-rain, .ha-rain-2, .ha-rain-3,
-  .ha-wind, .ha-wind-2, .ha-part, .ha-part-2, .ha-part-3, .ha-ring, .ha-wave { animation: none; }
-  .ha-part, .ha-part-2, .ha-part-3 { opacity: 1; }
+/* =====================================================================
+   RESPONSIF
+   ===================================================================== */
+@media (max-width: 1024px) {
+  .sc-title, .sc-nama, .team-title { font-size: 24px; }
+  .team-row { grid-template-columns: 1fr 150px; }
+  .team-photo { width: 150px; height: 185px; }
 }
 
+@media (max-width: 720px) {
+  .hero-nav { gap: 20px; }
+  .hero-nav a { font-size: 12px; padding-top: 8px; }
+  .brand-name { font-size: 14px; }
+  .hero-inner { padding: 88px var(--gutter) 48px; gap: 28px; }
+  .hero-title { font-size: clamp(32px, 10.5vw, 64px); letter-spacing: .04em; }
+
+  #showcase { padding: 64px 0 80px; }
+  .sc-lead { margin-bottom: 40px; }
+  .sc-slide { width: 86vw; }
+  .sc-panah { width: 40px; height: 40px; }
+  .sc-panah--kiri  { left: 4px; }
+  .sc-panah--kanan { right: 4px; }
+  .sc-panah .material-symbols-outlined { font-size: 18px; }
+  .sc-ket { min-height: 170px; }
+  .sc-title, .sc-nama, .team-title { font-size: 20px; }
+
+  #team { padding: 64px 0 0; }
+  .team-head { margin-bottom: 32px; }
+  .team-row { grid-template-columns: 1fr 108px; gap: 16px; padding: 24px 0; }
+  .team-photo { width: 108px; height: 140px; }
+  .sec-head { margin-bottom: 28px; }
+}

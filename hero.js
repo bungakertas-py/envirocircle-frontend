@@ -434,7 +434,7 @@
       a = 0.26 + 0.60 * (s / (PSTEPS - 1));
       /* Gelap, mengikuti latar terang. Lapis angin masih dimatikan lewat
          ANGIN, ini supaya tidak rusak kalau dinyalakan lagi. */
-      wCtx.strokeStyle = "rgba(17,17,17," + a + ")";
+      wCtx.strokeStyle = "rgba(51,51,51," + a + ")";   /* sewarna --ink, dulu 17 yang lebih pekat dari tulisannya */
       wCtx.beginPath();
       for (i = 0; i < NPART; i++) {
         x0 = px[i]; y0 = py[i];
