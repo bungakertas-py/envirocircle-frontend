@@ -791,3 +791,225 @@
 
   geser(0, true);
 })();
+
+/* =====================================================================
+   PINDAH BAGIAN LEWAT MENU, DENGAN PUDAR BUKAN GULIR
+
+   Diminta user, 9 September 2026. Keluhannya menu Home, Showcase, dan Team
+   terasa TERSENDAT. Sebabnya bukan animasinya kurang halus, tapi karena
+   bagian bagiannya saling menumpuk pakai position sticky sedangkan menunya
+   masih memakai gulir mulus bawaan peramban.
+
+   Waktu digulir dari Team ke Home, peramban menempuh 2096 piksel, padahal
+   sepanjang perjalanan itu hero DIAM di tempat sebab dia lengket. Jadi yang
+   benar benar bergerak cuma Showcase dan Team yang melorot turun, dan
+   hasilnya terbaca sebagai halaman yang tersangkut, bukan berpindah.
+
+   Jadi gulirnya DIBUANG dari perpindahan menu. Yang dianimasikan lapisan
+   penutupnya, dan posisi gulirnya dipindah diam diam waktu penutup itu
+   sedang tembus pandang. Orang melihat bagian yang menutupi memudar lalu
+   bagian tujuannya muncul dari baliknya, persis yang diminta.
+
+   Kuncinya hero itu sticky top 0 dan induknya body, jadi dia TETAP menempel
+   di puncak layar sepanjang halaman, cuma tertutup Showcase dan Team.
+   Artinya begitu dua penutup itu dipudarkan, hero sudah ada di sana, tidak
+   perlu digulir ke mana mana.
+
+   Turunnya kebalikannya. Penutupnya disembunyikan dulu tanpa animasi,
+   gulirnya dipindah, baru dia dimunculkan dengan memudar masuk.
+
+   Gulir mulus di CSS SENGAJA DIBIARKAN. Kalau skrip ini gagal atau tautannya
+   tidak dikenali, tautannya tetap bekerja seperti sebelumnya, cuma tersendat
+   lagi. Tidak ada yang rusak.
+   ===================================================================== */
+(function () {
+  "use strict";
+
+  var URUT = ["top", "showcase", "team"];
+  var bagian = URUT.map(function (id) { return document.getElementById(id); });
+  if (bagian.some(function (b) { return !b; })) return;
+
+  var DURASI = 320;
+  var kurangiGerak = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function jarakDariAtas(n) {
+    var y = 0;
+    while (n) { y += n.offsetTop; n = n.offsetParent; }
+    return y;
+  }
+
+  /* PENANDA POSISI, satu di depan tiap bagian.
+
+     Ini bagian yang paling gampang salah, dan aku sudah kena dua kali.
+
+     Salah yang pertama, mengira offsetTop itu angka tata letak jadi kebal
+     terhadap sticky. TIDAK. Di Chrome offsetTop elemen yang sedang lengket
+     memulangkan posisi TEMPELNYA. Waktu halaman digulir ke Team, hero yang
+     menempel di puncak layar melaporkan offsetTop 2096 bukan 0, dan Showcase
+     melaporkan 1708 yaitu posisi tempelnya. Akibatnya menu Home menyuruh
+     halaman menggulir ke tempat yang sedang ditempatinya sendiri, jadi tidak
+     terjadi apa apa. Terbukti dengan menyadap window.scrollTo dan membaca
+     angka yang benar benar diminta.
+
+     Salah yang kedua, mengakalinya dengan melepas sticky sebentar lalu
+     memasangnya lagi. Angkanya memang jadi benar, TAPI mengutak atik posisi
+     elemen sebesar layar memicu scroll anchoring Chrome, dan dia menggeser
+     gulirnya sendiri untuk mengimbangi. Hasilnya tujuannya meleset dengan
+     angka yang BERBEDA TIAP KALI. Diuji tiga putaran berturut turut dengan
+     kode yang sama persis, Home mendarat di 2020, lalu 2096, lalu 410. Cara
+     apa pun yang mengubah tata letak sesaat harus dibuang.
+
+     Yang dipakai sekarang, kotak setinggi nol ditaruh tepat di depan tiap
+     bagian. Dia elemen biasa, tidak pernah lengket, jadi offsetTop-nya selalu
+     angka tata letak yang jujur berapa pun posisi gulirnya. Tinggi nol jadi
+     dia tidak menambah apa apa, dan tidak ada satu pun gaya yang diubah waktu
+     mengukur. */
+  var tanda = bagian.map(function (s) {
+    var t = document.createElement("div");
+    t.setAttribute("aria-hidden", "true");
+    t.style.cssText = "height:0;margin:0;padding:0;border:0;font-size:0;line-height:0";
+    s.parentNode.insertBefore(t, s);
+    return t;
+  });
+
+  function posisiTataLetak() { return tanda.map(jarakDariAtas); }
+
+  /* Tumpukannya cuma hidup di layar yang cukup tinggi, lihat media query
+     min-height 620px di style.css. Di bawah itu tidak ada yang menumpuk,
+     jadi tidak ada yang perlu dipudarkan dan gulir biasa memang benar. */
+  function tumpukanHidup() {
+    return getComputedStyle(bagian[0]).position === "sticky";
+  }
+
+  function indeksSekarang(pos) {
+    var y = window.scrollY, i = 0;
+    for (var k = 0; k < pos.length; k++) if (pos[k] <= y + 2) i = k;
+    return i;
+  }
+
+  /* Pindah gulir TANPA animasi.
+
+     scroll-behavior di CSS bernilai smooth dan itu berlaku juga untuk
+     window.scrollTo, jadi harus dilawan. Sempat kulawan dengan menyetel
+     scrollBehavior auto di gaya sebaris lalu mengembalikannya sesudah
+     melompat, dan itu TIDAK ANDAL. Menu Home mendarat di tempat yang beda
+     tiap kali, 988 lalu 1820 lalu 1522 dari tiga putaran dengan kode yang
+     sama, semuanya angka setengah jalan menuju nol. Itu ciri gulirnya masih
+     dianimasikan.
+
+     Yang dipakai sekarang behavior "instant" yang diminta LANGSUNG di
+     panggilannya. Nilai itu mengalahkan CSS dan tidak bergantung pada urutan
+     menyetel lalu mengembalikan gaya. Bentuk dua argumen disisakan sebagai
+     cadangan untuk peramban yang belum mengenal "instant". */
+  function lompat(y) {
+    try { window.scrollTo({ top: y, left: 0, behavior: "instant" }); }
+    catch (e) { window.scrollTo(0, y); }
+  }
+
+  function pakaiTransisi(els, nilai) {
+    els.forEach(function (s) { s.style.transition = nilai; });
+  }
+  function pakaiOpacity(els, nilai) {
+    els.forEach(function (s) { s.style.opacity = nilai; });
+  }
+  function paksaGambarUlang() { void document.body.offsetHeight; }
+
+  /* Menunggu pudarnya BENAR BENAR selesai, bukan menunggu jam.
+
+     setTimeout tidak bisa dipercaya di sini. Hero halaman ini menggambar
+     kanvas kontur dan partikel angin terus menerus, dan waktu mesinnya sibuk
+     timer 320ms terukur baru menyala di 782ms. Kalau lompatnya digantungkan
+     ke jam, dia terjadi jauh sesudah gambarnya selesai memudar dan yang
+     terlihat jeda kosong. transitionend menyala tepat waktu, dan jamnya
+     disisakan cuma sebagai jaring pengaman kalau transisinya tidak pernah
+     jalan, misalnya karena elemennya tersembunyi. */
+  function sesudahPudar(el, lalu) {
+    var sudah = false;
+    var selesai = function (e) {
+      /* transitionend MENGGELEMBUNG. Bagian ini isinya puluhan elemen yang
+         punya transisinya sendiri, dan salah satunya selesai lebih dulu maka
+         lompatnya terjadi sebelum gambarnya benar benar memudar. Jadi cuma
+         transisi opacity milik elemen ini sendiri yang dihitung. */
+      if (e && (e.target !== el || e.propertyName !== "opacity")) return;
+      if (sudah) return;
+      sudah = true;
+      el.removeEventListener("transitionend", selesai);
+      lalu();
+    };
+    el.addEventListener("transitionend", selesai);
+    setTimeout(selesai, DURASI + 120);
+  }
+
+  var sedang = false;
+
+  function pindah(ke) {
+    if (sedang) return;
+    var pos = posisiTataLetak();
+    var tujuan = pos[ke];
+    var dari = indeksSekarang(pos);
+
+    if (dari === ke || kurangiGerak || !tumpukanHidup()) { lompat(tujuan); return; }
+
+    /* Yang dipudarkan SEMUA bagian di atas yang paling bawah di antara asal
+       dan tujuan. Naik dari Team ke Home berarti Showcase dan Team, sebab dua
+       duanya menutupi hero. */
+    var a = Math.min(dari, ke), b = Math.max(dari, ke);
+    var ikut = bagian.slice(a + 1, b + 1);
+    if (!ikut.length) { lompat(tujuan); return; }
+
+    sedang = true;
+
+    if (ke < dari) {
+      /* NAIK. Penutupnya dipudarkan, tujuannya muncul dari baliknya, baru
+         gulirnya dipindah. Di tempat tujuan penutup itu sudah di bawah
+         lipatan layar, jadi mengembalikan opacity-nya tidak kelihatan. */
+      pakaiTransisi(ikut, "opacity " + DURASI + "ms ease");
+      pakaiOpacity(ikut, "0");
+      sesudahPudar(ikut[ikut.length - 1], function () {
+        lompat(tujuan);
+        pakaiTransisi(ikut, "none");
+        pakaiOpacity(ikut, "");
+        paksaGambarUlang();
+        pakaiTransisi(ikut, "");
+        sedang = false;
+      });
+    } else {
+      /* TURUN. Penutupnya disembunyikan dulu tanpa animasi, gulirnya dipindah
+         selagi dia tak terlihat, baru dia dimunculkan memudar masuk. Dua rAF
+         supaya keadaan opacity nol benar benar tergambar sebelum transisinya
+         dinyalakan, kalau cuma satu peramban bisa menggabungkan keduanya dan
+         animasinya tidak jalan. */
+      pakaiTransisi(ikut, "none");
+      pakaiOpacity(ikut, "0");
+      paksaGambarUlang();
+      lompat(tujuan);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          pakaiTransisi(ikut, "opacity " + DURASI + "ms ease");
+          pakaiOpacity(ikut, "1");
+          setTimeout(function () {
+            pakaiTransisi(ikut, "");
+            pakaiOpacity(ikut, "");
+            sedang = false;
+          }, DURASI + 40);
+        });
+      });
+    }
+  }
+
+  /* Satu pendengar di dokumen, bukan satu per tautan. Menu, lambang merek,
+     dan tombol "See it live" di hero semuanya ikut lewat jalur yang sama. */
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    if (!a) return;
+    var id = a.getAttribute("href").slice(1);
+    var ke = URUT.indexOf(id);
+    if (ke < 0) return;                 // tautan dalam halaman yang bukan bagian
+    e.preventDefault();
+    pindah(ke);
+    /* Alamatnya tetap diperbarui supaya tombol bagikan dan riwayat peramban
+       ikut benar, tapi lewat replaceState supaya tidak menumpuk riwayat tiap
+       kali orang menekan menu. */
+    if (window.history && history.replaceState) history.replaceState(null, "", "#" + id);
+  });
+})();
