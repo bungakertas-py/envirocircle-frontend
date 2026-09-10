@@ -1,7 +1,7 @@
 /* Service worker Smokewatch — cache SHELL app (berversi), data cuaca TETAP
  * online. Naikkan VERSION tiap rilis frontend agar user dapat versi terbaru
  * (cache lama dihapus saat activate). */
-const VERSION = "v13";
+const VERSION = "v14";
 const CACHE = "kertas-emisi-" + VERSION;
 
 // Saat REVIEW LOKAL, jangan cache shell sama sekali. Strategi cache-first membuat
