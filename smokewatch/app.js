@@ -55,16 +55,12 @@ const _mp = new URLSearchParams(location.search).get("model");
 const MODEL_ID = modelHidup(_mp) ? _mp : "cams";
 const MODEL = MODELS[MODEL_ID];
 
-/* SUMBER DATA DIPILIH SENDIRI SAAT MUAT. Sama ceritanya dengan Atmosight,
-   penjelasan panjangnya ada di atmosight/app.js.
-
-   Singkatnya, yang DEKAT dicoba dulu baru yang JAUH. Di GitHub Pages tidak ada
-   data lokal jadi menumpang, di hostingan sebelum server mengirim juga
-   menumpang, dan begitu server mengirim dia pindah sendiri ke data lokal.
-
-   Menumpang CUMA berlaku untuk CAMS. Model lain memakai path relatifnya
-   sendiri, sebab keluarannya memang tidak pernah ada di repo lama itu. */
-const DATA_JAUH = "https://bungakertas-py.github.io/smokewatch/backend/data/output/";
+/* SUMBER DATA, SATU SAJA.
+   Diputuskan user 10 Sep 2026, cadangan GitHub Pages DIBUANG. Datanya cuma
+   dari hostingan ini sendiri, yaitu kiriman server cirrus ITERA di
+   `../backend/<app>/data/output/<model>/`. Kalau katalognya tidak ada, situs
+   masuk mode kosong dan itu disengaja, supaya kiriman yang berhenti langsung
+   kelihatan, bukan tertutup data dari tempat lain. */
 let DATA_BASE = MODEL.base;
 /* Sumber yang akhirnya menang, dipakai badge di pojok slider. Ditaruh di sini
    supaya nilainya sudah ada sebelum katalog diambil, bukan menunggu DOM. */
@@ -72,7 +68,6 @@ let SUMBER_DEKAT = true;
 
 async function ambilKatalog() {
   const urut = [MODEL.base];
-  if (DATA_JAUH && MODEL_ID === "cams") urut.push(DATA_JAUH);
   for (const base of urut) {
     let res;
     try {
@@ -1659,15 +1654,15 @@ function seriesPlotSVG(vals, times, unit, daily, warna, pita, baku, namaY) {
 // Dua, berkasnya tinggal di repo frontend jadi BEKU, tidak pernah diperbarui
 // oleh pipeline mana pun.
 //
-// Sekarang folder model dicoba dulu. Kalau server belum mengirimnya, dia
-// mundur ke berkas lama supaya grafiknya tidak hilang mendadak. Begitu server
-// mengirim, dia pindah sendiri tanpa ada yang perlu diubah.
+// 10 Sep 2026 cadangan berkas lama itu DIBUANG, sesuai keputusan user tidak
+// ada cadangan apa pun. Arsip cuma diambil dari folder model. Kalau server
+// belum mengirimnya, grafik tren menampilkan pesan "riwayat belum cukup",
+// bukan riwayat model lain yang sudah beku.
 let arsipData = null, arsipLoading = null, arsipIdxByName = null;
 function loadArsip() {
   if (arsipData) return Promise.resolve(arsipData);
   if (!arsipLoading) {
     arsipLoading = fetch(DATA_BASE + "arsip/harian.json")
-      .then((r) => (r.ok ? r : fetch("data/arsip/harian.json")))
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d && d.places) {
@@ -2146,41 +2141,27 @@ function reopenPoint() {
 // Waktu inisiasi model (run_time GFS) dalam WIB — jam & tanggal. Kredibilitas:
 // user tahu kapan data terakhir diperbarui.
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-// Tanda ASAL DATA di badge "Last update".
-//
-// "cirrus" berarti berkasnya diambil dari hostingan ini sendiri, yaitu hasil
-// masakan server ITERA yang didorong ke sini tiap malam. "cadangan" berarti
-// catalog lokalnya menjawab 404 dan situs sedang menumpang ke keluaran yang
-// tersaji di GitHub Pages. Cuma GFS dan CAMS yang punya cadangan itu.
+// Tanda ASAL DATA di badge "Last update". Sejak cadangan GitHub Pages dibuang
+// 10 Sep 2026 sumbernya cuma satu, server cirrus ITERA lewat hostingan ini.
 function tandaiSumber() {
   const el = $("fresh-src-text"); if (!el) return;
-  el.textContent = SUMBER_DEKAT ? "cirrus" : "cadangan";
+  el.textContent = "cirrus";
   const wadah = $("fresh-src");
-  if (wadah) {
-    wadah.title = SUMBER_DEKAT
-      ? "Data dari server cirrus, lewat hostingan ini sendiri"
-      : "Data lokal tidak ada, situs memakai keluaran cadangan di GitHub Pages";
-  }
+  if (wadah) wadah.title = "Data dari server cirrus, lewat hostingan ini sendiri";
 }
 
-// Dot HIJAU kalau data yang tersaji dimasak HARI INI menurut kalender WIB,
-// MERAH kalau tidak.
+// Dot HIJAU kalau kiriman terakhir dimasak dalam 24 JAM terakhir, MERAH kalau
+// lebih lama dari itu. Diputuskan user 10 Sep 2026, menggantikan patokan hari
+// kalender WIB. Jendelanya bergulir, jadi tidak ada lagi merah palsu antara
+// tengah malam dan jam kiriman mendarat.
 //
-// Patokannya generated_at, yaitu kapan pipeline selesai memasak, bukan run_time
-// yang bisa mundur belasan jam dari itu. Run 12Z kemarin yang dimasak dan
-// dikirim dini hari tadi itu kiriman HARI INI, dan mestinya hijau.
-//
-// SATU HAL YANG PERLU DISADARI. Antara tengah malam dan kiriman malam itu
-// mendarat, sekitar pukul 02.00 WIB, tandanya memang merah walau tidak ada
-// yang rusak. Itu bukan cacat, itu memang arti pertanyaannya, "hari ini sudah
-// ada kiriman atau belum", bukan "umur datanya berapa jam".
-function segarHariIni(cat) {
+// Patokannya generated_at, kapan pipeline selesai memasak, bukan run_time yang
+// bisa mundur belasan jam dari itu. Waktu yang tak terbaca dihitung merah.
+const SEGAR_MAKS_MS = 24 * 60 * 60 * 1000;
+function segar24Jam(cat) {
   const t = cat?.generated_at || cat?.run_time;
   if (!t) return false;
-  const d = toWIB(t), kini = toWIB(new Date().toISOString());
-  return d.getUTCFullYear() === kini.getUTCFullYear()
-      && d.getUTCMonth() === kini.getUTCMonth()
-      && d.getUTCDate() === kini.getUTCDate();
+  return Date.now() - Date.parse(t) <= SEGAR_MAKS_MS;
 }
 
 function updateFreshness() {
@@ -2195,7 +2176,7 @@ function updateFreshness() {
   if (badge) {
     badge.dataset.segar = catalog.arsip
       ? "arsip"
-      : (segarHariIni(catalog) ? "ya" : "tidak");
+      : (segar24Jam(catalog) ? "ya" : "tidak");
   }
   tandaiSumber();
 }

@@ -95,46 +95,12 @@ const MODEL = MODELS[MODEL_ID];
    tudung tautan, jadi klik di mana pun membuka app-nya.
    --------------------------------------------------------------------- */
 const EMBED = new URLSearchParams(location.search).get("embed") === "1";
-/* SUMBER DATA SEMENTARA.
-   Pohon gabungan ini sengaja dikirim tanpa keluaran pipeline, dan di GitHub
-   Pages memang tidak ada yang memasak data. Supaya petanya tetap berisi,
-   datanya DITUMPANG dari keluaran repo lama yang masih hidup dan masih
-   diperbarui tiap hari.
-
-   Ini TAMBALAN, bukan susunan akhir. Begitu pipeline jalan di server sendiri,
-   kosongkan string di bawah ini dan dia otomatis balik memakai path relatif
-   `../backend/atmosight/data/output/`. Tidak ada yang lain yang perlu diubah.
-
-   Aman lintas domain, GitHub Pages mengirim `access-control-allow-origin: *`,
-   sudah dicek. Jadi tetap jalan walau situsnya nanti pindah ke envirocircle.info.
-
-   Cuma berlaku untuk GFS. Model lain kalau dinyalakan tetap memakai path
-   relatifnya sendiri, sebab keluarannya memang tidak ada di repo lama itu. */
-const DATA_JAUH = "https://bungakertas-py.github.io/atmosight/backend/data/output/";
-
-/* SUMBER DATA DIPILIH SENDIRI SAAT MUAT, bukan dipatok di sini.
-
-   Dulu baris ini memaksa DATA_JAUH menang selalu. Akibatnya, waktu situsnya
-   dipasang di server sendiri dan pipeline di sana SUDAH mengirim datanya,
-   petanya TETAP menarik dari GitHub Pages dan data lokalnya diabaikan. Yang
-   membetulkannya cuma menyunting kode lalu deploy ulang, dan itu langkah yang
-   gampang lupa.
-
-   Sekarang urutannya dicoba, yang DEKAT dulu baru yang JAUH.
-     1. `../backend/atmosight/data/output/` di server yang sama
-     2. kalau itu 404, baru menumpang ke keluaran repo lama
-
-   Jadi satu berkas yang sama jalan di tiga keadaan tanpa diubah sama sekali.
-   Di GitHub Pages tidak ada data lokal, jadi menumpang. Di hostingan sebelum
-   server mengirim, juga menumpang. Begitu server mengirim, dia pindah sendiri
-   ke data lokal pada muat ulang berikutnya.
-
-   404 SAJA yang membuatnya mundur ke sumber berikutnya. 500 atau JSON rusak
-   itu kerusakan sungguhan dan tetap dilaporkan, jangan disembunyikan di balik
-   cadangan yang kebetulan hidup.
-
-   Cuma berlaku untuk GFS. Model lain memakai path relatifnya sendiri, sebab
-   keluarannya memang tidak ada di repo lama itu. */
+/* SUMBER DATA, SATU SAJA.
+   Diputuskan user 10 Sep 2026, cadangan GitHub Pages DIBUANG. Datanya cuma
+   dari hostingan ini sendiri, yaitu kiriman server cirrus ITERA di
+   `../backend/<app>/data/output/<model>/`. Kalau katalognya tidak ada, situs
+   masuk mode kosong dan itu disengaja, supaya kiriman yang berhenti langsung
+   kelihatan, bukan tertutup data dari tempat lain. */
 let DATA_BASE = MODEL.base;
 /* Sumber yang akhirnya menang, dipakai badge di pojok slider. Ditaruh di sini
    supaya nilainya sudah ada sebelum katalog diambil, bukan menunggu DOM. */
@@ -142,7 +108,6 @@ let SUMBER_DEKAT = true;
 
 async function ambilKatalog() {
   const urut = [MODEL.base];
-  if (DATA_JAUH && MODEL_ID === "gfs") urut.push(DATA_JAUH);
   for (const base of urut) {
     let res;
     try {
@@ -171,6 +136,10 @@ window.__sumberData = () => DATA_BASE;
 // ada di pipeline GFS. Di WRF berkasnya memang tak dibuat, jadi tombolnya
 // disembunyikan daripada dibiarkan mengejar 404.
 const PUNYA_EKSTRA = MODEL.ekstra;
+/* Skew-T menyala kalau profile_meta.json ADA di folder model. GFS selalu punya,
+   jadi langsung true. Model lain dicek dulu di terapkanFiturModel(), dan kartu
+   Skew-T di popup titik cuma dibuat kalau berkasnya memang dikirim server. */
+let SKEWT_ADA = PUNYA_EKSTRA;
 
 // Definisi legend per layer: [label, warna, teksPutih?]
 const LEGENDS = {
@@ -442,19 +411,43 @@ function setupModelSelect() {
   });
 }
 
-// Sembunyikan yang memang tak ada datanya di model ini, daripada membiarkan
-// tombolnya mengejar berkas yang tak pernah dibuat lalu diam diam gagal.
+// Fitur tambahan dinyalakan MENGIKUTI BERKAS YANG ADA di folder model.
+//
+// Dulu WRF 9 km dipatok tanpa siklon, ITCZ, dan Skew-T, jadi walau server
+// mengirim berkasnya fiturnya tetap tersembunyi. Sejak 10 Sep 2026 tiap berkas
+// dicek dulu, dan tombolnya muncul cuma kalau berkasnya menjawab. Server cukup
+// mengirim berkas ke folder model, frontend tidak perlu disunting lagi.
+//
+// Isobar tidak ada di daftar ini sebab dia muncul sendiri di layer Tekanan dan
+// loadIsobars() sudah berjaga terhadap 404.
+const FITUR_BERKAS = [
+  ["cyclone-toggle", "cyclones.json"],
+  ["itcz-toggle", "itcz.json"],
+  ["mon-toggle", "monsoon.json"],
+];
+async function berkasAda(nama) {
+  try {
+    const r = await fetch(DATA_BASE + nama, { method: "HEAD", cache: "no-store" });
+    return r.ok;
+  } catch (e) {
+    return false;
+  }
+}
 function terapkanFiturModel() {
   if (PUNYA_EKSTRA) return;
-  // WRF 9 km punya monsun (dihitung dari anginnya sendiri), jadi toggle Monsun
-  // tetap ada. Siklon dan ITCZ belum dibuat untuk model ini, disembunyikan.
-  const sembunyi = (MODEL_ID === "wrf9")
-    ? ["cyclone-toggle", "itcz-toggle"]
-    : ["cyclone-toggle", "itcz-toggle", "mon-toggle"];
-  sembunyi.forEach((id) => {
+  // Sembunyikan dulu semuanya, baru dimunculkan satu satu yang berkasnya ada.
+  // Urutannya begini supaya tombol tidak sempat terlihat lalu hilang lagi.
+  FITUR_BERKAS.forEach(([id]) => {
     const el = $(id);
     if (el) el.style.display = "none";
   });
+  FITUR_BERKAS.forEach(([id, berkas]) => {
+    berkasAda(berkas).then((ada) => {
+      const el = $(id);
+      if (ada && el) el.style.display = "";
+    });
+  });
+  berkasAda("profile_meta.json").then((ada) => { SKEWT_ADA = ada; });
   document.querySelector(".level-bar")?.style.setProperty("display", "none", "important");
   const lv = $("level-select");
   if (lv) lv.closest(".field")?.style.setProperty("display", "none");
@@ -1618,9 +1611,9 @@ function renderPoint(pd, lat, lon) {
     kolom.map(([h]) => `<th>${h}</th>`).join("") +
     `</tr></thead><tbody>${rows}</tbody></table></div>` +
     // Kartu LANJUTAN: profil vertikal Skew-T (dimuat malas saat dibuka).
-    // Butuh profile.bin.gz yang cuma dibuat pipeline GFS, jadi di WRF kartunya
-    // tidak ditampilkan sama sekali daripada dibuka lalu gagal.
-    (PUNYA_EKSTRA
+    // Cuma dibuat kalau profile_meta.json ada di folder model, lihat SKEWT_ADA.
+    // Tanpa berkas itu kartunya tidak ditampilkan daripada dibuka lalu gagal.
+    (SKEWT_ADA
       ? `<button type="button" class="pt-skewt-head${skewtOpen ? " open" : ""}" id="pt-skewt-toggle">` +
         `<span class="skt-lead material-symbols-outlined">stacked_line_chart</span>` +
         `<span class="skt-label">Profil Atmosfer · Skew-T</span>` +
@@ -1681,41 +1674,27 @@ function reopenPoint() {
 // Waktu inisiasi model (run_time GFS) dalam WIB — jam & tanggal. Kredibilitas:
 // user tahu kapan data terakhir diperbarui.
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-// Tanda ASAL DATA di badge "Last update".
-//
-// "cirrus" berarti berkasnya diambil dari hostingan ini sendiri, yaitu hasil
-// masakan server ITERA yang didorong ke sini tiap malam. "cadangan" berarti
-// catalog lokalnya menjawab 404 dan situs sedang menumpang ke keluaran yang
-// tersaji di GitHub Pages. Cuma GFS dan CAMS yang punya cadangan itu.
+// Tanda ASAL DATA di badge "Last update". Sejak cadangan GitHub Pages dibuang
+// 10 Sep 2026 sumbernya cuma satu, server cirrus ITERA lewat hostingan ini.
 function tandaiSumber() {
   const el = $("fresh-src-text"); if (!el) return;
-  el.textContent = SUMBER_DEKAT ? "cirrus" : "cadangan";
+  el.textContent = "cirrus";
   const wadah = $("fresh-src");
-  if (wadah) {
-    wadah.title = SUMBER_DEKAT
-      ? "Data dari server cirrus, lewat hostingan ini sendiri"
-      : "Data lokal tidak ada, situs memakai keluaran cadangan di GitHub Pages";
-  }
+  if (wadah) wadah.title = "Data dari server cirrus, lewat hostingan ini sendiri";
 }
 
-// Dot HIJAU kalau data yang tersaji dimasak HARI INI menurut kalender WIB,
-// MERAH kalau tidak.
+// Dot HIJAU kalau kiriman terakhir dimasak dalam 24 JAM terakhir, MERAH kalau
+// lebih lama dari itu. Diputuskan user 10 Sep 2026, menggantikan patokan hari
+// kalender WIB. Jendelanya bergulir, jadi tidak ada lagi merah palsu antara
+// tengah malam dan jam kiriman mendarat.
 //
-// Patokannya generated_at, yaitu kapan pipeline selesai memasak, bukan run_time
-// yang bisa mundur belasan jam dari itu. Run 12Z kemarin yang dimasak dan
-// dikirim dini hari tadi itu kiriman HARI INI, dan mestinya hijau.
-//
-// SATU HAL YANG PERLU DISADARI. Antara tengah malam dan kiriman malam itu
-// mendarat, sekitar pukul 02.00 WIB, tandanya memang merah walau tidak ada
-// yang rusak. Itu bukan cacat, itu memang arti pertanyaannya, "hari ini sudah
-// ada kiriman atau belum", bukan "umur datanya berapa jam".
-function segarHariIni(cat) {
+// Patokannya generated_at, kapan pipeline selesai memasak, bukan run_time yang
+// bisa mundur belasan jam dari itu. Waktu yang tak terbaca dihitung merah.
+const SEGAR_MAKS_MS = 24 * 60 * 60 * 1000;
+function segar24Jam(cat) {
   const t = cat?.generated_at || cat?.run_time;
   if (!t) return false;
-  const d = toWIB(t), kini = toWIB(new Date().toISOString());
-  return d.getUTCFullYear() === kini.getUTCFullYear()
-      && d.getUTCMonth() === kini.getUTCMonth()
-      && d.getUTCDate() === kini.getUTCDate();
+  return Date.now() - Date.parse(t) <= SEGAR_MAKS_MS;
 }
 
 function updateFreshness() {
@@ -1733,7 +1712,7 @@ function updateFreshness() {
   if (badge) {
     badge.dataset.segar = catalog.arsip
       ? "arsip"
-      : (segarHariIni(catalog) ? "ya" : "tidak");
+      : (segar24Jam(catalog) ? "ya" : "tidak");
   }
   tandaiSumber();
 }
@@ -2594,25 +2573,6 @@ function modeKosong() {
      yang masuk ke model tanpa data terjebak tanpa bilah bawah. */
   try { setupHP(); terapkanFiturModel(); } catch (e) { console.warn("setel antarmuka:", e); }
 
-  // Pesannya beda tergantung datanya diambil dari mana. Kalau menumpang
-  // sumber jauh lalu 404, itu BUKAN "belum dimasak", itu sumbernya yang
-  // hilang, dan menyuruh orang menjalankan pipeline cuma menyesatkan.
-  /* `DATA_JAUH` itu konstanta yang SELALU terisi, jadi memeriksanya sendirian
-     salah. Menumpang cuma berlaku untuk GFS, model lain memakai path
-     relatifnya sendiri. Tanpa syarat kedua ini, model 9 km yang datanya belum
-     ada akan dituduh "sumbernya hilang" dan menyuruh orang mengosongkan
-     DATA_JAUH, padahal dia tidak pernah menumpang sama sekali. */
-  if (DATA_JAUH && MODEL_ID === "gfs") {
-    showLoadMsg(
-      "<b>Sumber data tidak terjangkau</b><br><br>" +
-      "Pilihan model di panel kiri tetap bisa dipakai.<br><br>" +
-      "Katalog modelnya tidak ditemukan di sumber yang sedang ditumpangi.<br><br>" +
-      "<b>" + DATA_JAUH + "</b><br><br>" +
-      "Kalau sumber itu memang sudah tidak ada, kosongkan <b>DATA_JAUH</b> di " +
-      "app.js lalu masak datanya sendiri lewat pipeline.",
-      true);
-    return;
-  }
   showLoadMsg(
     "<b>Model ini belum punya data</b><br><br>" +
     "Pilihan model di panel kiri tetap bisa dipakai, jadi kamu bisa kembali " +
