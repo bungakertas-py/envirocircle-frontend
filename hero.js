@@ -139,6 +139,11 @@
     ];
   }
   var CALPHA = 168;            // ~ alpha 0.66 seperti contourf
+  /* Pita puncak lebih pekat dari yang lain, sejak 11 Sep. Warnanya
+     terakota, dan terakota yang dilukis 66 persen di atas kertas putih
+     berubah jadi merah muda salmon, bukan terakota lagi. Teal tidak kena
+     masalah ini sebab pita pita terangnya memang dimaksudkan pucat. */
+  var ALPHA_PITA = [CALPHA, CALPHA, CALPHA, CALPHA, CALPHA, CALPHA, 230];
 
   /* Penempatan field di dalam hero.
      Pusat massa data CAMx dihitung langsung dari pm25-frames.json, bukan
@@ -372,7 +377,7 @@
        max + 0,4*min, melesetnya di bawah 4 persen dan jauh lebih murah. */
     var kfs = k * fs;
     var d = IMG.data, gx, gy, sxp, syp, x0, y0, ax, ay, v00, v10, v01, v11, vv, bi, o;
-    var e, dvx, dvy, ga, gb, grad, m, nb, a1, a2, al, w1, w2, c1, c2, r0;
+    var e, dvx, dvy, ga, gb, grad, m, nb, a1, a2, al, w1, w2, c1, c2, i1, i2, r0;
     for (gy = 0; gy < fh; gy++) {
       syp = (gy * fs - oy) * k;
       y0 = Math.floor(syp); ay = syp - y0;
@@ -409,13 +414,14 @@
         al = a1 * (1 - m) + a2 * m;
         if (al <= 0) { d[o + 3] = 0; continue; }
 
-        c1 = JET[bi < 0 ? (nb < 0 ? 0 : nb) : bi];
-        c2 = nb < 0 ? c1 : JET[nb];
+        i1 = bi < 0 ? (nb < 0 ? 0 : nb) : bi;
+        i2 = nb < 0 ? i1 : nb;
+        c1 = JET[i1]; c2 = JET[i2];
         w2 = (a2 * m) / al; w1 = 1 - w2;
         d[o]     = c1[0] * w1 + c2[0] * w2;
         d[o + 1] = c1[1] * w1 + c2[1] * w2;
         d[o + 2] = c1[2] * w1 + c2[2] * w2;
-        d[o + 3] = CALPHA * al;
+        d[o + 3] = (ALPHA_PITA[i1] * w1 + ALPHA_PITA[i2] * w2) * al;
       }
     }
     offCtx.putImageData(IMG, 0, 0);

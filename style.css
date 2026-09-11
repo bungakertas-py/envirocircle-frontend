@@ -50,6 +50,18 @@
   --sisi-50: rgba(244, 244, 244, .5);
   --sisi-20: rgba(244, 244, 244, .2);
 
+  /* ---- AKSEN, terakota, 11 Sep 2026 ----
+     Dipilih user dari tiga kandidat amber, salmon, terakota yang dipreview
+     di app sungguhan. Hue OKLCH 33,4, hampir tepat di seberang tinta teal
+     (212,6), jadi dia komplementer murni.
+     Huruf di atas bidangnya PUTIH, kontras 4,35. Teal cuma 1,98, tidak
+     terbaca. --aksen-tua untuk keadaan disorot, putih di atasnya 6,00.
+     Dipakai SEDIKIT, cuma untuk yang menunjuk. Peta dan legenda warna tidak
+     boleh memakainya, warna di sana itu data. */
+  --aksen: #C8553D;
+  --aksen-tua: #A8432B;
+  --aksen-teks: #ffffff;
+
   /* Garis rambut. 0,7px, bukan 1px. Angka aslinya memang begitu, dan bedanya
      kelihatan, 1px sudah terbaca sebagai garis yang disengaja sedangkan
      0,7px terbaca sebagai batas yang nyaris tidak ada. */
@@ -70,7 +82,11 @@
   --lime:         #BFE2EA;
   --lime-dim:     #97CFDB;
   --primary:      #44AFC3;
-  --primary-deep: #005461;
+  /* Pita PALING GELAP, puncak konsentrasi, jadi terakota sejak 11 Sep,
+     diminta user. Dia satu satunya warna hangat di kanvas, jadi puncaknya
+     yang menarik mata, bukan seluruh peta. Terangnya 0,59, masih di bawah
+     pita sebelumnya #44AFC3 yang 0,69, jadi urutan makin gelap tetap jalan. */
+  --primary-deep: #C8553D;
 
   /* ---- Margin halaman ----
      Tangga aslinya raja, px-4 lalu 10 lalu 14 lalu 20 dalam satuan Tailwind,
@@ -572,3 +588,22 @@ footer a.f-link { color: var(--ink); border-bottom: var(--rambut) solid var(--in
   .team-photo { width: 108px; height: 140px; }
   .sec-head { margin-bottom: 28px; }
 }
+
+/* =====================================================================
+   AKSEN TERAKOTA, 11 Sep 2026. Token dan alasannya di :root.
+   Cuma tiga tempat di landing, semuanya yang menunjuk ke langkah
+   berikutnya. Titik judul, tombol See it live, dan tombol Explore.
+   ===================================================================== */
+.hero-title .fc-dot, .hero-title .fc-dot2 { color: var(--aksen); }
+
+.pill--lg {
+  background: var(--aksen); border-color: var(--aksen);
+  color: var(--aksen-teks); font-weight: 300;
+}
+/* .pill:hover memberi bidang tinta 5 persen, dan di atas bidang itu huruf
+   putih lenyap. Jadi yang disorot cukup menggelap. */
+.pill--lg:hover { background: var(--aksen-tua); border-color: var(--aksen-tua); }
+
+.sc-nama { border-bottom: 2px solid var(--aksen); }
+.sc-nama:hover { border-bottom-color: var(--aksen-tua); }
+.sc-panah:not([disabled]) { border-color: var(--aksen); }
