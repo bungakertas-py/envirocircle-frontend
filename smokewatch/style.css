@@ -2914,6 +2914,18 @@ body { font-weight: 200; }
    dilawan itu, lewat margin negatif. Sisa jarak ke tepi layar jadi 6px. */
 .ui-bottom { margin-bottom: -16px; }
 
+/* 11 Sep, DINAIKKAN LAGI, diminta user. 6px terlalu mepet ke tepi bawah.
+   Jaraknya sekarang disamakan dengan jarak header ke tepi atas, yang diukur
+   18px, baik di laptop maupun tablet. Jarak bawah = padding #ui + margin ini
+   + padding-bottom 2px. Padding #ui 20px di laptop dan 14px di tablet, jadi
+   marginnya beda. HP tidak disentuh, tata letaknya lain dan belum dirapikan. */
+@media (min-width: 641px) {
+  .ui-bottom { margin-bottom: -4px; }
+}
+@media (min-width: 641px) and (max-width: 1024px) {
+  .ui-bottom { margin-bottom: 2px; }
+}
+
 /* Kotak waktu MEMANJANG MENGIKUTI legenda. Batas 760px dibuang, dia tumbuh
    mengisi sisa ruang sampai 4px sebelum kotak satuan, berapa pun panjang
    legendanya. Legenda sendiri tidak boleh ikut memanjang atau menyusut.
@@ -3258,3 +3270,17 @@ body { font-weight: 200; }
    pewarisan, jadi harus dimatikan tegas di anaknya. */
 .pt-sec span { text-transform: none; }
 .pp-head span { text-transform: none; }
+
+/* Nama parameter aktif di kepala legenda, 10 Sep 2026, lihat isiKepalaLegenda
+   di app.js. Namanya dibesarkan, satuannya TIDAK, sebab .legend-head sengaja
+   text-transform none supaya µ tidak berubah jadi huruf Yunani Μ.
+   Pemisahnya diberi jarak sendiri. Dengan spasi biasa terbaca menempel, sebab
+   letter-spacing .14em membuat spasi antarkata lebih lebar dari spasi di
+   sekitar titik.
+   Di HP nama DISEMBUNYIKAN. Legenda HP berupa kolom tegak yang sempit dan
+   kepalanya cuma muat satuan. Blok ini IDENTIK di dua app. */
+.legend-head .lh-nama { text-transform: uppercase; font-weight: 400; }
+.legend-head .lh-sep { opacity: .55; margin: 0 .6em; }
+@media (max-width: 640px) {
+  .legend-head .lh-nama, .legend-head .lh-sep { display: none; }
+}

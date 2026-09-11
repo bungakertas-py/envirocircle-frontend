@@ -891,11 +891,50 @@ async function loadVelocity(vj) {
   return data;
 }
 
+// PARAMETER AKTIF, tetap kelihatan walau kartu Parameter tertutup. 10 Sep 2026.
+//
+// Dulu yang tersisa waktu kartu tertutup cuma SATUAN di kepala legenda, dan
+// Kelembapan dan Tutupan Awan dua duanya cuma "%". Sekarang kepala legenda
+// menyebut nama layernya di depan satuan, dan ikon di spine Parameter ikut
+// berganti jadi ikon layer yang aktif.
+//
+// Nama dan ikon diambil dari TOMBOL layer itu sendiri, supaya cuma ada satu
+// sumber. innerHTML dipakai supaya subskrip seperti PM<sub>2.5</sub> ikut.
+// Blok ini IDENTIK di atmosight dan smokewatch, jangan dibiarkan bercabang.
+function tombolLayer(layerKey) {
+  return document.querySelector(`.layer-btn[data-layer="${layerKey}"]`)
+      || (typeof BASE_OF !== "undefined" && BASE_OF[layerKey]
+          ? document.querySelector(`.layer-btn[data-layer="${BASE_OF[layerKey]}"]`)
+          : null);
+}
+function isiKepalaLegenda(head, layerKey, satuan) {
+  const t = tombolLayer(layerKey)?.querySelector(".lb-txt");
+  const nama = t ? t.textContent.trim() : "";
+  let sat = String(satuan || "");
+  if (!nama) { head.textContent = sat; return; }
+  // Nama yang sudah tertulis di satuan tidak diulang. "ISPU" tetap "ISPU",
+  // "CAPE, J/kg" jadi "CAPE · J/kg".
+  const N = nama.toUpperCase(), S = sat.toUpperCase();
+  if (S === N) sat = "";
+  else if (S.startsWith(N + ",")) sat = sat.slice(nama.length + 1).trim();
+  head.innerHTML = `<span class="lh-nama">${t.innerHTML.trim()}</span>` +
+    (sat ? `<span class="lh-sep">·</span><span class="lh-sat">${escHtml(sat)}</span>` : "");
+}
+// Tombol ISPU dan AQI tidak punya ikon, jadi untuk dua layer itu spine tetap
+// memakai ikon pengatur umum.
+function tandaiSpineParameter(layerKey) {
+  const ic = document.querySelector("#spine-param .sisi-ico");
+  if (!ic) return;
+  const bi = tombolLayer(layerKey)?.querySelector(".material-symbols-outlined");
+  ic.textContent = bi ? bi.textContent.trim() : "tune";
+}
+
 function renderLegend(layerKey) {
   const def = LEGENDS[layerKey];
   const head = $("legend-head"), cells = $("legend-cells");
   if (!def || !head || !cells) return;
-  head.textContent = def.head;
+  isiKepalaLegenda(head, layerKey, def.head);
+  tandaiSpineParameter(layerKey);
   cells.classList.toggle("legend-words", !!def.words);   // sel melebar utk label kata
   cells.innerHTML = def.cells.map(([label, bg, dark]) =>
     (bg === "transparent"
