@@ -1,7 +1,7 @@
 /* Service worker Atmosight — cache SHELL app (berversi), data cuaca TETAP
  * online. Naikkan VERSION tiap rilis frontend agar user dapat versi terbaru
  * (cache lama dihapus saat activate). */
-const VERSION = "v19";
+const VERSION = "v20";
 const CACHE = "kertas-cuaca-" + VERSION;
 
 // Saat REVIEW LOKAL, jangan cache shell sama sekali. Strategi cache-first membuat
