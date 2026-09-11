@@ -1441,7 +1441,7 @@ function chartSVG(spec) {
     }
     // garis acuan real-time di batas solid/forecast (tanpa teks — dijelaskan legenda)
     if (sx > padL + 1 && sx < padL + plotW - 1)
-      axes += `<line x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="#e8590c" stroke-width="1" stroke-dasharray="2 3" opacity="0.75"/>`;
+      axes += `<line class="pt-kini" x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="#e8590c" stroke-width="1" stroke-dasharray="2 3" opacity="0.75"/>`;
   }
 
   return `<svg class="pt-meteo" viewBox="0 0 ${W} ${H}" width="100%">` +

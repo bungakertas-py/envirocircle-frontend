@@ -30,6 +30,13 @@
   --surface-highest: #CFE9EA;
   --white: #ffffff;
 
+  /* AKSEN terakota, 11 Sep 2026, dipilih user. Huruf di atas bidangnya
+     PUTIH (4,35), teal di atasnya cuma 1,98. Aturan pakainya di blok
+     AKSEN TERAKOTA di ekor berkas. */
+  --aksen: #C8553D;
+  --aksen-tua: #A8432B;
+  --aksen-teks: #ffffff;
+
   --primary: #018790;
   --on-primary: #ffffff;
   /* Aktif = blok teal sedang berhuruf putih.
@@ -2874,3 +2881,111 @@ body { font-weight: 200; }
 @media (max-width: 640px) {
   .legend-head .lh-nama, .legend-head .lh-sep { display: none; }
 }
+
+/* =====================================================================
+   AKSEN TERAKOTA, 11 Sep 2026, dipilih user dari preview amber, salmon,
+   terakota. Blok ini IDENTIK di Atmosight dan Smokewatch.
+
+   Cuma untuk yang menunjuk, dipakai sedikit. Gagang slider dan tombol
+   putar, nama layer di legenda, tombol bahasa aktif, layer aktif, dan ikon
+   kartu yang terbuka. Peta dan pita legenda TIDAK disentuh, warna di sana
+   itu data.
+
+   Diketahui dan diterima user, terakota sehue dengan ISPU Sangat Tidak
+   Sehat #e42320. Jadi gagang slider di Smokewatch bersebelahan dengan
+   warna yang mirip.
+
+   Penanda layer aktif pakai BORDER, bukan bayangan. #stage * mematikan
+   box-shadow dengan !important dan selektor ID, jadi bayangan inset tidak
+   pernah muncul.
+   ===================================================================== */
+#time-slider::-webkit-slider-thumb { background: var(--aksen); border-color: var(--aksen); }
+#time-slider::-moz-range-thumb { background: var(--aksen); border-color: var(--aksen); }
+.tl-btn { border-color: var(--aksen); color: var(--aksen); }
+.legend-head .lh-nama { color: var(--aksen); }
+
+.alat .lang button.active { background: var(--aksen); color: var(--aksen-teks); }
+
+.sisi.terbuka .sisi-spine .sisi-ico { color: var(--aksen); }
+.sisi-body .layer-btn.active:not(.layer-btn--half) {
+  border-left: 3px solid var(--aksen); padding-left: 12px;
+}
+/* Pasangan ISPU dan AQI di Smokewatch, yang aktif jadi bidang terakota. */
+.sisi-body .panel.layers .layer-btn--half.active {
+  background: var(--aksen); border-color: var(--aksen);
+}
+.sisi-body .panel.layers .layer-btn--half.active .lb-txt,
+.sisi-body .panel.layers .layer-btn--half.active .material-symbols-outlined {
+  color: var(--aksen-teks);
+}
+
+/* =====================================================================
+   AKSEN TERAKOTA DI FITUR, 11 Sep 2026, diminta user sebab tadinya cuma
+   tampilan depan yang kena. Sama dengan Smokewatch KECUALI kepala Kondisi
+   dan Fenomena, yang di sini tetap teal.
+
+   Aturannya sama dengan tampilan depan. Terakota cuma untuk tiga hal.
+   1. Yang sedang aktif, fitur yang menyala dan tab yang terpilih.
+   2. Tindakan utama, Export CSV dan tombol Masuk.
+   3. Penanda posisi, titik di peta, garis jam sekarang di grafik, titik jam
+      yang tampil, dan gagang slider titik api.
+   Teks di atas putih pakai --aksen-tua (6,00), bukan --aksen (4,35).
+   Warna yang membawa arti, ikon kondisi, pita ISPU, tingkat siklon, titik
+   api, TIDAK disentuh.
+   ===================================================================== */
+
+/* Fitur yang menyala. DUA BUG sekaligus dari aturan lama di media query
+   hover, `.col.items-end .icon-btn.active .material-symbols-outlined` dan
+   pasangan :hover-nya. Keduanya memberi ikon --on-lime yang PUTIH, jadi di
+   kartu putih ikon fitur yang aktif HILANG, dan waktu disorot tombolnya
+   dapat bidang teal penuh. Selektornya lima kelas, jadi ditandingi dengan
+   .sisi-body di depannya, bukan dengan !important. */
+.sisi-body .col.items-end .icon-btn:hover:not(:disabled) { background: transparent; }
+.sisi-body .col.items-end .icon-btn:hover:not(:disabled) .material-symbols-outlined { color: var(--ink); }
+.sisi-body .col.items-end .icon-btn.active {
+  border-left: 3px solid var(--aksen); padding-left: 12px;
+}
+.sisi-body .col.items-end .icon-btn.active .material-symbols-outlined,
+.sisi-body .col.items-end .icon-btn.active:hover:not(:disabled) .material-symbols-outlined {
+  color: var(--aksen);
+}
+
+/* Kepala legenda Kondisi dan panel Fenomena SENGAJA TETAP TEAL. Sempat
+   dijadikan bidang terakota, lalu user minta porsi aksen di fitur dikurangi
+   sedikit, dan dua bidang penuh inilah yang paling berat. Tombol yang
+   memanggilnya sudah bergaris dan berikon terakota, jadi sambungannya
+   tetap terbaca. */
+
+/* Ikon di banner siklon, ITCZ, dan titik api. */
+.cyc-note-top .material-symbols-outlined,
+.itcz-note .cyc-note-top .material-symbols-outlined,
+.api-note .cyc-note-top .material-symbols-outlined { color: var(--aksen); }
+
+/* Panel titik. Label kecil di kepala, tab terpilih, Skew-T yang terbuka,
+   dan tombol ekspor. */
+.pt-head .badge, .pt-head .pt-sec { color: var(--aksen-tua); }
+.pt-head .pt-sec { border-bottom-color: var(--aksen); }
+.pt-btn.active, .pt-tab.active {
+  background: var(--aksen); border-color: var(--aksen); color: var(--aksen-teks);
+}
+.pt-skewt-head.open { border-bottom-color: var(--aksen); }
+.pt-export { background: var(--aksen); border-color: var(--aksen); color: var(--aksen-teks); }
+.pt-export:hover { background: var(--aksen-tua); border-color: var(--aksen-tua); opacity: 1; }
+
+/* Penanda posisi. Belah ketupat titik terpilih, bulatan lokasi saya, garis
+   jam sekarang di grafik titik, dan titik jam yang tampil di grafik popup. */
+.pm-diamond, .pm-me { background: var(--aksen); }
+.pt-kini { stroke: var(--aksen); opacity: 1; }
+.pp-dot { fill: var(--aksen); }
+
+/* Smokewatch, panel Kualitas Udara. Angka besarnya itu yang harus dibaca
+   pertama, jadi dia yang disorot. */
+.info-big b { color: var(--aksen-tua); }
+.info-sec-h .material-symbols-outlined { color: var(--aksen); }
+
+/* Smokewatch, slider jendela titik api, sama dengan gagang slider waktu. */
+.fire-slider::-webkit-slider-thumb { background: var(--aksen); border-color: var(--aksen); }
+.fire-slider::-moz-range-thumb { background: var(--aksen); border-color: var(--aksen); }
+
+/* Tombol Masuk di kartu sandi. */
+.pw-btn-primary { background: var(--aksen); border-color: var(--aksen); color: var(--aksen-teks); }

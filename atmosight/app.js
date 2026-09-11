@@ -1366,15 +1366,21 @@ function chartSeries(pd, lat, lon) {
   }
 }
 
+/* Warna deret grafik di panel titik, dibaca dari token --aksen di style.css
+   supaya tidak ada angka warna yang harus disunting di dua tempat. */
+function warnaDeret() {
+  return getComputedStyle(document.documentElement).getPropertyValue("--aksen").trim() || "#C8553D";
+}
+
 function chartSVG(spec) {
-  /* WARNA DERET DIPAKSA TINTA, 8 Sep 2026, ikut rebranding.
-     Tiap grafik di panel ini cuma punya SATU deret, jadi warnanya tidak
-     membedakan apa apa, dia murni hiasan. Beda dengan legenda di peta,
-     di sana warna itu tangga nilai dan artinya hilang kalau dibuang.
+  /* WARNA DERET, sejarahnya. 8 Sep dipaksa tinta #333 ikut rebranding, sebab
+     tiap grafik di panel ini cuma punya SATU deret dan warnanya tidak
+     membedakan apa apa. 11 Sep jadi TERAKOTA, diminta user, supaya garis
+     ramalan di titik yang dipilih terbaca sebagai hal yang disorot.
      Kalau suatu saat grafiknya berisi lebih dari satu deret, kembalikan
      `color` dari spec dan beri tiap deret warnanya sendiri. */
   const { values, type, times, daily } = spec;
-  const color = "#333333";
+  const color = warnaDeret();
   const n = values.length;
   if (!n) return "";
   // Padding asimetris: kiri utk label sumbu-Y, bawah utk label waktu sumbu-X.
@@ -1448,7 +1454,7 @@ function chartSVG(spec) {
     }
     // garis acuan real-time di batas solid/forecast (tanpa teks — dijelaskan legenda)
     if (sx > padL + 1 && sx < padL + plotW - 1)
-      axes += `<line x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="rgba(51,51,51,.5)" stroke-width="1" stroke-dasharray="2 3" opacity="0.9"/>`;
+      axes += `<line class="pt-kini" x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="rgba(51,51,51,.5)" stroke-width="1" stroke-dasharray="2 3" opacity="0.9"/>`;
   }
 
   return `<svg class="pt-meteo" viewBox="0 0 ${W} ${H}" width="100%">` +
@@ -1644,7 +1650,7 @@ function renderPoint(pd, lat, lon) {
     `<div class="pt-sec">PRAKIRAAN 3 HARI</div><div class="fc-cards">${dailyCards(times, temp, rain, cloud, ci)}</div>`;
   const spec = chartSeries(pd, lat, lon);
   $("pt-body").innerHTML = extras +
-    `<div class="pt-sec">${spec.label.toUpperCase()} <span>${spec.unit}</span></div>${chartSVG(spec)}${chartLegend("#333333")}` +
+    `<div class="pt-sec">${spec.label.toUpperCase()} <span>${spec.unit}</span></div>${chartSVG(spec)}${chartLegend(warnaDeret())}` +
     `<div class="pt-sec">DATA PER-JAM (WIB)</div>` +
     `<div class="pt-table-wrap"><table class="pt-table"><thead><tr>` +
     kolom.map(([h]) => `<th>${h}</th>`).join("") +
