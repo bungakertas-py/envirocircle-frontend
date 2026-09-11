@@ -619,10 +619,37 @@
        di bawahnya masih membawa alt yang menjelaskan isinya. */
     f.setAttribute("tabindex", "-1");
     f.setAttribute("aria-hidden", "true");
-    f.addEventListener("load", function () { f.classList.add("siap"); });
     shot.insertBefore(f, shot.querySelector(".sc-tudung"));
     f.src = src;
+    tungguPeta(f);
     skala();
+  }
+
+  /* Bingkai baru ditampilkan kalau PETANYA sudah tergambar, bukan waktu
+     halamannya selesai dimuat. Dulu kelas siap dipasang di event load, dan
+     load itu datang jauh lebih dulu. Di hostingan yang lambat app-nya masih
+     memajang kerangka kelabu "Memuat data cuaca" puluhan detik, dan kerangka
+     itu yang menutupi poster. Sekarang posternya yang tampil selama itu.
+
+     Tandanya #skeleton di dalam app diberi kelas hide, dikerjakan
+     hideSkeleton() milik app sesudah frame pertama tergambar. Dicek lewat
+     alamat dokumennya juga, sebab iframe sempat berisi about:blank yang
+     tidak punya kerangka dan akan terbaca siap. Kalau dua menit belum juga,
+     posternya dibiarkan. */
+  function tungguPeta(f) {
+    var coba = 0;
+    (function cek() {
+      var d;
+      /* Tidak bisa dibaca berarti beda asal. Tidak terjadi di situs ini, tapi
+         kalau pun terjadi, kembali ke cara lama, langsung tampil. */
+      try { d = f.contentDocument; } catch (e) { d = null; }
+      if (!d) { f.classList.add("siap"); return; }
+      if (d.location.href.indexOf("embed=1") !== -1 && d.readyState !== "loading") {
+        var sk = d.getElementById("skeleton");
+        if (!sk || sk.classList.contains("hide")) { f.classList.add("siap"); return; }
+      }
+      if (++coba < 400) setTimeout(cek, 300);
+    })();
   }
 
   /* ---- JEDA. App di dalam kartu itu app SUNGGUHAN ----
