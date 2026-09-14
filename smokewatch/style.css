@@ -206,17 +206,21 @@ html, body {
 .level-btn.active { background: var(--lime); color: var(--on-lime); }
 
 /* ---- Model / level / init ---- */
-.selects { width: 224px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+/* Cuma kerangka, warna dan huruf ada di blok "Dropdown model dan level" di
+   bawah. Sisa gaya neubrutalism dibuang 14 Sep 2026. Yang paling mengganggu,
+   select:focus mengecat latar dengan --lime, token yang dulu hijau lime dan
+   sekarang teal aktif #018790. Waktu dropdown diklik tulisannya teal di atas
+   teal, kontras 2 banding 1, dan di Chrome Windows daftar pilihannya ikut
+   mewarisi latar itu. Lebar 224 px juga dibuang, dia membuat dropdown 6 px
+   lebih lebar dari isi kartu Model yang 218 px. */
+.selects { display: flex; flex-direction: column; gap: 10px; }
 .field .label-caps { margin-bottom: 4px; }
 .select-wrap { position: relative; }
 .select-wrap select {
   width: 100%; appearance: none; -webkit-appearance: none;
-  background: var(--surface-low); color: var(--ink);
-  border: var(--bw) solid var(--ink); padding: 7px 26px 7px 9px;
-  font-family: var(--font-mono); font-size: 12px; cursor: pointer; outline: none;
+  cursor: pointer; outline: none;
 }
-.select-wrap select:focus { background: var(--lime); }
-.select-wrap select:disabled { opacity: .6; cursor: not-allowed; }
+.select-wrap select:disabled { cursor: not-allowed; }
 .select-wrap .material-symbols-outlined {
   position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
   pointer-events: none; font-size: 18px;
@@ -1896,8 +1900,22 @@ body { font-weight: 200; }
 .select-wrap select {
   font-family: var(--font-ui); font-weight: 200; font-size: 13px;
   letter-spacing: .04em; color: var(--ink); background: transparent;
-  border: 0; padding: 8px 0;
+  border: 0; padding: 8px 24px 8px 0;   /* kanan 24 px, jatah panah */
 }
+/* Fokus ditandai garis bawah yang menebal jadi teal aktif. Latarnya tetap
+   bening, lihat catatan di blok kerangka atas soal teal di atas teal. */
+.select-wrap:focus-within { border-bottom-color: var(--lime); box-shadow: 0 0.7px 0 var(--lime); }
+.select-wrap select:focus { background: transparent; }
+/* Dropdown yang dimatikan cukup dipudarkan warnanya. Opacity 0,6 peninggalan
+   gaya lama memudarkan huruf yang sudah setipis 200, jadi nyaris hilang. */
+.select-wrap select:disabled { color: var(--ink-50); }
+/* Daftar pilihan diatur sendiri, tidak diserahkan ke browser. Opsi yang tak
+   bisa dipilih (model pajangan, level yang belum ada datanya) dibuat jelas
+   pudar, dulu cuma beda 1,66 banding 1 dari opsi aktif. Warna padat, bukan
+   rgba, sebab daftar pilihan digambar sistem operasi dan transparansi sering
+   diabaikan. #80AAB0 = --ink 50 persen di atas putih. */
+.select-wrap select option { background: #ffffff; color: var(--ink); font-weight: 300; }
+.select-wrap select option:disabled { color: #80AAB0; }
 
 /* ---- Kartu Fitur. Tombol ikon jadi daftar berlabel, bukan deretan kotak
    melayang. Ikon saja tidak cukup di gaya seringan ini, tepinya sudah tidak
