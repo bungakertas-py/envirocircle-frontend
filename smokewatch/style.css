@@ -3072,11 +3072,12 @@ body { font-weight: 200; }
    dan oranye jadi baris bergaris, sama dengan siklon dan ITCZ. Merahnya
    pindah ke swatch, di sana warna itu memang menerangkan warna titik di
    peta, jadi dia membawa arti dan tetap dipakai. ---- */
-.api-note .cyc-note-top, .peringatan-note .cyc-note-top {
+.api-note .cyc-note-top, .peringatan-note .cyc-note-top, .model-note .cyc-note-top {
   background: transparent; color: var(--ink-70);
 }
-.api-note .cyc-caret, .peringatan-note .cyc-caret { color: var(--ink-50); }
+.api-note .cyc-caret, .peringatan-note .cyc-caret, .model-note .cyc-caret { color: var(--ink-50); }
 .api-note .cyc-note-top .material-symbols-outlined,
+.model-note .cyc-note-top .material-symbols-outlined,
 .peringatan-note .cyc-note-top .material-symbols-outlined { color: var(--ink-50); }
 .api-lead, .per-lead {
   font-family: var(--font-ui); font-size: 12px; font-weight: 200;
@@ -3170,6 +3171,21 @@ body { font-weight: 200; }
   letter-spacing: .04em; color: var(--ink-50);
 }
 .pp-kritis b { color: var(--ink); font-weight: 300; }
+/* Kabar pendek di popup titik, mis. "detail belum tersedia". Tanpa lebar
+   minimum popupnya menyempit mengikuti kata terpanjang dan kalimatnya patah
+   jadi lima baris selebar jempol. */
+.pp-kabar {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 200;
+  line-height: 1.5; color: var(--ink-70); min-width: 180px;
+}
+/* Catatan kecil di bawah grafik titik, mis. peringatan bahwa angka WRF-Chem
+   masih mentah. Sengaja redup dan dipisah garis rambut, dia keterangan
+   pendamping, bukan isi utama yang harus dibaca duluan. */
+.pp-catatan {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 200;
+  letter-spacing: .04em; line-height: 1.55; color: var(--ink-50);
+  margin-top: 9px; padding-top: 8px; border-top: 0.7px solid var(--ink-20);
+}
 .pp-rinci { font-family: var(--font-ui); font-size: 11px; font-weight: 200; }
 .pp-rinci div { padding: 5px 0; border-bottom: 0.7px solid var(--ink-20); }
 .pp-rinci span { color: var(--ink-50); letter-spacing: .04em; }

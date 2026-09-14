@@ -21,9 +21,15 @@
 // dan WRFCHEM 9 km itu DUA KELUARAN DARI SATU RUN yang sama di server ITERA,
 // yang satu parameter meteorologi yang satu parameter kimia. Yang meteorologi
 // mendarat di sini, yang kimia di pohon Smokewatch.
+//
+// ANGKA RESOLUSI, 12 km sejak 12 September 2026. Nama foldernya sengaja TETAP
+// wrfchem_9km_meteo, itu kesepakatan dengan backend supaya jalur push tidak
+// ikut berubah. Jadi angka di nama folder JANGAN dipakai sebagai resolusi.
+// Yang benar dikirim backend lewat catalog.model_label, dan samakanResolusi()
+// di bawah menyalin angkanya ke label ini begitu katalognya mendarat.
 const MODELS = {
   gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true  },
-  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 9 km",          ekstra: false },
+  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false },
 };
 
 // ================= SAKLAR MODEL =================
@@ -106,6 +112,12 @@ let DATA_BASE = MODEL.base;
    supaya nilainya sudah ada sebelum katalog diambil, bukan menunggu DOM. */
 let SUMBER_DEKAT = true;
 
+/* Kapan catalog.json MENDARAT di folder kita, dibaca dari header Last-Modified
+   jawaban server. Diisi ambilKatalog(), dipakai segar24Jam(). SENGAJA bukan
+   dari isi katalog: isi katalog menceritakan pekerjaan backend, sedangkan yang
+   ditanya titik segar cuma kapan berkasnya sampai di path kita. */
+let katalogMendarat = null;
+
 async function ambilKatalog() {
   const urut = [MODEL.base];
   for (const base of urut) {
@@ -115,7 +127,7 @@ async function ambilKatalog() {
     } catch (e) {
       continue;                     // jaringan mati, coba sumber berikutnya
     }
-    if (res.ok) { pakaiSumber(base); return res; }
+    if (res.ok) { pakaiSumber(base); katalogMendarat = res.headers.get("last-modified"); return res; }
     if (res.status !== 404) { pakaiSumber(base); return res; }
   }
   return null;                      // semua 404 -> mode kosong
@@ -362,6 +374,22 @@ function mintaSandi(label) {
   });
 }
 
+/* Angka resolusi model diambil dari katalog, bukan dipatok di kode.
+   Backend mengubah grid WRF dari 9 km jadi 12 km tanpa mengganti nama folder,
+   dan angka barunya mereka kirim di catalog.model_label. Yang diambil di sini
+   CUMA angka kilometernya. Nama produknya tetap punya kita, sebab model_label
+   mereka memakai nama internal backend yang tidak dipakai di situs ini. */
+function samakanResolusi(cat) {
+  const m = /(\d+(?:[.,]\d+)?)\s*km/i.exec((cat && cat.model_label) || "");
+  if (!m || !MODEL) return;
+  const baru = MODEL.label.replace(/\d+(?:[.,]\d+)?\s*km/i, m[1] + " km");
+  if (baru === MODEL.label) return;
+  MODEL.label = baru;
+  const sel = $("model-select");
+  const opt = sel && Array.from(sel.options).find((o) => o.value === MODEL_ID);
+  if (opt) opt.textContent = baru;
+}
+
 // Dropdown MODEL. Dulu dekoratif satu opsi, sekarang benar benar memindah sumber
 // data. Pindah model = muat ulang halaman dengan ?model=..., alasannya ada di
 // komentar MODELS di atas.
@@ -510,7 +538,33 @@ function setupLevelSelect() {
 }
 
 // Layer dengan data HARIAN (1 frame/hari; slider = tanggal saja, tanpa jam).
-const DAILY_LAYERS = new Set(["rain_accum_surface"]);
+//
+// Dulu ini daftar mati berisi rain_accum_surface. Itu benar untuk GFS, yang
+// mengirim satu frame akumulasi per hari, tapi SALAH untuk WRF meteo. Sejak
+// 12 September 2026 WRF mengirim akumulasi 24 jam BERGULIR tiap jam, 67 frame,
+// dan slidernya jadi menulis tanggal yang sama berjam jam tanpa jam sama
+// sekali. Sekarang harian atau tidak diputuskan dari jarak antar frame di
+// katalognya sendiri, jadi model mana pun terbaca benar tanpa menyunting kode.
+const HARIAN_CADANGAN = new Set(["rain_accum_surface"]);   // dipakai kalau framenya < 2
+const _harianCache = new Map();
+function layerHarian(key) {
+  if (!key) return false;
+  if (_harianCache.has(key)) return _harianCache.get(key);
+  const L = catalog && catalog.layers && catalog.layers[key];
+  const fr = L && L.frames;
+  let hasil;
+  if (!fr || fr.length < 2) {
+    hasil = HARIAN_CADANGAN.has(key);
+  } else {
+    // Rata rata seluruh rentang, bukan selisih dua frame pertama. Jarak frame
+    // tidak selalu rata di ujung, dan rata rata tak bisa tertipu satu lubang.
+    const jam = (Date.parse(fr[fr.length - 1].valid_time) - Date.parse(fr[0].valid_time))
+                / 3600000 / (fr.length - 1);
+    hasil = jam >= 20;
+  }
+  _harianCache.set(key, hasil);
+  return hasil;
+}
 
 // Ibukota provinsi (nama persis di id_places.json) — TIER 0: ikon kondisi selalu
 // tampil bahkan saat zoom-out penuh. Jakarta diwakili Jakarta Pusat saja.
@@ -1042,7 +1096,7 @@ async function showFrame(i) {
   }
 
   const vt = $("valid-time");
-  if (vt) vt.textContent = DAILY_LAYERS.has(activeLayer) ? fmtDay(frame.valid_time) : fmtValid(frame.valid_time);
+  if (vt) vt.textContent = layerHarian(activeLayer) ? fmtDay(frame.valid_time) : fmtValid(frame.valid_time);
   const ts = $("time-slider"); if (ts) ts.value = String(current);
   refreshCityIcons();                    // label kota (+ikon bila aktif) ikut waktu aktif
   if (cyclonesOn) refreshCyclones();     // siklon + jalur ikut waktu aktif
@@ -1728,18 +1782,28 @@ function tandaiSumber() {
   if (wadah) wadah.title = "Data dari server cirrus, lewat hostingan ini sendiri";
 }
 
-// Dot HIJAU kalau kiriman terakhir dimasak dalam 24 JAM terakhir, MERAH kalau
-// lebih lama dari itu. Diputuskan user 10 Sep 2026, menggantikan patokan hari
-// kalender WIB. Jendelanya bergulir, jadi tidak ada lagi merah palsu antara
-// tengah malam dan jam kiriman mendarat.
+// Dot HIJAU kalau data MENDARAT di path kita dalam 24 JAM terakhir, MERAH
+// kalau lebih lama. Jendelanya bergulir, jadi tidak ada merah palsu antara
+// tengah malam dan jam kiriman datang.
 //
-// Patokannya generated_at, kapan pipeline selesai memasak, bukan run_time yang
-// bisa mundur belasan jam dari itu. Waktu yang tak terbaca dihitung merah.
+// Patokannya header Last-Modified catalog.json, yaitu kapan berkas itu ditaruh
+// di folder kita. Ditegaskan user 12 September 2026. Kapan modelnya di-run dan
+// kapan dimasak di backend BUKAN urusan titik ini. Yang ditanya cuma satu,
+// dalam 24 jam terakhir ada penyegaran di path kita atau tidak.
+//
+// Dulu patokannya generated_at, dan itu meleset. Backend bisa mengolah ulang
+// run lama lalu mengisi generated_at dengan jam hari ini, dan titiknya hijau
+// padahal tak ada kiriman baru. Sebaliknya kiriman baru berisi run lama akan
+// dihitung merah, padahal foldernya baru saja disegarkan.
+//
+// Kalau headernya tak terbaca, mundur ke generated_at supaya tidak jadi merah
+// palsu. Waktu yang tak terbaca sama sekali dihitung merah.
 const SEGAR_MAKS_MS = 24 * 60 * 60 * 1000;
 function segar24Jam(cat) {
-  const t = cat?.generated_at || cat?.run_time;
+  const t = katalogMendarat || cat?.generated_at || cat?.run_time;
   if (!t) return false;
-  return Date.now() - Date.parse(t) <= SEGAR_MAKS_MS;
+  const ms = Date.parse(t);
+  return isFinite(ms) && Date.now() - ms <= SEGAR_MAKS_MS;
 }
 
 function updateFreshness() {
@@ -2712,10 +2776,11 @@ async function init() {
     if (!catRes.ok) throw new Error(`catalog.json HTTP ${catRes.status} (${DATA_BASE}catalog.json)`);
     const cat = await catRes.json();
     catalog = cat;
+    samakanResolusi(cat);            // "WRF - 9 km" -> ikut angka di model_label
     const avail = Object.keys(cat.layers || {});
     // Cadence sebenarnya, dari layer non-harian pertama yang punya >= 2 frame.
     for (const k of avail) {
-      if (DAILY_LAYERS.has(k)) continue;
+      if (layerHarian(k)) continue;
       const fr = cat.layers[k].frames;
       if (fr && fr.length > 1) { hitungStepJam(fr.map((f) => f.valid_time)); break; }
     }

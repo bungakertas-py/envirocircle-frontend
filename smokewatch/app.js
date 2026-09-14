@@ -17,12 +17,18 @@
    baru yang salah taruh langsung MENIMPA catalog.json CAMS, dan yang hilang
    justru model yang sudah jalan. Sekarang akar sengaja dibiarkan kosong.
 
-   WRFCHEM 9 km di sini dan WRF 9 km di Atmosight itu DUA KELUARAN DARI SATU
-   RUN yang sama di server ITERA. Yang di sana parameter meteorologi, yang di
-   sini parameter kimia. Beda pohon, beda folder, satu sumber. */
+   WRFCHEM di sini dan WRF di Atmosight itu DUA KELUARAN DARI SATU RUN yang
+   sama di server ITERA. Yang di sana parameter meteorologi, yang di sini
+   parameter kimia. Beda pohon, beda folder, satu sumber.
+
+   ANGKA RESOLUSI, 12 km sejak 12 September 2026. Nama foldernya sengaja TETAP
+   wrfchem_9km_kimia, itu kesepakatan dengan backend supaya jalur push tidak
+   ikut berubah. Jadi angka di nama folder JANGAN dipakai sebagai resolusi.
+   Yang benar dikirim backend lewat catalog.model_label, dan samakanResolusi()
+   di bawah menyalin angkanya ke label ini begitu katalognya mendarat. */
 const MODELS = {
-  cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km"   },
-  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 9 km" },
+  cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km"    },
+  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 12 km" },
 };
 
 /* Folder WRF meteo milik Atmosight. Dipakai CUMA untuk meminjam medan angin,
@@ -66,6 +72,12 @@ let DATA_BASE = MODEL.base;
    supaya nilainya sudah ada sebelum katalog diambil, bukan menunggu DOM. */
 let SUMBER_DEKAT = true;
 
+/* Kapan catalog.json MENDARAT di folder kita, dibaca dari header Last-Modified
+   jawaban server. Diisi ambilKatalog(), dipakai segar24Jam(). SENGAJA bukan
+   dari isi katalog: isi katalog menceritakan pekerjaan backend, sedangkan yang
+   ditanya titik segar cuma kapan berkasnya sampai di path kita. */
+let katalogMendarat = null;
+
 async function ambilKatalog() {
   const urut = [MODEL.base];
   for (const base of urut) {
@@ -75,7 +87,7 @@ async function ambilKatalog() {
     } catch (e) {
       continue;                     // jaringan mati, coba sumber berikutnya
     }
-    if (res.ok) { pakaiSumber(base); return res; }
+    if (res.ok) { pakaiSumber(base); katalogMendarat = res.headers.get("last-modified"); return res; }
     if (res.status !== 404) { pakaiSumber(base); return res; }
   }
   return null;                      // semua 404 -> cangkang
@@ -91,6 +103,23 @@ function pakaiSumber(base) {
 }
 window.__sumberData = () => DATA_BASE;
 window.__model = () => MODEL_ID;
+
+/* Angka resolusi model diambil dari katalog, bukan dipatok di kode.
+   Backend mengubah grid WRF dari 9 km jadi 12 km tanpa mengganti nama folder,
+   dan angka barunya mereka kirim di catalog.model_label. Yang diambil di sini
+   CUMA angka kilometernya. Nama produknya tetap punya kita, sebab model_label
+   mereka memakai nama internal backend yang tidak dipakai di situs ini.
+   Model PAJANGAN (CAMx, CMAQ, Flexpart) tidak disentuh, angkanya dipatok user. */
+function samakanResolusi(cat) {
+  const m = /(\d+(?:[.,]\d+)?)\s*km/i.exec((cat && cat.model_label) || "");
+  if (!m || !MODEL) return;
+  const baru = MODEL.label.replace(/\d+(?:[.,]\d+)?\s*km/i, m[1] + " km");
+  if (baru === MODEL.label) return;
+  MODEL.label = baru;
+  const sel = $("model-select");
+  const opt = sel && Array.from(sel.options).find((o) => o.value === MODEL_ID);
+  if (opt) opt.textContent = baru;
+}
 
 /* Dropdown MODEL. Dulu dekoratif, sekarang benar benar memindah sumber data.
    Pindah model = MUAT ULANG halaman dengan ?model=..., bukan menukar di tempat.
@@ -1471,7 +1500,17 @@ let popupLabel = null;   // nama kota kalau titiknya dari klik label kota
 async function loadSeries(key) {
   if (seriesCache[key]) return seriesCache[key];
   if (!seriesMeta) {
-    seriesMeta = await fetch(DATA_BASE + "point_meta.json").then((r) => r.json());
+    /* 404 di sini BUKAN kerusakan. Model yang berkas titiknya belum dikirim
+       backend memang begitu keadaannya, dan pesan ke pengunjung harus beda
+       dari galat sungguhan. WRF kimia contohnya, per 12 September 2026
+       point_meta.json-nya masih dibangun di sana. */
+    const r = await fetch(DATA_BASE + "point_meta.json");
+    if (!r.ok) {
+      const e = new Error("point_meta.json HTTP " + r.status);
+      if (r.status === 404) e.belumAda = true;
+      throw e;
+    }
+    seriesMeta = await r.json();
   }
   const m = seriesMeta[key];
   if (!m) throw new Error("deret titik tak ada untuk " + key);
@@ -1977,6 +2016,32 @@ function hapusTanda() {
   if (pointMarker) { map.removeLayer(pointMarker); pointMarker = null; }
 }
 
+/* Catatan jujur untuk model WRF-Chem, dari keterangan backend 12 September
+   2026. Angka polutannya masih keluaran model MENTAH. Koreksi ke pengamatan
+   yang lama dilepas sebab meninggalkan artefak mata sapi di Jakarta, dan
+   penggantinya belum jadi. Jadi angkanya cenderung lebih tinggi dari yang
+   terukur di lapangan, dan pembaca berhak tahu itu sebelum memakainya.
+   AOD-nya juga bukan ukuran optik penuh, dia dihitung dari massa aerosol.
+   CAMS tidak diberi catatan ini, dia produk operasional yang sudah jadi. */
+function catatanModel(key) {
+  if (MODEL_ID !== "wrfchem") return "";
+  const teks = key === "aod"
+    ? "Kabut asap model ini dihitung dari massa aerosol, bukan ukuran optik langsung. Enak dipakai membandingkan antar wilayah, bukan sebagai angka pasti."
+    : "Angka model ini masih keluaran mentah, belum dicocokkan dengan alat ukur di lapangan, jadi cenderung lebih tinggi dari kenyataan.";
+  return `<div class="pp-catatan">${teks}</div>`;
+}
+
+/* Banner model di atas peta. Muncul CUMA di WRFCHEM, alasannya sama dengan
+   catatanModel(). Banner ini yang menanggung beban penjelasan sekarang, sebab
+   berkas titik WRF kimia belum dikirim backend, jadi catatan di panel titik
+   belum ada yang melihatnya. */
+function pasangBannerModel() {
+  const el = $("model-note");
+  if (!el) return;
+  if (MODEL_ID === "wrfchem") el.classList.add("show");
+  $("model-note-toggle")?.addEventListener("click", () => el.classList.toggle("open"));
+}
+
 // Isi detail titik. Dipakai popup MAUPUN sidebar, jadi yang dikembalikan cuma
 // potongan isinya, bukan bungkusnya.
 async function badanTitik(key, lat, lon) {
@@ -2065,7 +2130,8 @@ async function badanTitik(key, lat, lon) {
   const namaY = key === "aqi" ? "AQI" : key === "ispu" ? "ISPU" : "";
   return {
     par: KIMIA_HTML[key] || key,
-    badan: kepala + seriesPlotSVG(vals, pd.meta.times, satuan, pd.meta.daily, warna, pita, baku, namaY),
+    badan: kepala + seriesPlotSVG(vals, pd.meta.times, satuan, pd.meta.daily, warna, pita, baku, namaY)
+           + catatanModel(key),
   };
 }
 
@@ -2131,8 +2197,12 @@ async function openPoint(lat, lon, label, isMe) {
   } catch (e) {
     console.error(e);
     if (token !== pointToken) return;
-    if (sidebar) isiSidebar('<div class="pt-loading">Data titik gagal dimuat.</div>');
-    else if (pointPopup) pointPopup.setContent(`<div class="pp-title">${judul}</div><div class="pp-body">Data titik gagal dimuat.</div>`);
+    const pesan = e && e.belumAda
+      ? "Detail titik belum tersedia untuk model ini."
+      : "Data titik gagal dimuat.";
+    if (sidebar) isiSidebar(`<div class="pt-loading">${pesan}</div>`);
+    else if (pointPopup) pointPopup.setContent(
+      `<div class="pp-title">${judul}</div><div class="pp-body"><div class="pp-kabar">${pesan}</div></div>`);
   }
 }
 
@@ -2189,18 +2259,28 @@ function tandaiSumber() {
   if (wadah) wadah.title = "Data dari server cirrus, lewat hostingan ini sendiri";
 }
 
-// Dot HIJAU kalau kiriman terakhir dimasak dalam 24 JAM terakhir, MERAH kalau
-// lebih lama dari itu. Diputuskan user 10 Sep 2026, menggantikan patokan hari
-// kalender WIB. Jendelanya bergulir, jadi tidak ada lagi merah palsu antara
-// tengah malam dan jam kiriman mendarat.
+// Dot HIJAU kalau data MENDARAT di path kita dalam 24 JAM terakhir, MERAH
+// kalau lebih lama. Jendelanya bergulir, jadi tidak ada merah palsu antara
+// tengah malam dan jam kiriman datang.
 //
-// Patokannya generated_at, kapan pipeline selesai memasak, bukan run_time yang
-// bisa mundur belasan jam dari itu. Waktu yang tak terbaca dihitung merah.
+// Patokannya header Last-Modified catalog.json, yaitu kapan berkas itu ditaruh
+// di folder kita. Ditegaskan user 12 September 2026. Kapan modelnya di-run dan
+// kapan dimasak di backend BUKAN urusan titik ini. Yang ditanya cuma satu,
+// dalam 24 jam terakhir ada penyegaran di path kita atau tidak.
+//
+// Dulu patokannya generated_at, dan itu meleset. Backend bisa mengolah ulang
+// run lama lalu mengisi generated_at dengan jam hari ini, dan titiknya hijau
+// padahal tak ada kiriman baru. Sebaliknya kiriman baru berisi run lama akan
+// dihitung merah, padahal foldernya baru saja disegarkan.
+//
+// Kalau headernya tak terbaca, mundur ke generated_at supaya tidak jadi merah
+// palsu. Waktu yang tak terbaca sama sekali dihitung merah.
 const SEGAR_MAKS_MS = 24 * 60 * 60 * 1000;
 function segar24Jam(cat) {
-  const t = cat?.generated_at || cat?.run_time;
+  const t = katalogMendarat || cat?.generated_at || cat?.run_time;
   if (!t) return false;
-  return Date.now() - Date.parse(t) <= SEGAR_MAKS_MS;
+  const ms = Date.parse(t);
+  return isFinite(ms) && Date.now() - ms <= SEGAR_MAKS_MS;
 }
 
 function updateFreshness() {
@@ -3178,6 +3258,8 @@ async function init() {
        folder meteo milik Atmosight. Cuma model itu, CAMS sudah punya. */
     if (MODEL_ID === "wrfchem") pinjamAnginMeteo();
 
+    samakanResolusi(cat); // "WRFCHEM - 9 km" -> ikut angka di model_label
+    pasangBannerModel();  // banner "model uji", cuma di WRFCHEM
     setupModelSelect();   // dropdown MODEL: CAMS <-> WRFCHEM
     setupLevelSelect();   // hidupkan dropdown LEVEL kalau data strato ada
     if (!dataMissing) loadPeringatan();   // banner peringatan kualitas udara
