@@ -2031,17 +2031,6 @@ function catatanModel(key) {
   return `<div class="pp-catatan">${teks}</div>`;
 }
 
-/* Banner model di atas peta. Muncul CUMA di WRFCHEM, alasannya sama dengan
-   catatanModel(). Banner ini yang menanggung beban penjelasan sekarang, sebab
-   berkas titik WRF kimia belum dikirim backend, jadi catatan di panel titik
-   belum ada yang melihatnya. */
-function pasangBannerModel() {
-  const el = $("model-note");
-  if (!el) return;
-  if (MODEL_ID === "wrfchem") el.classList.add("show");
-  $("model-note-toggle")?.addEventListener("click", () => el.classList.toggle("open"));
-}
-
 // Isi detail titik. Dipakai popup MAUPUN sidebar, jadi yang dikembalikan cuma
 // potongan isinya, bukan bungkusnya.
 async function badanTitik(key, lat, lon) {
@@ -3259,7 +3248,6 @@ async function init() {
     if (MODEL_ID === "wrfchem") pinjamAnginMeteo();
 
     samakanResolusi(cat); // "WRFCHEM - 9 km" -> ikut angka di model_label
-    pasangBannerModel();  // banner "model uji", cuma di WRFCHEM
     setupModelSelect();   // dropdown MODEL: CAMS <-> WRFCHEM
     setupLevelSelect();   // hidupkan dropdown LEVEL kalau data strato ada
     if (!dataMissing) loadPeringatan();   // banner peringatan kualitas udara
