@@ -808,6 +808,18 @@ function buildTicks() {
 // ---- Batas administrasi -------------------------------------------------
 // Indonesia: batas PROVINSI (garis tipis). Negara lain: batas NEGARA saja.
 const ADMIN_BASE = "data/";
+// Dua geojson batas diambil SEKALI. Pemakainya dua, garis batas di peta dan
+// topeng daratan peta daya tampung.
+let geoDaratJanji = null;
+function ambilGeoDarat() {
+  if (!geoDaratJanji) {
+    geoDaratJanji = Promise.all([
+      fetch(ADMIN_BASE + "world_countries.geojson").then((r) => (r.ok ? r.json() : null)),
+      fetch(ADMIN_BASE + "idn_provinces.geojson").then((r) => (r.ok ? r.json() : null)),
+    ]).catch((e) => { geoDaratJanji = null; throw e; });
+  }
+  return geoDaratJanji;
+}
 async function loadAdmin() {
   // Struktur styling mengikuti portofolio: batas negara solid & tegas,
   // batas provinsi tipis putus-putus. Warna putih agar kontras di atas heatmap gelap.
@@ -817,10 +829,7 @@ async function loadAdmin() {
   // muncul lagi saat di-pan/zoom-out. Jauh lebih mulus daripada SVG.
   const renderer = L.canvas({ pane: "admin", padding: 0.5 });
   try {
-    const [world, prov] = await Promise.all([
-      fetch(ADMIN_BASE + "world_countries.geojson").then((r) => (r.ok ? r.json() : null)),
-      fetch(ADMIN_BASE + "idn_provinces.geojson").then((r) => (r.ok ? r.json() : null)),
-    ]);
+    const [world, prov] = await ambilGeoDarat();
     if (world) {
       worldLayer = L.geoJSON(world, {
         pane: "admin",
@@ -1032,13 +1041,17 @@ async function showFrame(i) {
   const frame = frames[current];
 
   // Heatmap (kedua layer punya preview_image): angin = kecepatan, hujan = laju hujan.
-  const url = DATA_BASE + frame.preview_image;
+  // Daya tampung TIDAK memakai pratinjau server, lihat blok PETA DAYA TAMPUNG.
+  // Gambar lama dibiarkan tampil sampai gambar jam baru selesai digambar.
+  const petaDT = isLayerDT(activeLayer);
+  const url = petaDT ? GAMBAR_BENING : DATA_BASE + frame.preview_image;
   if (!speedLayer) {
     speedLayer = L.imageOverlay(url, imageBounds || dataBounds, { pane: "speed", opacity: 0.92, interactive: false });
     speedLayer.addTo(map);
-  } else {
+  } else if (!petaDT) {
     speedLayer.setUrl(url);
   }
+  if (petaDT) pasangPetaDT(activeLayer, frame.valid_time);
   const isVector = catalog.layers[activeLayer]?.kind === "vector";
   speedLayer.setOpacity(isVector ? 0.92 : 1); // scalar opaque; angin semi
 
@@ -1519,6 +1532,164 @@ async function loadSeries(key) {
   const buf = await new Response(stream).arrayBuffer();
   seriesCache[key] = { meta: m, arr: new Int16Array(buf) };
   return seriesCache[key];
+}
+
+/* =====================================================================
+   PETA DAYA TAMPUNG DIGAMBAR DI BROWSER. 15 September 2026.
+
+   Pratinjau dt_*_preview.webp kiriman server bening total, di CAMS dan WRF
+   kimia, di semua jam. Angkanya sendiri utuh di pd_dt_*.bin.gz, berkas yang
+   sama dengan yang dipakai waktu titik diklik. Jadi petanya digambar dari
+   situ. Tidak ada yang dihitung ulang, angka daya tampung tetap milik
+   backend, di sini cuma diberi warna.
+
+   Resepnya cermin _render_scalar_preview di process.py untuk layer dt_*.
+   Warna per pita 10K dari DT_PITA dengan alpha 225, garis kisi di tiap batas
+   sel, baris disusun Mercator, lalu dipotong mengikuti garis pantai dari dua
+   geojson batas.
+
+   Laut di berkas titik tertulis 0, bukan kosong, jadi TANPA topeng daratan
+   laut ikut berwarna seolah punya daya tampung. Kalau geojson gagal dimuat,
+   petanya sengaja tidak digambar sama sekali.
+   ===================================================================== */
+const GAMBAR_BENING = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const DT_ALPHA = 225;             // cermin _DT_ALPHA
+const DT_KISI = 0.34;             // cermin _KISI_CAMPUR
+// Lebar gambar dibidik sekitar 2.400 px. CAMS 296 sel jadi 8x, WRF 509 sel 4x.
+const DT_LEBAR_SASARAN = 2400, DT_SKALA_MIN = 4;
+const DT_RGB = DT_PITA.map((h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16)));
+// Garis kisi, sel terang digelapkan dan sel gelap diterangkan.
+const DT_RGB_KISI = DT_RGB.map(([r, g, b]) => {
+  const tuju = 0.299 * r + 0.587 * g + 0.114 * b > 128 ? 0 : 255;
+  return [r, g, b].map((c) => Math.round(c * (1 - DT_KISI) + tuju * DT_KISI));
+});
+const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+const mercLat = (y) => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
+
+const dtGambarCache = new Map();  // DATA_BASE|layer|valid_time -> Promise objectURL
+const dtTopengCache = new Map();
+
+// Tata letak piksel satu grid. Gambar ditempatkan Leaflet di TEPI sel dan
+// direntang lurus dalam ruang Mercator, jadi tiap baris piksel dicari barisan
+// selnya lewat lintang aslinya.
+function dtTata(meta) {
+  const { nx, ny, west, east, north, south } = meta;
+  const dx = (east - west) / (nx - 1), dy = (north - south) / (ny - 1);
+  const W0 = west - dx / 2, E0 = east + dx / 2, N0 = north + dy / 2, S0 = south - dy / 2;
+  const S = Math.max(DT_SKALA_MIN, Math.ceil(DT_LEBAR_SASARAN / nx));
+  const W = nx * S, H = ny * S;
+  const yN = mercY(N0), yS = mercY(S0);
+  const baris = new Int32Array(H), tepiBaris = new Uint8Array(H);
+  for (let y = 0; y < H; y++) {
+    const lat = mercLat(yN + (y + 0.5) / H * (yS - yN));
+    const j = Math.max(0, Math.min(ny - 1, Math.floor((N0 - lat) / dy)));
+    baris[y] = j;
+    tepiBaris[y] = y === 0 || j !== baris[y - 1] ? 1 : 0;
+  }
+  return { nx, ny, S, W, H, W0, E0, yN, yS, baris, tepiBaris };
+}
+
+// Pecahan daratan tiap piksel, 0 sampai 255. Poligon diisi kanvas yang sudah
+// ber-antialias, jadi tepi pantainya halus tanpa oversampling sendiri.
+async function dtTopeng(t) {
+  const kunci = [t.W0, t.E0, t.yN, t.yS, t.W, t.H].join();
+  if (dtTopengCache.has(kunci)) return dtTopengCache.get(kunci);
+  const [world, prov] = await ambilGeoDarat();
+  if (!world || !prov) throw new Error("geojson daratan tak terbaca");
+  const cv = document.createElement("canvas");
+  cv.width = t.W; cv.height = t.H;
+  const cx = cv.getContext("2d", { willReadFrequently: true });
+  const sx = t.W / (t.E0 - t.W0), sy = t.H / (t.yS - t.yN);
+  cx.fillStyle = "#fff";
+  const cincin = (r) => {
+    r.forEach(([lon, lat], k) => {
+      const px = (lon - t.W0) * sx, py = (mercY(lat) - t.yN) * sy;
+      if (k) cx.lineTo(px, py); else cx.moveTo(px, py);
+    });
+    cx.closePath();
+  };
+  // Lubang poligon (danau) ikut terbuka lewat aturan evenodd.
+  for (const gj of [world, prov]) {
+    for (const f of gj.features || []) {
+      const g = f.geometry || {};
+      const poli = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : [];
+      for (const p of poli) { cx.beginPath(); p.forEach(cincin); cx.fill("evenodd"); }
+    }
+  }
+  const a = cx.getImageData(0, 0, t.W, t.H).data;
+  const m = new Uint8Array(t.W * t.H);
+  for (let p = 0; p < m.length; p++) m[p] = a[p * 4 + 3];
+  dtTopengCache.set(kunci, m);
+  return m;
+}
+
+async function dtGambar(layerKey, vt) {
+  const pd = await loadSeries(layerKey);
+  // Dicocokkan PERSIS lewat valid_time. Katalog CAMS memuat jam yang tidak ada
+  // di berkas titik, dan jam terdekat di situ berarti peta hari yang salah.
+  const ti = (pd.meta.times || []).indexOf(vt);
+  if (ti < 0) return GAMBAR_BENING;
+  const t = pd.tata || (pd.tata = dtTata(pd.meta));
+  const topeng = await dtTopeng(t);
+  const { nx, ny, S, W, H, baris, tepiBaris } = t;
+  const arr = pd.arr, sc = pd.meta.scale, b0 = ti * nx * ny;
+  const pita = new Uint8Array(nx * ny);
+  for (let c = 0; c < pita.length; c++) pita[c] = dtIndeks(arr[b0 + c] * sc);
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const cx = cv.getContext("2d");
+  const img = cx.createImageData(W, H), px = img.data;
+  for (let y = 0, p = 0; y < H; y++) {
+    const r0 = baris[y] * nx, tb = tepiBaris[y];
+    for (let x = 0; x < W; x++, p++) {
+      const m = topeng[p];
+      if (!m) continue;
+      const k = pita[r0 + ((x / S) | 0)];
+      const rgb = tb || x % S === 0 ? DT_RGB_KISI[k] : DT_RGB[k];
+      const o = p * 4;
+      px[o] = rgb[0]; px[o + 1] = rgb[1]; px[o + 2] = rgb[2];
+      px[o + 3] = (DT_ALPHA * m + 127) / 255;
+    }
+  }
+  cx.putImageData(img, 0, 0);
+  const blob = await new Promise((res) => cv.toBlob(res, "image/png"));
+  if (!blob) throw new Error("kanvas daya tampung gagal disimpan");
+  return URL.createObjectURL(blob);
+}
+
+function dtGambarUrl(layerKey, vt) {
+  const kunci = DATA_BASE + "|" + layerKey + "|" + vt;
+  if (!dtGambarCache.has(kunci)) {
+    dtGambarCache.set(kunci, dtGambar(layerKey, vt).catch((e) => {
+      dtGambarCache.delete(kunci);
+      throw e;
+    }));
+  }
+  return dtGambarCache.get(kunci);
+}
+
+/* Satu gambar dikerjakan pada satu waktu. Waktu slider digeser cepat, jam
+   jam di tengah dilompati dan yang dikerjakan berikutnya cuma jam terakhir
+   yang diminta. */
+let dtMau = null, dtJalan = false;
+async function pasangPetaDT(layerKey, vt) {
+  dtMau = { layerKey, vt };
+  if (dtJalan) return;
+  dtJalan = true;
+  try {
+    while (dtMau) {
+      const { layerKey: k, vt: v } = dtMau;
+      dtMau = null;
+      try {
+        const url = await dtGambarUrl(k, v);
+        if (activeLayer === k && speedLayer) speedLayer.setUrl(url);
+      } catch (e) {
+        console.warn("peta daya tampung gagal digambar", e);
+      }
+    }
+  } finally {
+    dtJalan = false;
+  }
 }
 
 // Sampel bilinear deret waktu di satu titik. Grid baris-0 = utara.
