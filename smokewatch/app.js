@@ -25,10 +25,14 @@
    wrfchem_9km_kimia, itu kesepakatan dengan backend supaya jalur push tidak
    ikut berubah. Jadi angka di nama folder JANGAN dipakai sebagai resolusi.
    Yang benar dikirim backend lewat catalog.model_label, dan samakanResolusi()
-   di bawah menyalin angkanya ke label ini begitu katalognya mendarat. */
+   di bawah menyalin angkanya ke label ini begitu katalognya mendarat.
+
+   dx itu jarak antar sel dalam derajat, dipakai menghitung batas zoom-in di
+   zoomMaksGrid(). Angka di sini cuma CADANGAN. Kalau katalog membawa
+   image_bounds, jaraknya dihitung dari situ dan angka ini diabaikan. */
 const MODELS = {
-  cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km"    },
-  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 12 km" },
+  cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km",    dx: 0.4   },
+  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 12 km", dx: 0.108 },
 };
 
 /* Folder WRF meteo milik Atmosight. Dipakai CUMA untuk meminjam medan angin,
@@ -537,7 +541,10 @@ const _alasOpts = {
   // akses tanpa-key (tile bertempel watermark "API key required"), jadi pindah
   // ke Esri. Tanpa subdomain/{r}; nativenya sampai zoom 16.
   attribution: 'Tiles &copy; Esri | Data: CAMS (Copernicus/ECMWF)',
-  maxZoom: 12, maxNativeZoom: 16,
+  // Dinaikkan dari 12 jadi 16. Zoom-in maksimum peta sekarang ikut kerapatan
+  // grid model dan bisa lewat 12, dan kalau alasnya berhenti duluan yang
+  // kelihatan cuma latar polos. Alas Esri native sampai 16.
+  maxZoom: 16, maxNativeZoom: 16,
   updateWhenZooming: false, // tunda muat tile sampai zoom selesai → animasi mulus
   keepBuffer: 4,
 };
@@ -545,6 +552,41 @@ const _alasOpts = {
 // tertingginya berwarna hitam. Ditukar oleh applyTheme().
 const darkBase = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", _alasOpts).addTo(map);
 const lightBase = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", _alasOpts);
+
+/* ---------------------------------------------------------------------
+   ZOOM-IN MAKSIMUM IKUT KERAPATAN GRID MODEL
+
+   Dulu batasnya dipatok 9 untuk semua model. Akibatnya model beresolusi halus
+   berhenti sedalam model kasar, dan detail yang sudah ada di datanya tak
+   pernah bisa dilihat.
+
+   Sekarang batasnya dihitung dari jarak antar sel. Zoom paling dalam adalah
+   saat satu sel data selebar satu ubin peta, 256 piksel. Lebih dalam dari itu
+   yang bertambah cuma bluran, bukan detail.
+
+   Lebar satu sel dalam piksel = dx * 256 * 2^z / 360, jadi
+   z = log2(PX_PER_SEL * 360 / (256 * dx)).
+   --------------------------------------------------------------------- */
+const PX_PER_SEL = 256;     // satu sel data = selebar satu ubin peta
+const ZOOM_MAKS_BAWAH = 9;  // jangan pernah lebih dangkal dari batas lama
+const ZOOM_MAKS_ATAS = 13;  // jangan lewat kemampuan alas Esri (native 16)
+
+function zoomMaksGrid(dxDeg) {
+  if (!(dxDeg > 0)) return ZOOM_MAKS_BAWAH;
+  const z = Math.log2((PX_PER_SEL * 360) / (256 * dxDeg));
+  return Math.max(ZOOM_MAKS_BAWAH, Math.min(ZOOM_MAKS_ATAS, Math.round(z * 10) / 10));
+}
+
+/* Jarak antar sel dalam derajat, dibaca dari katalog. `image_bounds` itu
+   `bounds` yang diperlebar SETENGAH sel di tiap sisi, sebab pratinjau berisi
+   blok sel penuh sedangkan bounds cuma pusat sel. Jadi selisih tepinya sama
+   dengan setengah jarak antar sel. Katalog yang tak mengirim image_bounds
+   mengembalikan null, dan pemanggil memakai angka cadangan di MODELS. */
+function jarakSelDerajat(region) {
+  if (!region || !region.image_bounds || !region.bounds) return null;
+  const d = Math.abs(region.bounds[0] - region.image_bounds[0]) * 2;
+  return d > 0 ? d : null;
+}
 
 // Pane heatmap kecepatan angin: di atas peta dasar (z200), di bawah partikel
 // (overlayPane z400) & label (z650). Ini "kontur warna" ala BMKG Signature.
@@ -599,8 +641,15 @@ let velocityLayer = null;
    Tiap permintaan mengambil nomor, hasilnya dibuang kalau bukan yang terakhir. */
 let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
-let dataBounds = null;      // L.latLngBounds domain data (pusat sel; utk klik & batas pan)
+let dataBounds = null;      // L.latLngBounds domain data (pusat sel; utk klik & geolokasi)
 let imageBounds = null;     // L.latLngBounds TEPI sel — hanya untuk menempatkan pratinjau
+let frameBounds = null;     // L.latLngBounds untuk BINGKAI, minZoom, dan kunci pan
+/* Pegangan ke frameRegion() yang lahir di dalam init(). Dipakai tombol layar
+   penuh supaya bisa membingkai ulang tanpa menunggu event resize. */
+let bingkaiUlang = null;
+/* true = model berdomain terbatas yang membawa frame_bounds sendiri, yaitu WRF.
+   Untuk model begini bingkainya memuat SELURUH domain. Lihat frameRegion(). */
+let ikutDomain = false;
 let playing = false;
 let playTimer = null;
 let activeLayer = "ispu";
@@ -2553,15 +2602,32 @@ function toggleFullscreen() {
     if (immersive) document.documentElement.requestFullscreen?.();
     else if (document.fullscreenElement) document.exitFullscreen?.();
   } catch (_) { /* fullscreen API diblokir → mode sembunyi-panel tetap jalan */ }
-  setTimeout(() => map.invalidateSize(), 200);
+  segarkanBingkai();
 }
+
+/* Masuk atau keluar layar penuh mengubah TINGGI jendela, jadi bingkai awalnya
+   harus dihitung ulang. Kalau tidak, yang tampil masih bingkai ukuran jendela
+   yang lama, dan di model berdomain terbatas tepi luar domain jadi kelihatan
+   lagi di atas bawah.
+
+   Tidak boleh bergantung pada event resize Leaflet saja. Peralihan layar penuh
+   itu beranimasi dan kadang belum selesai waktu event itu datang, jadi ukuran
+   yang terbaca masih ukuran lama. invalidateSize() sendiri diam saja kalau
+   ukurannya dianggap belum berubah. Maka bingkainya dipanggil LANGSUNG, dua
+   kali, sesudah peralihan mulai dan sesudah kira kira selesai. */
+function segarkanBingkai() {
+  const sekali = () => { try { map.invalidateSize(); bingkaiUlang?.(); } catch (e) { /* peta belum siap */ } };
+  setTimeout(sekali, 200);
+  setTimeout(sekali, 700);
+}
+
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement && immersive) {   // keluar via ESC → sinkron
     immersive = false;
     $("stage")?.classList.remove("immersive");
     setFsIcon();
   }
-  map.invalidateSize();
+  segarkanBingkai();
 });
 
 // Kartu Tentang (modal)
@@ -3372,6 +3438,15 @@ async function init() {
     // mundur ke `bounds` supaya katalog lama tetap terbaca.
     const ib = cat.region.image_bounds;
     imageBounds = ib ? L.latLngBounds([ib[1], ib[0]], [ib[3], ib[2]]) : dataBounds;
+    /* Kotak BINGKAI, beda lagi dari dua di atas. Backend mengirim frame_bounds
+       cuma untuk model berdomain terbatas, yaitu WRF se-Indonesia. CAMS tidak
+       punya, jadi dia jatuh ke bounds dan bingkainya tetap diturunkan dari
+       VIEW_CORE seperti sebelumnya. */
+    const fb = cat.region.frame_bounds;
+    frameBounds = fb ? L.latLngBounds([fb[1], fb[0]], [fb[3], fb[2]]) : dataBounds;
+    ikutDomain = !!fb;
+    // Batas zoom-in ikut kerapatan grid model, bukan angka mati 9.
+    map.setMaxZoom(zoomMaksGrid(jarakSelDerajat(cat.region) || MODEL.dx));
     // Kotak tampilan awal, kalau modelnya membawa sendiri. Lihat VIEW_CORE.
     if (cat.region.view_core) {
       const [vw, vs, ve, vn] = cat.region.view_core;
@@ -3431,6 +3506,31 @@ async function init() {
     // luas) tak pernah terlihat. Dihitung ulang tiap kali jendela di-resize.
     function frameRegion() {
       const crs = map.options.crs;
+      // Lepas dulu rem lama. getBoundsZoom() memotong hasilnya ke minZoom yang
+      // sedang berlaku, jadi tanpa ini jendela yang DIKECILKAN tak pernah bisa
+      // turun zoom lagi dan tepi bingkainya kepotong.
+      map.setMinZoom(0);
+
+      /* Model berdomain terbatas (WRF) membawa frame_bounds sendiri. Untuk dia
+         bingkainya = SELURUH domain, bukan turunan VIEW_CORE.
+
+         Argumen kedua `true` itu kuncinya. Tanpa dia Leaflet memberi zoom saat
+         domain MUAT DI DALAM layar, dan sisa layar jadi pita alas kosong di
+         atas-bawah. Dengan `true` yang diberi adalah zoom saat layar muat DI
+         DALAM domain, jadi domain MENUTUPI layar dan tepi luarnya tak pernah
+         kelihatan. Sumbu yang lebih sempit yang menentukan, di layar mendatar
+         itu tingginya, dan bujurnya yang gantian kepotong sedikit.
+
+         Dinding pan dipasang di tepi domain juga, jadi potongan itu bisa
+         digeser tapi tak pernah bisa keluar domain. */
+      if (ikutDomain) {
+        const z = map.getBoundsZoom(frameBounds, true);
+        map.setMinZoom(z);
+        map.setMaxBounds(frameBounds);
+        map.setView(frameBounds.getCenter(), z, { animate: false });
+        return;
+      }
+
       const sw = crs.project(VIEW_CORE.getSouthWest());
       const ne = crs.project(VIEW_CORE.getNorthEast());
       const cx = (sw.x + ne.x) / 2, cy = (sw.y + ne.y) / 2; // pusat (proyeksi Mercator)
@@ -3440,8 +3540,8 @@ async function init() {
       const screenRatio = size.x / size.y;
       // Setengah-ukuran domain data GRIB. Bingkai tak boleh melewati ini di sumbu
       // mana pun, kalau lewat yang kelihatan cuma latar kosong di tepi.
-      const dsw = crs.project(dataBounds.getSouthWest());
-      const dne = crs.project(dataBounds.getNorthEast());
+      const dsw = crs.project(frameBounds.getSouthWest());
+      const dne = crs.project(frameBounds.getNorthEast());
       const dataHalfW = Math.abs(dne.x - dsw.x) / 2;
       const dataHalfH = Math.abs(dne.y - dsw.y) / 2;
       if (screenRatio > halfW / halfH) {
@@ -3466,9 +3566,10 @@ async function init() {
       // zoom-in dan geser tetap bebas di dalam domain data.
       const z = map.getBoundsZoom(box);      // zoom saat bingkai inti mengisi layar
       map.setMinZoom(z);                     // tak bisa zoom-out lebih jauh dari ini
-      map.setMaxBounds(dataBounds);          // pan dibatasi domain data, bukan bingkai
+      map.setMaxBounds(frameBounds);         // pan dibatasi domain data, bukan bingkai
       map.setView(crs.unproject(L.point(cx, cy)), z, { animate: false });
     }
+    bingkaiUlang = frameRegion;   // dipanggil juga oleh tombol layar penuh
     frameRegion();
     map.on("resize", frameRegion);
     loadAdmin(); // batas negara + provinsi Indonesia (non-blocking)
