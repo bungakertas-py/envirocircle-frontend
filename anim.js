@@ -20,9 +20,15 @@
   var sasaran = {
     top:    document.querySelectorAll(".hero-top [data-anim='top']"),
     baris:  hero.querySelectorAll(".hero-title .hl-in"),
-    tbl:    hero.querySelectorAll(".hero-foot .pill"),
-    kontur: hero.querySelector(".hero-contour")
+    tbl:    hero.querySelectorAll(".hero-foot .pill")
   };
+
+  /* Latar hero TIDAK lagi ikut timeline. Waktu latarnya masih kanvas kontur,
+     dia dipudarkan masuk di detik 1,60 dan itu aman sebab tulisannya gelap di
+     atas kertas putih. Sekarang tulisannya PUTIH di atas foto, jadi kalau
+     fotonya ikut dipudarkan, 1,6 detik pertama isinya tulisan putih di atas
+     kertas putih, alias hilang. Fotonya tampil sejak awal, yang bergerak cuma
+     zoom lambat dari CSS. */
 
   /* Jaring pengaman. Kalau GSAP gagal dimuat, teksnya jangan ikut hilang,
      sebab keadaan awal opacity 0 dipasang dari CSS. */
@@ -33,7 +39,8 @@
        keadaan awal opacity 0 dipasang pada .pc. Sempat ketinggalan dan
        akibatnya SELURUH JUDUL tak terlihat kalau GSAP gagal dimuat. */
     var semua = document.querySelectorAll(
-      "[data-anim], .hero .hero-title .pc, .hero .hero-contour, [data-sc]");
+      "[data-anim], .hero .hero-title .pc, .hero .hero-title .hl-in," +
+      " .hero .hb-butir, .hero .hb-garis, [data-sc]");
     for (var i = 0; i < semua.length; i++) {
       semua[i].style.opacity = "1";
       semua[i].style.transform = "none";
@@ -126,6 +133,18 @@
 
   if (!window.gsap) { tampilkanSaja(); return; }
 
+  /* SAKLAR ANIMASI HERO, 27 September 2026.
+     Dimatikan atas permintaan user. KODENYA SENGAJA TIDAK DIBUANG sedikit pun,
+     yang dilakukan cuma menyetop timeline-nya lalu menampilkan keadaan akhir.
+     Menyalakan lagi cukup membuang kelas hero-diam dari <body> di index.html,
+     tidak ada yang perlu disunting di berkas ini maupun di style.css.
+
+     Yang ikut mati kalau kelas itu dipasang cuma tiga, meluncurnya dua baris
+     judul, pantulan titik dari Forecast ke huruf i, dan zoom lambat fotonya.
+     Animasi gulir di bagian Showcase dan Team TIDAK ikut mati, sebab
+     showcase() dipanggil lebih dulu di bawah ini. */
+  if (document.body.classList.contains("hero-diam")) { showcase(); tampilkanSaja(); return; }
+
   var diam = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (diam) { tampilkanSaja(); return; }
 
@@ -151,6 +170,104 @@
           onComplete: function () { window.gsap.set(this.targets(), { clearProps: "transition,transform" }); }
         },
         jeda);
+    }
+
+    /* ===============================================================
+       ANIMASI MASUK HERO, 27 September 2026.
+
+       Koreografi lama di bawah blok ini TERIKAT pada kata "Precise" dan
+       "Forecast." Titiknya butuh huruf i untuk dituju dan huruf t untuk
+       menendangnya. Judulnya sudah diganti, potongan itu tidak ada lagi,
+       jadi kalau .pc-i tidak ketemu yang dijalankan barisan waktu DI SINI.
+       Kode lama dibiarkan utuh di bawah, siap dipakai lagi kalau judulnya
+       suatu saat dikembalikan.
+
+       Rasanya mengikuti gsap.com. Intinya tiga.
+
+       1. Yang direveal BIDANGNYA, bukan cuma opacity. Tiap baris judul punya
+          jendela yang memotong, lihat .hero-title .hl di style.css, dan
+          isinya naik dari bawah jendela itu. Tulisannya jadi terasa muncul
+          dari ketiadaan, bukan menyala dari transparan.
+       2. Semuanya SATU BARISAN WAKTU, termasuk fotonya. Foto mengendap dari
+          skala 1,08 ke 1 selama 2,2 detik, dan baris judul mendarat di
+          tengah tengah gerakan itu. Kalau fotonya diam, reveal-nya terasa
+          seperti tulisan yang ditempel di atas gambar, bukan satu adegan.
+       3. Lambat di akhir. power4.out untuk judul, jadi 70 persen jaraknya
+          ditempuh di 30 persen pertama waktunya lalu melambat panjang. Itu
+          yang membuat geraknya terasa berat dan mahal, bukan gesit.
+
+       Angka 130 persen di CSS bukan 100, sebab jendelanya sengaja dilebarkan
+       supaya halo hurufnya tidak terpotong, jadi teks yang menunggu harus
+       turun lebih jauh dari tinggi barisnya sendiri.
+       =============================================================== */
+    if (!hero.querySelector(".pc-i")) {
+      var foto    = hero.querySelector(".hero-foto img");
+      var barisJ  = hero.querySelectorAll(".hero-title .hl-in");
+      var label   = hero.querySelector(".hero-kicker");
+      var lead    = hero.querySelector(".hero-lead");
+      var tombolH = hero.querySelectorAll(".hero-foot .pill");
+      var garis   = hero.querySelector(".hb-garis");
+      var butir   = hero.querySelectorAll(".hero-bukti .hb-butir:not([hidden])");
+
+      if (foto) {
+        tl.fromTo(foto, { scale: 1.08 },
+                        { scale: 1, duration: 2.2, ease: "power2.out" }, 0);
+      }
+      masuk(sasaran.top, -12, 0.7, 0.07, 0.15);
+
+      if (label) {
+        tl.fromTo(label, { opacity: 0, y: 14 },
+                         { opacity: 1, y: 0, duration: 0.7 }, 0.28);
+      }
+      if (barisJ.length) {
+        /* `y: 0` di KEDUA sisi itu WAJIB, dan ini jebakan yang memakan waktu.
+           Keadaan awalnya dipasang CSS sebagai translateY(130%). GSAP membaca
+           transform yang sudah ada lewat getComputedStyle, dan di situ persen
+           sudah terlanjur dihitung jadi PIKSEL. Piksel itu masuk ke properti
+           `y`, sedangkan tween ini mengisi `yPercent`. Dua duanya lalu
+           dijumlahkan, jadi di akhir animasi transformnya bukan nol melainkan
+           translateY(105px) dan seluruh judulnya tetap tersembunyi di balik
+           jendelanya. Menyebut `y: 0` secara tersurat yang membersihkannya. */
+        tl.fromTo(barisJ, { yPercent: 130, y: 0 },
+                          { yPercent: 0, y: 0, duration: 1.15, stagger: 0.13, ease: "power4.out" }, 0.38);
+      }
+      if (lead) {
+        tl.fromTo(lead, { opacity: 0, y: 16 },
+                        { opacity: 1, y: 0, duration: 0.8 }, 0.95);
+      }
+      if (tombolH.length) {
+        tl.fromTo(tombolH, { opacity: 0, y: 16 },
+                           { opacity: 1, y: 0, duration: 0.7, stagger: 0.09 }, 1.10);
+      }
+      /* Garis pita bukti DITARIK dari tengah ke dua sisi. Gerak yang sama
+         dipakai gsap.com untuk garis pemisah, dan dia yang menutup adegan. */
+      if (garis) {
+        tl.fromTo(garis, { scaleX: 0 },
+                         { scaleX: 1, duration: 1.2, ease: "power3.inOut" }, 1.15);
+      }
+      if (butir.length) {
+        tl.fromTo(butir, { opacity: 0, y: 8 },
+                         { opacity: 1, y: 0, duration: 0.6, stagger: 0.08 }, 1.45);
+      }
+
+      /* JARING PENGAMAN TERAKHIR, dan ini bukan kehati hatian berlebihan.
+         Seluruh isi hero sekarang berangkat dari opacity 0 dan transform di
+         luar jendela. Kalau ticker GSAP tidak pernah berdetak, hero-nya BUKAN
+         cuma kehilangan animasi, dia KOSONG SAMA SEKALI. Itu kejadian
+         sungguhan waktu diuji di Chrome headless, barisan waktunya lahir dan
+         durasinya benar 2,35 detik, tapi progress-nya mandek di 0,008 sebab
+         requestAnimationFrame tidak pernah dipanggil.
+
+         Di browser sungguhan ini jarang, tapi tab yang dibuka di latar
+         belakang memang menahan rAF. Jadi enam detik sesudah barisan waktu
+         ini lahir, kalau dia masih belum beranjak, langsung dilompatkan ke
+         akhir. Lebih baik muncul tanpa animasi daripada tidak muncul. */
+      setTimeout(function () {
+        if (tl.progress() < 0.02) tl.progress(1);
+      }, 6000);
+
+      window.__heroTl = tl;
+      return tl;
     }
 
     var pcA = hero.querySelector(".pc-a");     // "Prec"
@@ -192,18 +309,6 @@
       fcS: hero.querySelector(".fc-s"),
       dot2: hero.querySelector(".fc-dot2")
     });
-
-    /* Kontur PM2.5 muncul setelah DUA KATA-nya mendarat, bukan menunggu
-       seluruh urusan titik yang berlangsung sampai detik ke-4. Kalau menunggu
-       itu, latarnya kosong terlalu lama.
-       Yang dipudarkan kanvasnya, bukan isinya, jadi tak ada ongkos tambahan
-       di gelung gambar. Keadaan awal opacity 0 dipasang dari CSS. */
-    if (sasaran.kontur) {
-      tl.fromTo(sasaran.kontur,
-        { opacity: 0 },
-        { opacity: 1, duration: 1.1, ease: "power2.out" },
-        1.60);
-    }
 
     /* Dipakai waktu verifikasi headless. Chrome headless tidak menjalankan
        animasi sampai selesai, jadi keadaan akhir diperiksa lewat progress(1). */
@@ -341,31 +446,215 @@
      jadi tidak perlu memudar lagi tiap kali digulir bolak balik.
      Kalau ScrollTrigger gagal dimuat, elemennya ditampilkan apa adanya, sebab
      keadaan awal opacity 0 dipasang dari CSS. */
+  /* =================================================================
+     ADEGAN PER BAGIAN, ditulis ulang 27 September 2026.
+
+     Sebelumnya semuanya memakai satu resep, tiap elemen ber-[data-sc]
+     dipudarkan sambil naik 34 px dengan jeda 0,11. Hasilnya seluruh halaman
+     bergerak dengan cara yang persis sama dari atas sampai bawah, dan waktu
+     digulir tidak ada yang terasa BERPINDAH BABAK.
+
+     Sekarang tiga bagian punya ceritanya sendiri.
+
+       Showcase   tiga pintu dibuka. Kartunya naik satu per satu, dan tiap
+                  pratinjau MENGENDAP ke dalam bingkainya dari skala 1,14,
+                  seperti foto yang baru diletakkan. Isinya menyusul.
+       Instrumen  alat dinyalakan. Bingkai fotonya DISIBAK dari sisi luar
+                  mengikuti zigzagnya, baris pertama dari kiri, baris kedua
+                  dari kanan. Keterangannya masuk dari sisi yang sama, jadi
+                  mata bergerak bolak balik mengikuti barisnya.
+       Footer     menutup. Isi kiri naik tenang, lalu tombol sosial MEMANTUL
+                  masuk satu satu dari kecil, itu satu satunya gerak yang
+                  bersifat main main di halaman ini, dan letaknya memang di
+                  ujung waktu semuanya sudah selesai dibaca.
+
+     Tiap baris Instrumen punya PEMICUNYA SENDIRI, bukan satu pemicu untuk
+     seluruh bagian. Kalau satu pemicu, baris kedua sudah selesai beranimasi
+     jauh sebelum orang menggulir sampai ke sana.
+     ================================================================= */
+
+  /* Barisan waktu tiap adegan disimpan, dipakai jaring pengaman di ekor
+     berkas kalau ticker GSAP tidak pernah berdetak.
+
+     DIISI DI DALAM showcase(), bukan di sini. Pernyataan di luar fungsi
+     dijalankan menurut URUTAN BARIS, sedangkan showcase() dipanggil jauh di
+     atas blok ini. Waktu sempat ditulis di luar, isinya masih undefined saat
+     adegan pertama mencoba push, itu melempar TypeError dan MEMBUNUH SELURUH
+     IIFE ini, jadi bukan cuma animasinya yang hilang tapi seluruh isi
+     Showcase, Instrumen, dan footer ikut tak pernah muncul. */
   function showcase() {
-    ["#showcase", "#team"].forEach(bagianGulir);
+    window.__scTl = [];
+    if (!window.gsap || !window.ScrollTrigger) { tampilSemuaSc(); return; }
+    window.gsap.registerPlugin(window.ScrollTrigger);
+    adeganShowcase();
+    adeganInstrumen();
+    adeganPublication();
+    adeganProject();
+    adeganFooter();
   }
 
-  function bagianGulir(pilih) {
-    var sec = document.querySelector(pilih);
-    if (!sec) return;
-    var sasaranSc = sec.querySelectorAll("[data-sc]");
-    if (!sasaranSc.length) return;
-
-    if (!window.gsap || !window.ScrollTrigger) {
-      for (var i = 0; i < sasaranSc.length; i++) {
-        sasaranSc[i].style.opacity = "1";
-        sasaranSc[i].style.transform = "none";
-      }
-      return;
+  /* Cadangan kalau GSAP atau ScrollTrigger gagal dimuat. */
+  function tampilSemuaSc() {
+    var a = document.querySelectorAll("[data-sc]");
+    for (var i = 0; i < a.length; i++) {
+      a[i].style.opacity = "1";
+      a[i].style.transform = "none";
     }
-    window.gsap.registerPlugin(window.ScrollTrigger);
-    window.gsap.fromTo(sasaranSc,
-      { opacity: 0, y: 34 },
-      {
-        opacity: 1, y: 0, duration: 0.7, stagger: 0.11, ease: "power3.out",
-        clearProps: "transform",
-        scrollTrigger: { trigger: sec, start: "top 78%", once: true }
-      });
+  }
+
+  function garis(sec, mulai) {
+    return window.gsap.timeline({
+      scrollTrigger: { trigger: sec, start: "top " + mulai, once: true }
+    });
+  }
+
+  /* ---- SHOWCASE, tiga pintu dibuka ---- */
+  function adeganShowcase() {
+    var sec = document.querySelector("#showcase");
+    if (!sec) return;
+    var label  = sec.querySelector(".section-head");
+    var judul  = sec.querySelector(".sc-title");
+    var lead   = sec.querySelector(".sc-lead");
+    var baris  = sec.querySelector(".sc-baris");
+    var kartu  = sec.querySelectorAll(".sc-kartu");
+    var muka   = sec.querySelectorAll(".sc-kartu-gambar img, .sc-kartu-gambar .material-symbols-outlined");
+    var isi    = sec.querySelectorAll(".sc-kartu-isi > *");
+    if (!baris) return;
+
+    var tl = garis(sec, "74%");
+    if (label) tl.fromTo(label, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 0);
+    if (judul) tl.fromTo(judul, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.75 }, 0.08);
+    if (lead)  tl.fromTo(lead,  { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.7 }, 0.22);
+
+    /* Wadah kartunya DINYALAKAN, bukan dipudarkan, sebab yang beranimasi
+       kartunya sendiri. Kalau wadahnya ikut dipudarkan, pudarnya dobel dan
+       geraknya jadi berkabut. */
+    tl.set(baris, { opacity: 1 }, 0.34);
+    tl.from(kartu, { opacity: 0, y: 66, duration: 0.9, stagger: 0.14, ease: "power3.out" }, 0.34);
+    tl.from(muka,  { scale: 1.14, duration: 1.25, stagger: 0.14, ease: "power2.out" }, 0.34);
+    tl.from(isi,   { opacity: 0, y: 14, duration: 0.5, stagger: 0.05 }, 0.66);
+    window.__scTl.push(tl);
+  }
+
+  /* ---- INSTRUMEN, alat dinyalakan ---- */
+  function adeganInstrumen() {
+    var sec = document.querySelector("#instrumen");
+    if (!sec) return;
+    var kepala = sec.querySelector(".bag-head");
+    if (kepala) {
+      var tk = garis(sec, "80%");
+      tk.fromTo(kepala, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6 }, 0);
+      window.__scTl.push(tk);
+    }
+
+    var rows = sec.querySelectorAll(".ins-baris");
+    for (var i = 0; i < rows.length; i++) {
+      (function (r) {
+        var balik = r.className.indexOf("ins-baris--balik") >= 0;
+        var foto  = r.querySelector(".ins-foto");
+        var ikon  = r.querySelector(".ins-foto .material-symbols-outlined");
+        var cat   = r.querySelector(".ins-foto-catatan");
+        var teks  = r.querySelectorAll(".ins-no, .ins-nama, .ins-desc");
+        var tl = garis(r, "78%");
+        tl.set(r, { opacity: 1 }, 0);
+
+        /* Bingkai foto DISIBAK, bukan dipudarkan. Arah sibakannya mengikuti
+           zigzag, baris biasa terbuka dari kiri dan baris yang dibalik dari
+           kanan, jadi gerakannya selalu berangkat dari tepi layar menuju ke
+           tengah. Nilainya ditulis LENGKAP empat sisi dengan satuan yang
+           sama di kedua ujung, sebab GSAP menyulam clip-path per angka dan
+           campuran "0" dengan "0%" bikin sulamannya gagal diam diam. */
+        if (foto) {
+          tl.fromTo(foto,
+            { clipPath: balik ? "inset(0% 0% 0% 100%)" : "inset(0% 100% 0% 0%)" },
+            { clipPath: "inset(0% 0% 0% 0%)", duration: 1.0, ease: "power3.inOut" }, 0);
+        }
+        /* Keterangannya masuk dari sisi yang SAMA dengan sibakan fotonya. */
+        if (teks.length) {
+          tl.from(teks, { opacity: 0, x: balik ? 30 : -30, duration: 0.6, stagger: 0.1, ease: "power3.out" }, 0.22);
+        }
+        if (ikon) tl.from(ikon, { opacity: 0, scale: 0.82, duration: 0.6, ease: "back.out(1.6)" }, 0.55);
+        if (cat)  tl.from(cat,  { opacity: 0, duration: 0.5 }, 0.75);
+        window.__scTl.push(tl);
+      })(rows[i]);
+    }
+  }
+
+  /* ---- PUBLICATION, berkas dibuka ----
+     Paling tenang di halaman ini, dan itu disengaja. Isinya tulisan ilmiah,
+     bukan produk, jadi geraknya tidak boleh menjual. Barisnya masuk dari
+     KIRI satu per satu, mengikuti arah baca, bukan naik dari bawah seperti
+     kartu Showcase. Bedanya kecil tapi cukup untuk terasa babak lain. */
+  function adeganPublication() {
+    var sec = document.querySelector("#publication");
+    if (!sec) return;
+    var kepala = sec.querySelector(".bag-head");
+    var baris  = sec.querySelectorAll(".pub");
+    var tl = garis(sec, "80%");
+    if (kepala) tl.fromTo(kepala, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6 }, 0);
+    if (baris.length) {
+      /* fromTo, BUKAN set lalu from. Menyetel opacity 1 lalu memanggil from
+         pada ELEMEN YANG SAMA itu jebakan. from merekam nilai akhir waktu
+         tween dibuat, dan waktu itu nilainya masih 0 dari CSS, jadi dia
+         beranimasi dari 0 ke 0 dan barisnya tidak pernah muncul. Pola set
+         lalu from cuma aman kalau yang di-set dan yang di-from itu elemen
+         yang BERBEDA, seperti di adegan Showcase. */
+      tl.fromTo(baris, { opacity: 0, x: -26 },
+                       { opacity: 1, x: 0, duration: 0.7, stagger: 0.12, ease: "power3.out" }, 0.2);
+      /* Isi kepalanya menyusul berjenjang rapat, jadi tahun, judul, dan nama
+         penulis mendarat berurutan bukan sekaligus. */
+      tl.from(sec.querySelectorAll(".pub-kepala > *"),
+              { opacity: 0, y: 10, duration: 0.45, stagger: 0.06 }, 0.34);
+    }
+    window.__scTl.push(tl);
+  }
+
+  /* ---- PROJECT, daftar dihitung ----
+     Pita teal juga, sepasang dengan Instrumen, jadi geraknya WAJIB beda
+     supaya dua pita itu tidak terasa satu bagian panjang. Instrumen menyibak
+     mendatar, di sini kelompoknya naik tegak satu per satu dan NOMORNYA
+     muncul duluan dengan memantul. Kesannya sesuatu sedang dihitung. */
+  function adeganProject() {
+    var sec = document.querySelector("#project");
+    if (!sec) return;
+    var kepala = sec.querySelector(".bag-head");
+    var grup   = sec.querySelectorAll(".prj");
+    var nomor  = sec.querySelectorAll(".prj-no");
+    var tl = garis(sec, "80%");
+    if (kepala) tl.fromTo(kepala, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6 }, 0);
+    if (grup.length) {
+      /* fromTo, alasannya sama dengan di adegan Publication di atas. */
+      tl.fromTo(grup, { opacity: 0, y: 34 },
+                      { opacity: 1, y: 0, duration: 0.65, stagger: 0.11, ease: "power3.out" }, 0.18);
+      tl.from(nomor, { opacity: 0, scale: 0.4, duration: 0.5, stagger: 0.11, ease: "back.out(2.4)" }, 0.18);
+    }
+    window.__scTl.push(tl);
+  }
+
+  /* ---- FOOTER, menutup ---- */
+  function adeganFooter() {
+    var ft = document.querySelector("footer");
+    if (!ft) return;
+    var atas  = ft.querySelector(".f-atas");
+    var bawah = ft.querySelector(".f-bawah");
+    var kiri  = ft.querySelectorAll(".f-kiri > *");
+    var label = ft.querySelector(".f-sos-label");
+    var sos   = ft.querySelectorAll(".f-sos-btn");
+    if (!atas) return;
+
+    /* Ambangnya 90 persen, paling lambat di halaman ini. Footer itu penutup,
+       dan penutup yang sudah selesai beranimasi sebelum kelihatan sama saja
+       dengan tidak ada. */
+    var tl = garis(ft, "90%");
+    tl.set(atas, { opacity: 1 }, 0);
+    tl.from(kiri, { opacity: 0, y: 16, duration: 0.6, stagger: 0.08, ease: "power3.out" }, 0);
+    if (label) tl.from(label, { opacity: 0, y: 10, duration: 0.5 }, 0.2);
+    if (sos.length) tl.from(sos, { opacity: 0, scale: 0.55, duration: 0.5, stagger: 0.08, ease: "back.out(2.2)" }, 0.28);
+    if (bawah) {
+      tl.set(bawah, { opacity: 1 }, 0.52);
+      tl.from(bawah.children, { opacity: 0, y: 10, duration: 0.5, stagger: 0.09 }, 0.52);
+    }
+    window.__scTl.push(tl);
   }
 
   /* Tunggu Archivo Black selesai dimuat dulu. Kalau tidak, huruf tulisannya
@@ -852,7 +1141,7 @@
 (function () {
   "use strict";
 
-  var URUT = ["top", "showcase", "team"];
+  var URUT = ["top", "showcase", "instrumen"];
   var bagian = URUT.map(function (id) { return document.getElementById(id); });
   if (bagian.some(function (b) { return !b; })) return;
 
@@ -1039,4 +1328,61 @@
        kali orang menekan menu. */
     if (window.history && history.replaceState) history.replaceState(null, "", "#" + id);
   });
+})();
+
+/* =====================================================================
+   PENJAGA TERAKHIR UNTUK ISI YANG DIREVEAL WAKTU DIGULIR.
+
+   Sepupu dari penjaga di hero, dan lahir dari kejadian yang sama. Semua
+   elemen ber-[data-sc] berangkat dari opacity 0 dan baru dinyalakan
+   ScrollTrigger. Kalau ticker GSAP tidak pernah berdetak, seluruh bagian
+   Showcase dan Team BUKAN cuma kehilangan animasi, mereka kosong melompong.
+   Terbukti waktu diuji, kartunya ada di DOM, ukurannya benar, tapi tidak
+   satu piksel pun tergambar.
+
+   Yang dinyalakan CUMA yang sudah berada di dalam layar, bukan semuanya.
+   Kalau semuanya dinyalakan, bagian yang masih jauh di bawah kehilangan
+   animasi gulirnya padahal tidak ada yang salah dengan dia.
+
+   Delapan detik, bukan enam seperti di hero, sebab ScrollTrigger memang
+   menunggu orang menggulir dulu dan tidak boleh didahului.
+   ===================================================================== */
+(function () {
+  "use strict";
+  function didalam(el) {
+    var r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < (window.innerHeight || 0);
+  }
+  function periksa() {
+    /* Sejak tiap bagian punya adegannya sendiri, menyalakan wadah ber-[data-sc]
+       saja TIDAK CUKUP. Anak anak di dalamnya digerakkan pakai gsap.from, dan
+       from itu menuliskan opacity 0 ke gaya sebaris begitu barisan waktunya
+       dibuat. Jadi wadahnya bisa menyala sementara isinya tetap hilang.
+       Yang benar melompatkan BARISAN WAKTUNYA ke akhir, biar semua anaknya
+       ikut mendarat di keadaan akhir sekaligus. */
+    var tls = window.__scTl || [];
+    for (var i = 0; i < tls.length; i++) {
+      var tl = tls[i];
+      if (!tl || tl.progress() > 0.001) continue;
+      var st = tl.scrollTrigger;
+      var pemicu = st && st.trigger;
+      if (pemicu && didalam(pemicu)) tl.progress(1);
+    }
+    /* Jalur kedua, buat keadaan tanpa GSAP sama sekali. Di situ tidak ada
+       barisan waktu, yang tersisa cuma wadah yang disembunyikan CSS. */
+    var sisa = document.querySelectorAll("[data-sc]");
+    for (var j = 0; j < sisa.length; j++) {
+      var el = sisa[j];
+      if (getComputedStyle(el).opacity !== "0") continue;
+      if (didalam(el)) { el.style.opacity = "1"; el.style.transform = "none"; }
+    }
+  }
+  setTimeout(periksa, 8000);
+  /* Dijalankan lagi tiap kali orang berhenti menggulir, dengan jeda, supaya
+     bagian yang baru masuk layar ikut terjaga tanpa membanjiri gelung gambar. */
+  var jam = null;
+  window.addEventListener("scroll", function () {
+    if (jam) clearTimeout(jam);
+    jam = setTimeout(periksa, 2500);
+  }, { passive: true });
 })();

@@ -481,6 +481,18 @@
 
     <div id="loading">Memuat data model…</div>
 
+    <!-- ============ PETUNJUK KURSOR ============
+         Label kecil yang mengikuti kursor selama dia di atas peta, 27 Sep
+         2026, diminta user. Sebabnya petanya tidak punya satu pun tanda
+         bahwa dia bisa diklik, jadi orang tidak tahu panel titik itu ada.
+         Warnanya sama dengan bidang sorot di kartu Parameter dan Fitur,
+         jadi lime di app ini konsisten berarti SATU HAL, bisa diklik.
+         Diletakkan di sini, di luar #ui, supaya dia tidak ikut aturan
+         pointer-events di sana dan tidak pernah menghalangi klik ke peta.
+         Perilakunya di app.js, cari "petunjuk kursor". -->
+    <div id="klik-petunjuk" class="klik-petunjuk" aria-hidden="true">Click Here</div>
+
+
     <!-- Panel detail titik (muncul saat klik peta) -->
     <aside id="point-panel">
       <div class="pt-head">

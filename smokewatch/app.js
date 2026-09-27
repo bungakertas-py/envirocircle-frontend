@@ -1281,11 +1281,10 @@ function exportSkewTPng() {
     c.width = cw * s; c.height = ch * s;
     const x = c.getContext("2d");
     x.scale(s, s);
-    x.fillStyle = "#fcf8f8"; x.fillRect(0, 0, cw, ch);         // latar
-    x.fillStyle = "#1c1b1b"; x.fillRect(M + SH, M + SH, W, H); // bayangan keras
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, cw, ch);         // latar
     x.fillStyle = "#ffffff"; x.fillRect(M, M, W, H);           // latar plot putih
     x.drawImage(img, M, M, W, H);
-    x.lineWidth = 3; x.strokeStyle = "#1c1b1b"; x.strokeRect(M + 1.5, M + 1.5, W - 3, H - 3);
+    x.lineWidth = 1; x.strokeStyle = "rgba(7,65,115,.35)"; x.strokeRect(M + 0.5, M + 0.5, W - 1, H - 1);
     c.toBlob((b) => {
       if (!b) return;
       const nm = (sharedPoint && sharedPoint.name) ? sharedPoint.name.replace(/[^\w-]+/g, "_")
@@ -1301,13 +1300,13 @@ function exportSkewTPng() {
 // Legenda garis/elemen diagram (di bawah plot, sebelum kartu indeks).
 function skewtLegend() {
   const line = (c, dash) => `<svg width="24" height="10" viewBox="0 0 24 10"><line x1="1" y1="5" x2="23" y2="5" stroke="${c}" stroke-width="2"${dash ? ` stroke-dasharray="${dash}"` : ""}/></svg>`;
-  const box = (fill) => `<svg width="24" height="10" viewBox="0 0 24 10"><rect x="1" y="1" width="22" height="8" fill="${fill}" stroke="#9aa2b0" stroke-width="0.5"/></svg>`;
-  const barbSw = `<svg width="24" height="12" viewBox="0 0 24 12"><line x1="2" y1="6" x2="19" y2="6" stroke="#222" stroke-width="1.2"/><line x1="19" y1="6" x2="23" y2="1" stroke="#222" stroke-width="1.2"/><line x1="15" y1="6" x2="19" y2="1" stroke="#222" stroke-width="1.2"/></svg>`;
+  const box = (fill) => `<svg width="24" height="10" viewBox="0 0 24 10"><rect x="1" y="1" width="22" height="8" fill="${fill}" stroke="#8FA0B3" stroke-width="0.5"/></svg>`;
+  const barbSw = `<svg width="24" height="12" viewBox="0 0 24 12"><line x1="2" y1="6" x2="19" y2="6" stroke="#074173" stroke-width="1.2"/><line x1="19" y1="6" x2="23" y2="1" stroke="#074173" stroke-width="1.2"/><line x1="15" y1="6" x2="19" y2="1" stroke="#074173" stroke-width="1.2"/></svg>`;
   const it = (sw, label) => `<div class="skt-lg">${sw}<span>${label}</span></div>`;
   return `<div class="skt-legend">` +
     it(line("#e42320"), "Suhu (T)") +
     it(line("#1f8a4c"), "Titik embun (Td)") +
-    it(line("#1c1b1b", "4 3"), "Jalur parcel") +
+    it(line("#074173", "4 3"), "Jalur parcel") +
     it(barbSw, "Angin (barbs)") +
     it(line("#0029d7", "5 3"), "LCL · dasar awan") +
     it(line("#d97706", "5 3"), "LFC · mulai konveksi") +
@@ -1322,14 +1321,14 @@ function skewtIndexBox(d) {
   const fmtP = (p) => p ? Math.round(p) + " hPa" : "–";
   const capeCol = d.cape > 2500 ? "#d61f1f" : d.cape > 1000 ? "#e8590c" : d.cape > 300 ? "#f59f00" : "#2b8a3e";
   const cell = (label, val, col) =>
-    `<div class="skt-cell"><span class="skt-k">${label}</span><span class="skt-v" style="color:${col || "#1c1b1b"}">${val}</span></div>`;
+    `<div class="skt-cell"><span class="skt-k">${label}</span><span class="skt-v" style="color:${col || "#074173"}">${val}</span></div>`;
   return `<div class="skt-idx">` +
     cell("CAPE", Math.round(d.cape) + " J/kg", capeCol) +
-    cell("CIN", Math.round(d.cin) + " J/kg", d.cin < -50 ? "#e8590c" : "#5a6472") +
+    cell("CIN", Math.round(d.cin) + " J/kg", d.cin < -50 ? "#e8590c" : "#4A6685") +
     cell("LCL", fmtP(d.lcl.p)) +
     cell("LFC", fmtP(d.lfc)) +
     cell("EL", fmtP(d.el)) +
-    cell("LI", d.li !== null ? d.li.toFixed(1) : "–", d.li !== null && d.li < -2 ? "#d61f1f" : "#5a6472") +
+    cell("LI", d.li !== null ? d.li.toFixed(1) : "–", d.li !== null && d.li < -2 ? "#d61f1f" : "#4A6685") +
     `</div>`;
 }
 
@@ -1441,7 +1440,7 @@ function chartSeries(pd, lat, lon) {
     }
     case "temp_surface": return num("temp", "Suhu", "°C", "#e42320", "line", [0, 50]);
     case "humidity_surface": return num("humidity", "Kelembapan", "%", "#1f8a5c", "line", [0, 100]);
-    case "cloud_surface": return num("cloud", "Tutupan Awan", "%", "#5a6472", "line", [0, 100]);
+    case "cloud_surface": return num("cloud", "Tutupan Awan", "%", "#4A6685", "line", [0, 100]);
     case "pressure_surface": return num("pressure", "Tekanan", "hPa", "#7a3fb0", "line", [1200, 400]);
     case "storm_potential": return num("cape", "CAPE", "J/kg", "#e84a2f", "line", [0, 4000]);
     // Sumbu CIN sengaja 0 di atas, -400 di bawah: makin ke bawah makin tebal tutupnya.
@@ -1508,7 +1507,7 @@ function chartSVG(spec) {
   }
 
   // ---- sumbu X & Y + tick label (tanpa grid) ----
-  const AX = `stroke="#1c1b1b" stroke-width="1.4"`;
+  const AX = `stroke="rgba(7,65,115,.35)" stroke-width="1"`;
   let axes = `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${y0}" ${AX}/>` +
              `<line x1="${padL}" y1="${y0}" x2="${padL + plotW}" y2="${y0}" ${AX}/>`;
   for (const tv of [hi, (lo + hi) / 2, lo]) {
@@ -1536,7 +1535,7 @@ function chartSVG(spec) {
   }
 
   return `<svg class="pt-meteo" viewBox="0 0 ${W} ${H}" width="100%">` +
-    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="#ffffff" stroke="#1c1b1b" stroke-width="2"/>` +
+    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="#ffffff" stroke="rgba(7,65,115,.2)" stroke-width="1"/>` +
     axes + body + `</svg>`;
 }
 
@@ -3653,6 +3652,43 @@ async function init() {
 
     // Point detail: klik peta → panel titik
     map.on("click", (e) => openPoint(e.latlng.lat, e.latlng.lng));
+
+    /* ---- petunjuk kursor ----
+       Label "Click Here" yang mengikuti kursor selama dia di atas peta.
+       Petanya tidak punya satu pun tanda bahwa dia bisa diklik, jadi panel
+       titik itu praktis tersembunyi sampai ada yang tidak sengaja mengklik.
+       Gayanya di style.css, cari PETUNJUK KURSOR.
+
+       Pendengarnya ditempel di #map, BUKAN di window. Panel dan kartu tepi
+       itu saudara #map, bukan anaknya, jadi begitu kursor naik ke panel
+       #map menerima mouseleave dan labelnya hilang sendiri. Tidak perlu
+       satu pun daftar pengecualian.
+
+       Labelnya juga disembunyikan selama peta DIGESER atau di-zoom. Kalau
+       tidak, dia menulis "Click Here" tepat waktu orang sedang menyeret
+       peta, dan itu menyesatkan. */
+    (() => {
+      const tanda = $("klik-petunjuk"), wadah = map.getContainer();
+      if (!tanda || !wadah || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+      let diDalam = false, geser = false, mx = 0, my = 0;
+      const JARAK = 18;                      // jarak dari ujung kursor
+      const taruh = () => {
+        /* Dibalik ke kiri kursor kalau sudah dekat tepi kanan, kalau tidak
+           labelnya terpotong jendela. Lebarnya diukur, tidak ditebak. */
+        const w = tanda.offsetWidth, h = tanda.offsetHeight;
+        let x = mx + JARAK, y = my + JARAK;
+        if (x + w > window.innerWidth - 8) x = mx - JARAK - w;
+        if (y + h > window.innerHeight - 8) y = my - JARAK - h;
+        tanda.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      };
+      const nyala = () => tanda.classList.toggle("tampil", diDalam && !geser);
+      wadah.addEventListener("mousemove", (e) => {
+        mx = e.clientX; my = e.clientY; diDalam = true; taruh(); nyala();
+      });
+      wadah.addEventListener("mouseleave", () => { diDalam = false; nyala(); });
+      map.on("movestart zoomstart", () => { geser = true; nyala(); });
+      map.on("moveend zoomend", () => { geser = false; nyala(); });
+    })();
     $("pt-close")?.addEventListener("click", closePoint);
     $("pt-export")?.addEventListener("click", exportCSV);
     $("pt-hide")?.addEventListener("click", hidePoint);

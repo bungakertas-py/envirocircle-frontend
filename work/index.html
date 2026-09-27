@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Publication &amp; Project — Envirocircle</title>
+  <meta name="description" content="Publikasi dan proyek Tim Envirocircle. Pemodelan dispersi udara, AMDAL, Persetujuan Teknis, dan inventarisasi emisi di berbagai kota di Indonesia." />
+  <link rel="canonical" href="https://envirocircle.info/work/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Envirocircle" />
+  <meta property="og:title" content="Publication &amp; Project — Envirocircle" />
+  <meta property="og:description" content="Pemodelan dispersi udara, AMDAL, Persetujuan Teknis, dan inventarisasi emisi." />
+  <meta property="og:url" content="https://envirocircle.info/work/" />
+  <meta property="og:image" content="https://envirocircle.info/og-image.jpg" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+  <link rel="apple-touch-icon" href="../icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
+  <link rel="stylesheet" href="../style.css" />
+  <script>document.documentElement.className += " js-anim";</script>
+</head>
+<body class="hal-karya">
+
+  <!-- Bilah judul sama persis dengan landing, tapi kelas .padat dipasang
+       LANGSUNG di markup. Di landing kelas itu dipasang anim.js waktu hero
+       terlewat, di sini tidak ada hero jadi bidang putihnya harus ada sejak
+       awal, kalau tidak tulisannya teal di atas kertas putih tanpa alas. -->
+  <header class="hero-top padat">
+    <div class="hero-bar">
+      <a class="brand" href="../">
+        <span class="brand-mark"><span class="material-symbols-outlined">hub</span></span>
+        <span class="brand-name">Envirocircle</span>
+      </a>
+      <nav class="hero-nav">
+        <a href="../">Home</a>
+        <a href="../#showcase">Showcase</a>
+        <a href="../#instrumen">Instrument</a>
+        <a href="./" aria-current="page">Publication &amp; Project</a>
+        <a href="../about/">About Us</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="kry-atas">
+      <div class="wrap">
+        <span class="kry-atas-label" data-kry>Envirocircle</span>
+        <h1 class="kry-atas-judul" data-kry>Publication<br />&amp; Project</h1>
+        <p class="kry-atas-lead" data-kry>Satu makalah dan empat belas pekerjaan pemodelan kualitas udara di sembilan kota. Dari sebaran satu cerobong pabrik sampai satu kota penuh, dibaca lewat keluaran modelnya.</p>
+      </div>
+    </section>
+
+    <section id="publication">
+      <div class="wrap">
+        <div class="bag-head" data-kry>
+          <h2 class="bag-judul">Publication</h2>
+          <span class="bag-jumlah">01 paper</span>
+        </div>
+
+        <article class="pub2">
+          <div class="pub2-kepala" data-kry>
+            <span class="pub-meta">2026 &middot; Jurnal Geografi, Vol 18 No 1</span>
+            <h3 class="pub-judul">Urban Flood Susceptibility Modeling Using GIS and Machine Learning in Bandar Lampung</h3>
+            <span class="pub-penulis">Alvin Pratama &middot; Andreas Boni Baik Simamora &middot; Farras Ghaly</span>
+          </div>
+
+          <!-- Figur ditarik LANGSUNG dari PDF-nya, bukan potret layar, jadi
+               tajamnya utuh. Yang dipilih Figure 4, peta keluaran model, sebab
+               itu hasil akhirnya. Figure 1 lokasi penelitian jadi pendamping. -->
+          <figure class="pub2-figur" data-kry>
+            <img src="../img/karya/pub-1.webp" alt="Peta kerawanan banjir Bandar Lampung keluaran model terpilih" loading="lazy" decoding="async" />
+            <figcaption>Peta kerawanan banjir keluaran model terpilih. Figure 4 di makalah.</figcaption>
+          </figure>
+
+          <div class="pub2-isi">
+            <div class="pub2-kolom">
+              <div class="pub-blok" data-kry>
+                <span class="pub-label">Apa yang kami cari</span>
+                <p class="pub-teks">Daerah mana di Bandar Lampung yang paling rawan banjir, dan model mana yang paling bisa dipercaya untuk menebaknya. Datanya catatan banjir sepuluh tahun, 2015 sampai 2024, diadu dengan sembilan penciri lingkungan dan infrastruktur.</p>
+              </div>
+              <div class="pub-blok" data-kry>
+                <span class="pub-label">Temuan</span>
+                <ol class="pub-temuan">
+                  <li><b>Gradient Boosting paling akurat.</b> AUC 0,95 di data uji yang belum pernah dilihat model.</li>
+                  <li><b>Regresi Logistik paling stabil.</b> Selisih latih dan validasi cuma 0,03, sedangkan model ensemble sampai 0,12. Akurasi tertinggi belum tentu yang paling bisa dipercaya.</li>
+                  <li><b>Rawan banjir menumpuk di dataran rendah</b>, dekat jalan besar, dan di sepanjang jaringan sungai.</li>
+                </ol>
+              </div>
+            </div>
+            <div class="pub2-kolom">
+              <figure class="pub2-figur pub2-figur--kecil" data-kry>
+                <img src="../img/karya/pub-2.webp" alt="Peta lokasi penelitian di Bandar Lampung" loading="lazy" decoding="async" />
+                <figcaption>Lokasi penelitian. Figure 1 di makalah.</figcaption>
+              </figure>
+              <div class="pub-blok" data-kry>
+                <span class="pub-label">Kata kunci</span>
+                <span class="chips">
+                  <span class="chip">Urban Flood</span><span class="chip">Flood Susceptibility</span><span class="chip">GIS</span><span class="chip">Machine Learning</span><span class="chip">Bandar Lampung</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <details class="pub-abstrak" data-kry>
+            <summary>Abstrak lengkap, bahasa Inggris</summary>
+            <p>Urban flooding increasingly affects rapidly urbanizing tropical cities, where terrain, rainfall, and anthropogenic surface modification interact to shape spatial flood patterns. This study develops a GIS–machine learning framework to model urban flood susceptibility in Bandar Lampung, Indonesia, using a multi-year flood inventory (2015–2024). A balanced dataset (n = 308; 1:1 flood to pseudo-absence ratio) was constructed using buffered pseudo-absence sampling with spatial separation constraints to reduce bias. Nine environmental and infrastructure-related predictors were evaluated using Logistic Regression (LR), Random Forest (RF), Gradient Boosting (GB), and Support Vector Machine (SVM). Model performance was assessed through five-fold stratified cross-validation, generalization gap analysis (Train AUC − CV AUC), learning curves, and a 20% hold-out test set. GB achieved the highest cross-validation performance (CV AUC = 0.8953), followed by RF (0.8782), SVM (0.8007), and LR (0.6925). However, ensemble models exhibited larger generalization gaps (RF = 0.1218; GB = 0.1047) compared to LR (0.0333), indicating stronger overfitting tendencies. Learning curves confirmed that LR maintained the most stable convergence between training and validation scores. On the independent test set (n = 61), GB achieved the highest predictive accuracy (ROC AUC = 0.9462), whereas LR showed lower discriminative performance (AUC = 0.7065) but greater validation stability. Flood susceptibility was concentrated in low-elevation areas, near major roads, and adjacent to river networks. By integrating learning curve diagnostics with cross- validation and hold-out testing, this study provides a rigorous framework for model selection in data-limited urban environments.</p>
+          </details>
+
+          <div class="pub-aksi" data-kry>
+            <a class="pill pill--lg" href="https://doi.org/10.24114/jg.v18i1.72252" target="_blank" rel="noopener">
+              <span>Baca di jurnal</span>
+              <span class="pill-ico"><span class="material-symbols-outlined">arrow_outward</span></span>
+            </a>
+            <span class="pub-doi">DOI 10.24114/jg.v18i1.72252</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="project">
+      <div class="wrap">
+        <div class="bag-head" data-kry>
+          <h2 class="bag-judul">Project</h2>
+          <span class="bag-jumlah">14 pekerjaan</span>
+        </div>
+
+        <div class="kry-grup">
+          <div class="kry-grup-kepala" data-kry>
+            <span class="kry-grup-no">01</span>
+            <div>
+              <h2 class="kry-grup-judul">Persetujuan Teknis Emisi</h2>
+              <p class="kry-grup-desc">Pemodelan sebaran emisi cerobong dan jalan untuk dokumen Pertek, memakai AERMET dan AERMOD dengan meteorologi sepuluh tahun.</p>
+              <span class="kry-grup-kota">Batam &middot; Kotawaringin Timur &middot; Cirebon &middot; Cimahi &middot; 5 pekerjaan</span>
+            </div>
+          </div>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Pabrik kayu olahan di Batam</h3>
+              <span class="kry-kerja-tempat">Batam &middot; 2025 &middot; AERMET dan AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran 4 polutan termasuk VOC dari 2 cerobong utama pabrik di Batam.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p06-1.webp" alt="Sebaran NO2 Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran NO2 Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p06-2.webp" alt="Sebaran VOC Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran VOC Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p06-3.webp" alt="Sebaran NO2 Kondisi Basah" loading="lazy" decoding="async" />
+                <figcaption>Sebaran NO2 Kondisi Basah</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Pabrik alumina di Kalimantan Tengah</h3>
+              <span class="kry-kerja-tempat">Kotawaringin Timur &middot; 2025 &middot; AERMET dan AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran 3 polutan dari 2 cerobong utama pabrik alumina di Kalimantan Tengah.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p07-1.webp" alt="Total NO2 Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Total NO2 Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p07-2.webp" alt="Total SO2 Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Total SO2 Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p07-3.webp" alt="Total TSP Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Total TSP Kondisi Kering</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Kawasan industri di Cirebon</h3>
+              <span class="kry-kerja-tempat">Cirebon &middot; 2025 &middot; AERMET dan AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran debu dan gas dari aktivitas kendaraan di jalan utama kawasan industri di Cirebon.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p08-1.webp" alt="KLTP NO2" loading="lazy" decoding="async" />
+                <figcaption>KLTP NO2</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p08-2.webp" alt="Mobilisasi Pekerja PM10" loading="lazy" decoding="async" />
+                <figcaption>Mobilisasi Pekerja PM10</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p08-3.webp" alt="Mobilisasi Peralatan SO2" loading="lazy" decoding="async" />
+                <figcaption>Mobilisasi Peralatan SO2</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Pabrik manufaktur di Cimahi</h3>
+              <span class="kry-kerja-tempat">Cimahi &middot; 2025 &middot; AERMET dan AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran 3 polutan dari 4 cerobong produksi di kawasan Cimahi.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p09-1.webp" alt="Sebaran NO2 Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran NO2 Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p09-2.webp" alt="Sebaran NO2 Kondisi Basah" loading="lazy" decoding="async" />
+                <figcaption>Sebaran NO2 Kondisi Basah</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p09-3.webp" alt="Sebaran TSP Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran TSP Kondisi Kering</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Pabrik lima cerobong di Cimahi</h3>
+              <span class="kry-kerja-tempat">Cimahi &middot; 2025 &middot; AERMET dan AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran 6 polutan termasuk benzene, toluene, dan xylene dari 5 cerobong pabrik di Cimahi.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p10-1.webp" alt="Sebaran Toluene Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran Toluene Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p10-2.webp" alt="Sebaran Benzene Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran Benzene Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p10-3.webp" alt="Sebaran Xylene Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran Xylene Kondisi Kering</figcaption>
+              </figure>
+            </div>
+          </article>
+        </div>
+        <div class="kry-grup">
+          <div class="kry-grup-kepala" data-kry>
+            <span class="kry-grup-no">02</span>
+            <div>
+              <h2 class="kry-grup-judul">AMDAL</h2>
+              <p class="kry-grup-desc">Prakiraan dampak kualitas udara untuk dokumen AMDAL, dari beban emisi sampai bab prakiraan dampaknya.</p>
+              <span class="kry-grup-kota">Cirebon &middot; Batam &middot; 5 pekerjaan</span>
+            </div>
+          </div>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Fasilitas olahraga di Cirebon</h3>
+              <span class="kry-kerja-tempat">Cirebon &middot; 2025 &middot; AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan dampak emisi udara dari pembangunan dan operasional fasilitas olahraga di Cirebon.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p01-1.webp" alt="KLTP NO2" loading="lazy" decoding="async" />
+                <figcaption>KLTP NO2</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p01-2.webp" alt="Mobilisasi Peralatan dan Material PM10" loading="lazy" decoding="async" />
+                <figcaption>Mobilisasi Peralatan dan Material PM10</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p01-3.webp" alt="Penyiapan Lahan SO2" loading="lazy" decoding="async" />
+                <figcaption>Penyiapan Lahan SO2</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Fasilitas industri di Batam</h3>
+              <span class="kry-kerja-tempat">Batam &middot; 2025 &middot; AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran 5 polutan udara dari 3 sumber jalan di sekitar fasilitas di Batam.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p02-1.webp" alt="KLTP NO2" loading="lazy" decoding="async" />
+                <figcaption>KLTP NO2</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p02-2.webp" alt="Mobilisasi Kendaraan Operasional NO2" loading="lazy" decoding="async" />
+                <figcaption>Mobilisasi Kendaraan Operasional NO2</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p02-3.webp" alt="Konstruksi Bangunan dan Sarana Pendukung NO2" loading="lazy" decoding="async" />
+                <figcaption>Konstruksi Bangunan dan Sarana Pendukung NO2</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Pabrik oleokimia di Batam</h3>
+              <span class="kry-kerja-tempat">Batam &middot; 2025 &middot; AERMET dan AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran 5 polutan dari 3 ruas jalan dan 20 lebih sumber titik industri kimia di Batam.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p03-1.webp" alt="Operasional Industri NO2" loading="lazy" decoding="async" />
+                <figcaption>Operasional Industri NO2</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p03-2.webp" alt="Konstruksi Bangunan PM10" loading="lazy" decoding="async" />
+                <figcaption>Konstruksi Bangunan PM10</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p03-3.webp" alt="Mobilisasi Peralatan CO" loading="lazy" decoding="async" />
+                <figcaption>Mobilisasi Peralatan CO</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Industri manufaktur di Cirebon</h3>
+              <span class="kry-kerja-tempat">Cirebon &middot; 2025 &middot; AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan sebaran 5 polutan dari 2 sumber jalan dan 4 cerobong industri di Cirebon.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p04-1.webp" alt="KLTP NO2" loading="lazy" decoding="async" />
+                <figcaption>KLTP NO2</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p04-2.webp" alt="Mobilisasi Pekerja CO" loading="lazy" decoding="async" />
+                <figcaption>Mobilisasi Pekerja CO</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p04-3.webp" alt="Mobilisasi Peralatan SO2" loading="lazy" decoding="async" />
+                <figcaption>Mobilisasi Peralatan SO2</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Pabrik busa di Cirebon</h3>
+              <span class="kry-kerja-tempat">Cirebon &middot; 2025 &middot; AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memodelkan dispersi 4 polutan dari sumber jalan di pabrik foam Cirebon dengan 5 skenario operasi.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p05-1.webp" alt="Sebaran PM10 Kondisi Kering" loading="lazy" decoding="async" />
+                <figcaption>Sebaran PM10 Kondisi Kering</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p05-2.webp" alt="Sebaran PM10 Kondisi Basah" loading="lazy" decoding="async" />
+                <figcaption>Sebaran PM10 Kondisi Basah</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p05-3.webp" alt="Penyiapan Lahan NOx" loading="lazy" decoding="async" />
+                <figcaption>Penyiapan Lahan NOx</figcaption>
+              </figure>
+            </div>
+          </article>
+        </div>
+        <div class="kry-grup">
+          <div class="kry-grup-kepala" data-kry>
+            <span class="kry-grup-no">03</span>
+            <div>
+              <h2 class="kry-grup-judul">Pemodelan Dispersi Skala Kota</h2>
+              <p class="kry-grup-desc">Simulasi kualitas udara satu kota penuh, membandingkan beberapa skenario emisi untuk menemukan penyumbang terbesar.</p>
+              <span class="kry-grup-kota">DKI Jakarta &middot; Tangerang Selatan &middot; 3 pekerjaan</span>
+            </div>
+          </div>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Resilience Development Initiative</h3>
+              <span class="kry-kerja-tempat">DKI Jakarta &middot; 2025 &middot; AERMOD</span>
+            </div>
+            <p class="kry-kerja-desc">Memprediksi kualitas udara Jakarta tahun 2025 dan 2040 untuk 4 skenario bahan bakar: kondisi sekarang, batubara biomassa, gas batubara, dan gas penuh.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p12-1.webp" alt="Skenario Baseline 2025 (NO2)" loading="lazy" decoding="async" />
+                <figcaption>Skenario Baseline 2025 (NO2)</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p12-2.webp" alt="Skenario Coal-Biomass 50:50 (NO2)" loading="lazy" decoding="async" />
+                <figcaption>Skenario Coal-Biomass 50:50 (NO2)</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p12-3.webp" alt="Skenario Gas 100% (NO2)" loading="lazy" decoding="async" />
+                <figcaption>Skenario Gas 100% (NO2)</figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Resilience Development Initiative</h3>
+              <span class="kry-kerja-tempat">DKI Jakarta &middot; 2025 &middot; WRF-Chem</span>
+            </div>
+            <p class="kry-kerja-desc">Membandingkan 4 cara berbeda menghitung emisi industri Jakarta untuk melihat mana yang paling akurat. Hasilnya 25 animasi peta sebaran 5 polutan udara.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr kry-gbr--gerak">
+                <button class="kry-main" type="button" data-gerak="../img/karya/p13-1-gerak.webp" aria-label="Putar animasi Skenario Non-Asimilasi (NO2)">
+                  <img src="../img/karya/p13-1.webp" alt="Skenario Non-Asimilasi (NO2)" loading="lazy" decoding="async" />
+                  <span class="kry-main-tanda material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                </button>
+                <figcaption>Skenario Non-Asimilasi (NO2) <span class="kry-cap-gerak">animasi</span></figcaption>
+              </figure>
+              <figure class="kry-gbr kry-gbr--gerak">
+                <button class="kry-main" type="button" data-gerak="../img/karya/p13-2-gerak.webp" aria-label="Putar animasi Asimilasi inventori AP-42 (NO2)">
+                  <img src="../img/karya/p13-2.webp" alt="Asimilasi inventori AP-42 (NO2)" loading="lazy" decoding="async" />
+                  <span class="kry-main-tanda material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                </button>
+                <figcaption>Asimilasi inventori AP-42 (NO2) <span class="kry-cap-gerak">animasi</span></figcaption>
+              </figure>
+              <figure class="kry-gbr kry-gbr--gerak">
+                <button class="kry-main" type="button" data-gerak="../img/karya/p13-3-gerak.webp" aria-label="Putar animasi Asimilasi inventori EMEP (NO2)">
+                  <img src="../img/karya/p13-3.webp" alt="Asimilasi inventori EMEP (NO2)" loading="lazy" decoding="async" />
+                  <span class="kry-main-tanda material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                </button>
+                <figcaption>Asimilasi inventori EMEP (NO2) <span class="kry-cap-gerak">animasi</span></figcaption>
+              </figure>
+            </div>
+          </article>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Dinas Lingkungan Hidup Kota Tangerang Selatan</h3>
+              <span class="kry-kerja-tempat">Tangerang Selatan &middot; 2025 &middot; WRF-Chem</span>
+            </div>
+            <p class="kry-kerja-desc">Memetakan sebaran polusi udara di Tangerang Selatan dari lebih dari 50 ruas jalan dan 60 sumber industri. Membandingkan 4 skenario untuk menemukan kontributor polusi terbesar.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr kry-gbr--gerak">
+                <button class="kry-main" type="button" data-gerak="../img/karya/p14-1-gerak.webp" aria-label="Putar animasi Skenario Tanpa Asimilasi (NO2)">
+                  <img src="../img/karya/p14-1.webp" alt="Skenario Tanpa Asimilasi (NO2)" loading="lazy" decoding="async" />
+                  <span class="kry-main-tanda material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                </button>
+                <figcaption>Skenario Tanpa Asimilasi (NO2) <span class="kry-cap-gerak">animasi</span></figcaption>
+              </figure>
+              <figure class="kry-gbr kry-gbr--gerak">
+                <button class="kry-main" type="button" data-gerak="../img/karya/p14-2-gerak.webp" aria-label="Putar animasi Asimilasi Sumber Jalan (NO2)">
+                  <img src="../img/karya/p14-2.webp" alt="Asimilasi Sumber Jalan (NO2)" loading="lazy" decoding="async" />
+                  <span class="kry-main-tanda material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                </button>
+                <figcaption>Asimilasi Sumber Jalan (NO2) <span class="kry-cap-gerak">animasi</span></figcaption>
+              </figure>
+              <figure class="kry-gbr kry-gbr--gerak">
+                <button class="kry-main" type="button" data-gerak="../img/karya/p14-3-gerak.webp" aria-label="Putar animasi Asimilasi Gabungan Jalan dan Titik (NO2)">
+                  <img src="../img/karya/p14-3.webp" alt="Asimilasi Gabungan Jalan dan Titik (NO2)" loading="lazy" decoding="async" />
+                  <span class="kry-main-tanda material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                </button>
+                <figcaption>Asimilasi Gabungan Jalan dan Titik (NO2) <span class="kry-cap-gerak">animasi</span></figcaption>
+              </figure>
+            </div>
+          </article>
+        </div>
+        <div class="kry-grup">
+          <div class="kry-grup-kepala" data-kry>
+            <span class="kry-grup-no">04</span>
+            <div>
+              <h2 class="kry-grup-judul">Inventarisasi Emisi</h2>
+              <p class="kry-grup-desc">Menghitung dan memetakan beban emisi wilayah dari kendaraan dan industri, sebagai dasar kebijakan dan sebagai masukan model.</p>
+              <span class="kry-grup-kota">Jabodetabek dan Jawa Barat &middot; 1 pekerjaan</span>
+            </div>
+          </div>
+          <article class="kry-kerja" data-kry>
+            <div class="kry-kerja-kepala">
+              <h3 class="kry-kerja-nama">Clean Air Asia</h3>
+              <span class="kry-kerja-tempat">Jabodetabek dan Jawa Barat &middot; 2025 &middot; GIS dan Inventarisasi</span>
+            </div>
+            <p class="kry-kerja-desc">Menghitung emisi 10 jenis polutan dari kendaraan dan industri di Jabodetabek, lalu memetakan sebarannya untuk dukungan kebijakan kualitas udara.</p>
+            <div class="kry-galeri">
+              <figure class="kry-gbr">
+                <img src="../img/karya/p11b-1.webp" alt="Distribusi Spasial NOx Kota Depok" loading="lazy" decoding="async" />
+                <figcaption>Distribusi Spasial NOx Kota Depok</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p11b-2.webp" alt="Distribusi Spasial CO Kabupaten Bogor" loading="lazy" decoding="async" />
+                <figcaption>Distribusi Spasial CO Kabupaten Bogor</figcaption>
+              </figure>
+              <figure class="kry-gbr">
+                <img src="../img/karya/p11b-3.webp" alt="Distribusi Spasial PM10 Kabupaten Purwakarta" loading="lazy" decoding="async" />
+                <figcaption>Distribusi Spasial PM10 Kabupaten Purwakarta</figcaption>
+              </figure>
+            </div>
+          </article>
+        </div>
+        <div class="kry-grup kry-grup--kemampuan" data-kry>
+          <div class="kry-grup-kepala">
+            <span class="kry-grup-no">05</span>
+            <div>
+              <h2 class="kry-grup-judul">Daya Dukung dan Daya Tampung</h2>
+              <p class="kry-grup-desc">Menghitung berapa beban pencemar yang masih sanggup ditampung sebuah wilayah, lalu memetakannya per satuan luas. Belum ada proyek terpisahnya, buktinya sudah jadi lapisan hidup di Smokewatch.</p>
+              <a class="kry-grup-tautan" href="../smokewatch/">Lihat di Smokewatch</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="f-atas" data-kry>
+        <div class="f-kiri">
+          <a class="f-brand" href="../">
+            <span class="f-brand-mark"><span class="material-symbols-outlined">hub</span></span>
+            <span>Envirocircle</span>
+          </a>
+          <p class="f-note">Peta atmosfer dan lingkungan Indonesia, dari model global yang terbuka. Diolah otomatis tiap hari.</p>
+          <a class="f-surel" href="mailto:envirocircleind@gmail.com">envirocircleind@gmail.com</a>
+        </div>
+        <div class="f-kanan">
+          <span class="f-sos-label">Ikuti kami</span>
+          <div class="f-sos">
+              <a class="f-sos-btn" href="https://www.youtube.com/@enviroCircle"
+                 target="_blank" rel="noopener" aria-label="YouTube Envirocircle"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg></a>
+              <span class="f-sos-btn f-sos--mati" title="Belum ada" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077" /></svg></span>
+              <span class="f-sos-btn f-sos--mati" title="Belum ada" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg></span>
+              <span class="f-sos-btn f-sos--mati" title="Belum ada" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.586 0c-.818 0-1.508.19-2.073.565-.563.377-.97.936-1.213 1.68a3.193 3.193 0 0 0-.112.437 8.365 8.365 0 0 0-.078.53 9 9 0 0 0-.05.727c-.01.282-.013.621-.013 1.016a31.121 31.123 0 0 0 .014 1.017 9 9 0 0 0 .05.727 7.946 7.946 0 0 0 .077.53h-.005a3.334 3.334 0 0 0 .113.438c.245.743.65 1.303 1.214 1.68.565.376 1.256.564 2.075.564.8 0 1.536-.213 2.105-.603.57-.39.94-.916 1.175-1.65.076-.235.135-.558.177-.93a10.9 10.9 0 0 0 .043-1.207v-.82c0-.095-.047-.142-.14-.142h-3.064c-.094 0-.14.047-.14.141v.956c0 .094.046.14.14.14h1.666c.056 0 .084.03.084.086 0 .36 0 .62-.036.865-.038.244-.1.447-.147.606-.108.385-.348.664-.638.876-.29.212-.738.35-1.227.35-.545 0-.901-.15-1.21-.353-.306-.203-.517-.454-.67-.915a3.136 3.136 0 0 1-.147-.762 17.366 17.367 0 0 1-.034-.656c-.01-.26-.014-.572-.014-.939a26.401 26.403 0 0 1 .014-.938 15.821 15.822 0 0 1 .035-.656 3.19 3.19 0 0 1 .148-.76 1.89 1.89 0 0 1 .742-1.01c.344-.244.593-.352 1.137-.352.508 0 .815.096 1.144.303.33.207.528.492.764.925.047.094.111.118.198.07l1.044-.43c.075-.048.09-.115.042-.199a3.549 3.549 0 0 0-.466-.742 3 3 0 0 0-.679-.607 3.313 3.313 0 0 0-.903-.41A4.068 4.068 0 0 0 19.586 0zM8.217 5.836c-1.69 0-3.036.086-4.297.086-1.146 0-2.291 0-3.007-.029v.831l1.088.2c.744.144 1.174.488 1.174 2.264v11.288c0 1.777-.43 2.12-1.174 2.263l-1.088.2v.832c.773-.029 2.12-.086 3.465-.086 1.29 0 2.951.057 3.667.086v-.831l-1.49-.2c-.773-.115-1.174-.487-1.174-2.264v-4.784c.688.057 1.29.057 2.206.057 1.748 3.123 3.41 5.472 4.355 6.56.86 1.032 2.177 1.691 3.839 1.691.487 0 1.003-.086 1.318-.23v-.744c-1.031 0-2.063-.716-2.808-1.518-1.26-1.376-2.95-3.582-4.355-6.074 2.32-.545 4.04-2.722 4.04-4.9 0-3.208-2.492-4.698-5.758-4.698zm-.515 1.29c2.406 0 3.839 1.26 3.839 3.552 0 2.263-1.547 3.782-4.097 3.782-.974 0-1.404-.03-2.063-.086v-7.19c.66-.059 1.547-.059 2.32-.059z" /></svg></span>
+            </div>
+        </div>
+      </div>
+      <div class="f-bawah" data-kry>
+        <span class="f-hak">&copy; 2026 Envirocircle</span>
+        <span class="f-tautan">
+          <a href="../atmosight/">Atmosight</a>
+          <a href="../smokewatch/">Smokewatch</a>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../vendor/gsap.min.js"></script>
+  <script src="../vendor/ScrollTrigger.min.js"></script>
+  <script src="karya.js"></script>
+</body>
+</html>
