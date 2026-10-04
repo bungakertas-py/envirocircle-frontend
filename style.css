@@ -1842,6 +1842,11 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   font-size: 15px; line-height: 27px; letter-spacing: .3px;
   font-weight: 200; color: var(--ink-70);
 }
+/* Bio boleh lebih dari satu paragraf, dan baru satu orang yang punya. Induknya
+   flex berjarak 12 px, jadi tanpa aturan ini jarak antar paragraf jadi 12 plus
+   6 plus 4 dan terbaca lebih longgar daripada jarak ke baris Fokus di
+   bawahnya. Yang kedua dan seterusnya margin atasnya dinolkan. */
+.tim-bio + .tim-bio { margin-top: 0; }
 /* Baris rincian. Label kiri selebar tetap, isinya di kanan, jadi Fokus dan
    Kini berbaris rata walau panjang isinya beda. */
 .tim-rinci {
