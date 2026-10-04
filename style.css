@@ -1169,6 +1169,20 @@ footer .wrap { padding: 56px var(--gutter) 32px; display: block; }
 }
 .f-kiri { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 46ch; }
 
+/* ---- Naungan di footer ----
+   Lambang di KIRI, dua baris tulisan di kanannya, bukan ditumpuk seperti di
+   halaman About. Di footer ruangnya mendatar dan blok tegak di sini akan
+   memanjangkan kolom kiri melewati kolom sosial di seberangnya.
+   Tingginya 58 px, lebih kecil daripada 100 px yang di About, sebab di sini
+   dia keterangan dan bukan pernyataan. Dicoba 46 dulu dan tulisan ITERA di
+   kaki lambangnya sudah berhenti terbaca. */
+.f-naung { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+.f-naung img { width: auto; height: 58px; display: block; }
+.f-naung-teks {
+  font-size: 11px; line-height: 17px; letter-spacing: .1em;
+  text-transform: uppercase; font-weight: 200; color: var(--ink-50);
+}
+
 /* Merek footer memakai lambang dan jarak huruf yang SAMA PERSIS dengan bilah
    judul di atas, cuma lebih kecil. Kalau dibuat lain, dua ujung halaman
    terbaca seperti dua situs. */
@@ -1721,17 +1735,40 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px;
   align-items: start;
 }
+/* Kolom kiri sekarang berisi DUA benda, lambang dan blok naungan, jadi yang
+   LENGKET pindah ke pembungkusnya. Kalau tetap di .abt-logo, blok naungan
+   ditinggal diam di atas sementara lambangnya berjalan turun, dan dua benda
+   yang tadinya sepasang jadi berpisah. */
+.abt-sisi { position: sticky; top: 118px; display: flex; flex-direction: column; gap: 22px; }
 .abt-logo {
-  position: sticky; top: 118px;
   aspect-ratio: 1 / 1; display: grid; place-items: center; gap: 12px;
   border: var(--rambut) solid var(--ink-20); background: var(--ink-5);
   align-content: center;
 }
+/* Padding 18 persen itu RUANG NAPAS lambang, bukan hiasan. Lambangnya bundar
+   penuh tanpa marginnya sendiri, dan menempel ke garis rambut kotaknya dia
+   terbaca sesak. */
 .abt-logo img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 18%; }
-.abt-logo-tanda { font-size: 62px; color: var(--ink-20); }
-.abt-logo-catatan {
+
+/* ---- Blok naungan ----
+   Lambang ITERA aslinya tegak dan jauh lebih tinggi daripada lebar, jadi dia
+   dipatok TINGGINYA bukan lebarnya. Kalau dipatok lebar, dia menjulang dan
+   bobot visualnya melampaui lambang Envirocircle di atasnya, padahal urutan
+   bacanya harus sebaliknya. */
+.abt-naung { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.abt-naung-label {
   font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
   font-weight: 200; color: var(--ink-50);
+}
+/* 100 px, bukan 58. Dicoba 58 dulu dan terlalu kecil, deretan bulir emasnya
+   jadi noda dan tulisan ITERA di bawahnya nyaris tidak terbaca. Lambang ini
+   rasionya tegak, 900 banding 1095, jadi tinggi 100 cuma selebar 82 dan
+   masih jauh lebih ringan daripada kotak lambang 220 px di atasnya. Urutan
+   bobotnya tetap benar, yang punya halaman dulu baru yang menaungi. */
+.abt-naung-logo { width: auto; height: 100px; display: block; }
+.abt-naung-nama {
+  font-size: 12px; line-height: 18px; letter-spacing: .3px;
+  font-weight: 200; color: var(--ink-70);
 }
 .abt-utama { display: flex; flex-direction: column; align-items: flex-start; }
 /* Garis rambut pemisah antara pernyataan dan badan teks. Elemen sendiri,
@@ -1885,6 +1922,12 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   /* Kisi editorialnya ditumpuk, dan lambangnya berhenti lengket lalu
      menyusut. Kotak 220 px di layar sempit memakan satu layar sendiri. */
   .abt-kisi { grid-template-columns: 1fr; gap: 28px; }
+  /* Satu kolom, jadi tidak ada lagi tulisan yang berjalan di sebelahnya
+     untuk ditemani. Lengketnya dimatikan, kalau tidak lambangnya menempel
+     di puncak layar sepanjang halaman. */
+  .abt-sisi { position: static; flex-direction: row; align-items: flex-end; gap: 28px; }
+  .abt-logo { width: 150px; flex: none; }
+  .abt-naung-logo { height: 76px; }
   .abt-logo { position: static; width: 132px; aspect-ratio: 1 / 1; }
   .abt-logo-tanda { font-size: 42px; }
   .abt-paragraf { grid-template-columns: 1fr; gap: 20px; }
