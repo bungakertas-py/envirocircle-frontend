@@ -3373,51 +3373,143 @@ body { font-weight: 200; }
 
 /* =====================================================================
    ALARM HUJAN, 4 Oktober 2026
-   Tanda berdenyut di kota yang sekarang kering tapi akan kena hujan di sisa
-   waktu model. Perilakunya di app.js, cari ALARM HUJAN.
+   Gelembung berdenyut di kota yang sekarang kering tapi akan kena hujan di
+   sisa waktu model. Perilakunya di app.js, cari ALARM HUJAN.
 
-   Letaknya MENEMPEL DI POJOK ikon kondisi, bukan menggantikannya. Ikonnya
-   bercerita soal SEKARANG, alarmnya soal NANTI, dan dua duanya perlu terbaca
-   bersamaan.
+   BENTUKNYA GELEMBUNG BERSKALA, bukan titik berukuran tetap. Garis tengahnya
+   dihitung di app.js dari hujan TERDERAS yang akan datang, dan LUASNYA yang
+   sebanding dengan angkanya sebab mata membaca luas bukan lebar. Ini pola
+   baku peta gelembung.
 
-   WARNANYA IKUT SEBERAPA DEKAT, bukan seberapa deras. Yang paling berguna
-   dari sebuah alarm itu waktunya, dan derasnya nanti sudah diceritakan ikon
-   kotanya sendiri waktu hujannya tiba.
-   Merah SENGAJA TIDAK DIPAKAI. Di app ini merah sudah berarti bahaya, dipakai
-   ISPU Sangat Tidak Sehat dan titik api, sedangkan hujan ringan bukan bahaya.
+   MERAH, diminta user. Sebelumnya biru dengan alasan merah di app ini sudah
+   berarti bahaya, dan user menolak alasan itu. Memang benar juga, peringatan
+   yang tidak terbaca sebagai peringatan tidak ada gunanya.
+
+   ISIANNYA TEMBUS PANDANG, cuma tepinya yang pekat. Gelembung sebesar 30 px
+   yang pekat akan menutupi ikon kondisi dan nama kotanya, dan dua duanya
+   masih perlu terbaca. Yang pekat cuma cincinnya.
    ===================================================================== */
 .alarm-hujan {
-  position: absolute; top: -3px; right: -3px; z-index: 2;
-  width: 9px; height: 9px; border-radius: 50%;
-  box-shadow: 0 0 0 1.5px var(--surface);
+  position: absolute; top: 0; right: 0; z-index: 3;
+  transform: translate(45%, -45%);
+  width: var(--d, 14px); height: var(--d, 14px); border-radius: 50%;
+  background: rgba(228, 35, 32, .26);
+  border: 2px solid #e42320;
+  box-sizing: border-box;
   pointer-events: auto; cursor: help;
 }
 /* Cincin yang mengembang lalu memudar. Elemen semu, bukan elemen kedua, jadi
    markup tiap kota tetap satu span. */
 .alarm-hujan::after {
-  content: ""; position: absolute; inset: 0; border-radius: 50%;
-  background: inherit; opacity: .55;
+  content: ""; position: absolute; inset: -2px; border-radius: 50%;
+  border: 2px solid #e42320;
   animation: alarm-denyut 1.8s ease-out infinite;
 }
 @keyframes alarm-denyut {
-  0%   { transform: scale(1);   opacity: .55; }
-  70%  { transform: scale(2.6); opacity: 0; }
-  100% { transform: scale(2.6); opacity: 0; }
+  0%   { transform: scale(1);   opacity: .7; }
+  70%  { transform: scale(1.9); opacity: 0; }
+  100% { transform: scale(1.9); opacity: 0; }
 }
-/* Makin dekat makin cepat dan makin pekat. Tiga tingkat saja, lebih dari itu
-   tidak terbaca sebagai beda. */
-.alarm-hujan.ah-dekat  { background: #2360c8; }
+/* Yang berubah cuma KECEPATAN dan kepekatan denyutnya, warnanya tetap merah
+   semua. Warna sudah dipakai untuk menandai "ini alarm", ukuran sudah
+   dipakai untuk deras, jadi yang tersisa untuk waktu cuma gerak.
+   Yang jauh TETAP BERDENYUT, cuma pelan. Dulu dia diam sama sekali dan itu
+   membuatnya nyaris tidak terlihat. */
 .alarm-hujan.ah-dekat::after  { animation-duration: 1.1s; }
-.alarm-hujan.ah-sedang { background: #22a5e0; }
-.alarm-hujan.ah-sedang::after { animation-duration: 1.8s; opacity: .45; }
-.alarm-hujan.ah-jauh   { background: #8FA0B3; }
-.alarm-hujan.ah-jauh::after   { animation: none; opacity: 0; }
+.alarm-hujan.ah-sedang::after { animation-duration: 2.0s; opacity: .8; }
+.alarm-hujan.ah-jauh          { border-color: rgba(228, 35, 32, .6);
+                                background: rgba(228, 35, 32, .14); }
+.alarm-hujan.ah-jauh::after   { animation-duration: 3.4s; border-color: rgba(228, 35, 32, .6); }
+
+/* ---- KEADAAN KEDUA, SEDANG HUJAN ----
+   Muncul waktu slider sampai di jam hujannya. Pilihan user dari tiga usulan,
+   yang dipilih "butir air di dalamnya".
+
+   Isiannya DIPEKATKAN jadi 0,9, beda dengan keadaan "akan hujan" yang cuma
+   0,26. Tetes putih di atas isian tembus pandang tidak akan terbaca, dan
+   tetes itu seluruh gunanya memang supaya keadaan ini bisa dibedakan dari
+   jauh tanpa membaca kartunya.
+
+   Cincin yang mengembang DIMATIKAN di sini. Mengembang keluar itu bahasa
+   "sesuatu akan datang". Hujannya sudah datang, jadi yang bergerak cukup
+   tetesnya. Dua gerakan sekaligus di gelembung 20 px cuma jadi ramai.
+
+   Tetesnya pakai Material Symbols yang memang sudah dimuat app ini, bukan
+   bentuk buatan dari CSS. Di 10 px, bentuk buatan dari lingkaran dan segitiga
+   jatuh jadi noda, sedangkan glif aslinya tetap tajam. */
+.alarm-hujan.ah-kini {
+  background: rgba(228, 35, 32, .9);
+  border-color: #e42320;
+  display: flex; align-items: center; justify-content: center;
+}
+.alarm-hujan.ah-kini::after { animation: none; opacity: 0; }
+.ah-tetes {
+  color: #fff; font-size: calc(var(--d, 20px) * 0.52); line-height: 1;
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+  animation: ah-jatuh 1.7s ease-in-out infinite;
+  pointer-events: none;
+}
+/* Tetesnya JATUH lalu muncul lagi dari atas. Jaraknya ditahan 22 persen
+   tinggi gelembung, lebih jauh dari itu tetesnya keluar dari bidang merahnya
+   dan berkedip di atas peta. */
+@keyframes ah-jatuh {
+  0%   { transform: translateY(-22%); opacity: 0; }
+  22%  { transform: translateY(0);    opacity: 1; }
+  68%  { transform: translateY(0);    opacity: 1; }
+  100% { transform: translateY(22%);  opacity: 0; }
+}
 
 /* Tanpa ikon kondisi, tumpukannya lebih pendek dan pojoknya pindah. */
-.city-cond.no-ico .alarm-hujan { top: 2px; right: 6px; }
+.city-cond.no-ico .alarm-hujan { top: 6px; right: 8px; }
 
-/* Denyut dimatikan untuk yang minta gerakan dikurangi. Titiknya TETAP ADA,
-   cuma diam. Membuang titiknya sama saja membuang peringatannya. */
+/* ---- Kartu waktu gelembung disorot ----
+   Menggantikan atribut title. Tooltip bawaan peramban terlambat sedetik,
+   tidak bisa diberi gaya, dan tidak bisa memuat tata letak.
+   SELURUHNYA CSS, tidak ada pendengar kejadian yang perlu dilepas tiap kota
+   digambar ulang.
+
+   Muncul DI ATAS gelembungnya, bukan di bawah. Kota berikut namanya ada di
+   bawah ikon, jadi kartu yang turun akan menimpa nama kota tetangga. */
+.ah-kartu {
+  position: absolute; bottom: calc(100% + 9px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  display: flex; flex-direction: column; gap: 3px;
+  min-width: 142px; padding: 10px 13px 11px;
+  background: var(--paper); color: var(--ink);
+  border: var(--bw) solid var(--ink-20);
+  font-family: var(--font-ui); text-align: left; white-space: nowrap;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease, visibility .16s;
+  z-index: 10;
+}
+.alarm-hujan:hover .ah-kartu {
+  opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
+}
+/* Lidah kecil yang menunjuk balik ke gelembungnya. Tanpa dia kartunya
+   terbaca melayang lepas, tidak jelas milik kota yang mana. */
+.ah-kartu::after {
+  content: ""; position: absolute; top: 100%; left: 50%;
+  margin-left: -5px; border: 5px solid transparent;
+  border-top-color: var(--ink-20);
+}
+.ah-kota {
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  font-weight: 300; color: var(--ink-50);
+}
+.ah-utama { font-size: 14px; font-weight: 300; line-height: 1.25; }
+.ah-jam { font-size: 11px; font-weight: 200; color: var(--ink-50); }
+.ah-pisah { display: block; height: 0; border-top: var(--bw) solid var(--ink-20); margin: 5px 0 4px; }
+.ah-deras { font-size: 12px; font-weight: 200; color: var(--ink-70); }
+/* Angka derasnya diwarnai merah, sewarna gelembungnya, supaya mata tahu
+   angka ini yang menentukan besar gelembungnya. */
+.ah-deras b { font-weight: 300; color: #e42320; font-size: 15px; }
+
+/* Denyut dimatikan untuk yang minta gerakan dikurangi. Gelembungnya TETAP
+   ADA dan tetap berskala, cuma diam. Membuang gelembungnya sama saja
+   membuang peringatannya. */
 @media (prefers-reduced-motion: reduce) {
   .alarm-hujan::after { animation: none; opacity: 0; }
+  /* Tetesnya berhenti jatuh tapi TETAP TAMPAK. Dia yang membedakan sedang
+     hujan dari akan hujan, jadi dia tidak boleh ikut hilang. */
+  .ah-tetes { animation: none; opacity: 1; transform: none; }
 }

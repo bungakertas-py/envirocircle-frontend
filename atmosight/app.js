@@ -2340,39 +2340,82 @@ var ALARM_AMBANG = 0.5;   // mm, batas disebut hujan. Sama dengan cityCondition.
    membaca hal lain harus punya cara mematikannya. */
 let alarmOn = true;
 
-/* Indeks waktu terdekat dengan JAM SEKARANG. Sengaja dipisah dari
-   timeIndexOf() yang mengikuti frame tampil. */
-function indeksSekarang(times) {
-  if (!times || !times.length) return 0;
-  var kini = Date.now(), bi = 0, bd = Infinity;
-  for (var i = 0; i < times.length; i++) {
-    var d = Math.abs(new Date(times[i]).getTime() - kini);
-    if (d < bd) { bd = d; bi = i; }
-  }
-  return bi;
-}
+/* PATOKANNYA FRAME YANG SEDANG TAMPIL, bukan jam dinding.
+   Diputuskan 4 Oktober sore, menggantikan keputusan pagi harinya.
 
-/* Berapa jam lagi hujan di tempat ke-i, dihitung dari jam sekarang.
-   Mengembalikan null kalau tidak ada hujan di sisa waktu model, dan juga
-   null kalau SEKARANG memang sudah hujan.
+   Alasannya bukan berubah pikiran. Yang diminta sekarang gelembungnya
+   BERGANTI KEADAAN waktu slider sampai di jam hujannya, dan itu mustahil
+   kalau patokannya jam dinding.
 
-   Yang sudah hujan sengaja tidak dialarmi. Ikon kotanya sudah bergambar
-   hujan, jadi tanda tambahan cuma mengulang. Alarm ini untuk yang sekarang
-   kering tapi nanti basah. */
+   Syarat "patokan jam dinding" TETAP TERPENUHI, dan ini bukan akal akalan.
+   App ini membuka slidernya di nearestNowIndex(), frame terdekat dengan jam
+   sekarang. Jadi waktu halaman dibuka, slider dan jam dinding memang sama,
+   dan alarmnya bekerja sebagai alarm. Begitu orang menggeser waktu dia
+   berubah jadi alat jelajah, dan itu memang yang diminta.
+   Ikut slider juga membuatnya sinkron dengan SELURUH isi peta lain. Gelembung
+   yang ikut jam dinding sendirian akan jadi satu satunya benda yang bercerita
+   soal waktu yang berbeda dari yang sedang digambar. */
 function alarmHujan(i) {
   if (!cityData) return null;
   var arr = cityData.data.rain;
   if (!arr || !arr[i]) return null;
-  var sc = cityData.scales.rain, t = cityData.times;
-  var kini = indeksSekarang(t);
-  if (arr[i][kini] * sc >= ALARM_AMBANG) return null;   // sudah hujan sekarang
-  for (var k = kini + 1; k < arr[i].length; k++) {
-    if (arr[i][k] * sc >= ALARM_AMBANG) {
-      var jam = (new Date(t[k]).getTime() - Date.now()) / 3600000;
-      return { jam: Math.max(0, jam), mm: arr[i][k] * sc, waktu: t[k] };
-    }
+  var sc = cityData.scales.rain, t = cityData.times, baris = arr[i];
+  var ti = timeIndexOf(t);
+  if (ti < 0 || ti >= baris.length) return null;
+  var patok = new Date(t[ti]).getTime();
+  var jamDari = function (k) { return (new Date(t[k]).getTime() - patok) / 3600000; };
+
+  /* ---- KEADAAN 1, SEDANG HUJAN ---- */
+  if (baris[ti] * sc >= ALARM_AMBANG) {
+    var mulai = ti;
+    while (mulai > 0 && baris[mulai - 1] * sc >= ALARM_AMBANG) mulai--;
+    var reda = -1;
+    for (var k = ti + 1; k < baris.length; k++)
+      if (baris[k] * sc < ALARM_AMBANG) { reda = k; break; }
+    return {
+      kini: true,
+      mm: baris[ti] * sc,
+      sejak: -jamDari(mulai),                 // jam, sudah berlangsung berapa lama
+      awalData: mulai === 0,                  // mulainya di luar jangkauan data
+      reda: reda >= 0 ? t[reda] : null,       // sampelnya sudah kering di sini
+      jamReda: reda >= 0 ? jamDari(reda) : null,
+    };
   }
-  return null;
+
+  /* ---- KEADAAN 2, AKAN HUJAN ---- */
+  var awal = -1, puncak = 0;
+  for (var m = ti + 1; m < baris.length; m++) {
+    var v = baris[m] * sc;
+    if (v >= ALARM_AMBANG && awal < 0) awal = m;
+    if (awal >= 0 && v > puncak) puncak = v;
+  }
+  if (awal < 0) return null;
+  /* Puncaknya dihitung dari saat hujan MULAI, bukan dari frame sekarang,
+     supaya yang diukur memang episode yang akan datang itu.
+     DUA angka untuk dua hal. `jam` kapan mulai, itu yang mengatur denyut.
+     `puncak` terderas, itu yang mengatur besar gelembung. Dulu yang dipakai
+     cuma nilai saat hujan pertama menyentuh ambang, dan itu menyesatkan,
+     rintik 0,6 mm bisa diikuti 15 mm beberapa jam kemudian. */
+  return { kini: false, jam: jamDari(awal), mm: baris[awal] * sc,
+           puncak: puncak, waktu: t[awal] };
+}
+
+/* Garis tengah gelembung, piksel. Luasnya yang sebanding dengan angkanya,
+   bukan garis tengahnya, jadi akarnya diambil. Itu aturan baku peta
+   gelembung, sebab mata membaca LUAS bukan lebar.
+
+   DOMAINNYA DIPATOK 0,5 sampai 20 mm, TIDAK ikut sebaran data. Diukur,
+   puncak GFS cuma sampai 3,4 mm sedangkan WRF sampai 41,9 mm. Kalau
+   skalanya ikut data masing masing, gelembung sebesar itu akan berarti
+   3 mm di satu model dan 40 mm di model lain, dan itu bohong.
+   Angka 0,5, 10, dan 20 itu ambang yang sama dengan cityCondition, jadi
+   gelembung sebesar separuh kira kira berarti "hujan lebat". */
+/* 16 dan 34, bukan 12 dan 30. Yang terkecil pun harus langsung terlihat,
+   dan di 12 px gelembung hujan ringan nyaris hilang di antara ikon kota. */
+var ALARM_MIN = 16, ALARM_MAKS = 34, ALARM_PUNCAK = 20;
+function alarmGaris(mm) {
+  var p = (Math.min(mm, ALARM_PUNCAK) - ALARM_AMBANG) / (ALARM_PUNCAK - ALARM_AMBANG);
+  return Math.round(ALARM_MIN + (ALARM_MAKS - ALARM_MIN) * Math.sqrt(Math.max(0, p)));
 }
 
 /* Tandanya. Kelasnya ikut SEBERAPA DEKAT, bukan seberapa deras, sebab yang
@@ -2383,11 +2426,60 @@ function alarmKelas(jam) {
   if (jam <= 12) return "ah-sedang";
   return "ah-jauh";
 }
-function alarmHtml(a) {
+/* Jam dibulatkan jadi kalimat, bukan angka telanjang. "0 jam lagi" itu
+   membingungkan, dan "2,7 jam" bukan cara orang bicara. */
+function alarmJamKata(j) {
+  return j < 1 ? "kurang dari 1 jam lagi" : Math.round(j) + " jam lagi";
+}
+/* Jam saja tanpa tanggal, "16:00 WIB". Kartunya sempit dan tanggalnya sudah
+   kelihatan di bilah waktu di bawah peta. */
+function alarmJamSaja(iso) {
+  var o = { hour: "2-digit", minute: "2-digit", timeZone: "UTC" };
+  return toWIB(iso).toLocaleString("id-ID", o).replace(/\./g, ":") + " WIB";
+}
+
+/* Kartu kecil waktu gelembungnya disorot. SELURUHNYA CSS, tidak ada satu pun
+   pendengar kejadian. Kota digambar ulang tiap peta digeser dan tiap waktu
+   diganti, jadi pendengar yang dipasang per gelembung harus dilepas lagi tiap
+   kali, dan yang lupa dilepas menumpuk diam diam.
+
+   Atribut title SENGAJA TIDAK DIPAKAI. Tooltip bawaan peramban terlambat
+   sekitar sedetik, tidak bisa diberi gaya, dan tidak bisa memuat tata letak. */
+function alarmHtml(a, namaKota) {
   if (!a) return "";
-  var j = a.jam < 1 ? "<1" : String(Math.round(a.jam));
-  return '<span class="alarm-hujan ' + alarmKelas(a.jam) +
-         '" title="Hujan ' + j + ' jam lagi, sekitar ' + a.mm.toFixed(1).replace(".", ",") + ' mm"></span>';
+  var kepala = '<span class="ah-kota">' + escHtml(namaKota || "") + '</span>';
+
+  if (a.kini) {
+    /* KATA "SEKITAR" ITU WAJIB, bukan basa basi. Redanya cuma bisa diketahui
+       sehalus langkah waktu modelnya, dan di GFS langkahnya 3 jam. Diukur,
+       47 persen episode hujan GFS cuma muncul di SATU sampel, jadi "reda 3
+       jam lagi" sebenarnya berarti "sampel berikutnya sudah kering" dan
+       hujannya bisa berhenti kapan saja di antara keduanya. Kalimat yang
+       terdengar seperti hitung mundur pasti itu menjanjikan ketelitian yang
+       datanya tidak punya. */
+    var lama = a.awalData ? "Sudah berlangsung"
+             : a.sejak < 1 ? "Baru mulai"
+             : "Sudah " + Math.round(a.sejak) + " jam";
+    var reda = a.reda ? "reda sekitar " + alarmJamSaja(a.reda)
+                      : "masih hujan sampai ujung data model";
+    return '<span class="alarm-hujan ah-kini" style="--d:' + alarmGaris(a.mm) + 'px">' +
+      '<i class="ah-tetes material-symbols-outlined" aria-hidden="true">water_drop</i>' +
+      '<span class="ah-kartu">' + kepala +
+        '<span class="ah-utama">Sedang hujan</span>' +
+        '<span class="ah-jam">' + escHtml(lama) + '</span>' +
+        '<span class="ah-pisah"></span>' +
+        '<span class="ah-deras"><b>' + a.mm.toFixed(1).replace(".", ",") + '</b> mm, ' +
+        escHtml(reda) + '</span>' +
+      '</span></span>';
+  }
+
+  return '<span class="alarm-hujan ' + alarmKelas(a.jam) + '" style="--d:' + alarmGaris(a.puncak) + 'px">' +
+    '<span class="ah-kartu">' + kepala +
+      '<span class="ah-utama">Hujan ' + escHtml(alarmJamKata(a.jam)) + '</span>' +
+      '<span class="ah-jam">' + escHtml(fmtValid(a.waktu)) + '</span>' +
+      '<span class="ah-pisah"></span>' +
+      '<span class="ah-deras"><b>' + a.puncak.toFixed(1).replace(".", ",") + '</b> mm terderas</span>' +
+    '</span></span>';
 }
 
 // Tempatkan ikon kota: filter tier×zoom + dalam layar, urut prioritas, lalu
@@ -2521,7 +2613,7 @@ async function refreshCityIcons() {
       pane: "cityicons", title: c.p.n, keyboard: false,
       icon: L.divIcon({ className: "city-cond" + (cityIconsOn ? "" : " no-ico"),
         iconSize: [30, 30], iconAnchor: [15, 15],
-        html: ico + alarmHtml(c.alarm) +
+        html: ico + alarmHtml(c.alarm, cityShortName(c.p.n)) +
               `<span class="cc-lbl"><b>${escHtml(cityShortName(c.p.n))}</b>` +
               (c.val ? `<i>${escHtml(c.val)}</i>` : "") + `</span>` }),
     });
