@@ -466,20 +466,40 @@ async function berkasAda(nama) {
   }
 }
 function terapkanFiturModel() {
+  /* Tombol Skew-T disetel DULUAN, sebelum cabang PUNYA_EKSTRA di bawah.
+     Markupnya lahir hidden, dan model berekstra seperti GFS keluar lebih awal
+     dari fungsi ini sehingga tidak pernah sampai ke pemeriksaan berkas di
+     bawah. Akibatnya tombolnya tidak pernah muncul di model yang justru
+     paling pasti punya Skew-T. Sempat terjadi. */
+  var tbSkt = $("skewt-toggle");
+  if (tbSkt) tbSkt.hidden = !SKEWT_ADA;
   if (PUNYA_EKSTRA) return;
   // Sembunyikan dulu semuanya, baru dimunculkan satu satu yang berkasnya ada.
   // Urutannya begini supaya tombol tidak sempat terlihat lalu hilang lagi.
+  /* Yang disembunyikan PEMBUNGKUSNYA, bukan tombolnya. Sejak 4 Oktober 2026
+     tiap tombol fitur duduk di dalam .fit-wrap bersama keterangannya, dan
+     daftar fitur itu flex bercelah 18 px. Menyembunyikan tombolnya saja
+     meninggalkan pembungkus kosong yang tetap memakan satu celah, jadi ada
+     lubang di tengah daftar tanpa isi. */
+  const bungkus = (id) => $(id)?.closest(".fit-wrap, .city-wrap, .phenom-wrap") || $(id);
   FITUR_BERKAS.forEach(([id]) => {
-    const el = $(id);
+    const el = bungkus(id);
     if (el) el.style.display = "none";
   });
   FITUR_BERKAS.forEach(([id, berkas]) => {
     berkasAda(berkas).then((ada) => {
-      const el = $(id);
+      const el = bungkus(id);
       if (ada && el) el.style.display = "";
     });
   });
-  berkasAda("profile_meta.json").then((ada) => { SKEWT_ADA = ada; });
+  berkasAda("profile_meta.json").then((ada) => {
+    SKEWT_ADA = ada;
+    /* Tombolnya disembunyikan, bukan dimatikan. Tombol mati yang tetap
+       terlihat mengundang orang mengkliknya lalu kecewa, sedangkan model
+       yang tidak punya profile_meta.json memang tidak akan pernah punya
+       Skew-T selama pipeline-nya belum mengirimkannya. */
+    var tb = $("skewt-toggle"); if (tb) tb.hidden = !ada;
+  });
   document.querySelector(".level-bar")?.style.setProperty("display", "none", "important");
   const lv = $("level-select");
   if (lv) lv.closest(".field")?.style.setProperty("display", "none");
@@ -1151,7 +1171,7 @@ async function showFrame(i) {
   if (cyclonesOn) refreshCyclones();     // siklon + jalur ikut waktu aktif
   if (itczOn) refreshItcz();             // zona ITCZ ikut waktu aktif
   if (activeLayer === "pressure_surface") refreshIsobars();   // isobar ikut waktu aktif
-  if (skewtOpen && lastPoint && $("point-panel")?.classList.contains("open")) renderSkewTCard();
+  segarkanSkewT();   // kartu Skew-T ikut jam yang sedang tampil
   updateHash();
 }
 
@@ -1224,7 +1244,6 @@ function windAt(u, v) {
 // ============== PROFIL VERTIKAL (Skew-T) — muat malas & sampel ==============
 let profileData = null;      // { meta, vars:{t,r,u,v} }
 let profileLoading = null;
-let skewtOpen = false;       // kartu Skew-T sedang dibuka?
 
 async function loadProfileData() {
   if (profileData) return profileData;
@@ -1283,7 +1302,10 @@ function sampleProfile(pd, lat, lon, ti) {
 // Export PLOT Skew-T (tanpa legenda) ke PNG. Rasterize SVG plot ke canvas,
 // beri latar + border + bayangan neubrutalist agar rapi saat dibagikan.
 function exportSkewTPng() {
-  const wrap = $("pt-skewt-wrap");
+  /* Sumbernya PINDAH 4 Oktober 2026 ikut kartu Skew-T yang keluar dari
+     panel titik. Dulu wadah lipat di sidebar, dan begitu wadah itu
+     dibuang tombol ekspor akan diam saja tanpa satu pun pesan. */
+  const wrap = $("skt-card");
   const svgEl = wrap && wrap.querySelector("svg");   // svg PERTAMA = plot (bukan swatch legenda)
   if (!svgEl) return;
   const vb = svgEl.viewBox.baseVal;
@@ -1358,26 +1380,69 @@ function skewtSkeleton() {
     `</div>`;
 }
 
-// Render (atau re-render) kartu Skew-T ke #pt-skewt-wrap untuk titik & waktu aktif.
-async function renderSkewTCard() {
-  const wrap = $("pt-skewt-wrap");
-  if (!wrap || !lastPoint) return;
-  wrap.innerHTML = skewtSkeleton();
+/* ================= MODE SKEW-T =================
+   4 Oktober 2026, diminta user. Skew-T dikeluarkan dari panel titik dan jadi
+   ALAT di kartu Fitur. Dinyalakan dulu, lalu titiknya ditunjuk di peta, lalu
+   hasilnya tampil di kartu tengah layar.
+
+   Modenya MATI SENDIRI sesudah satu titik dipilih. Kalau dibiarkan menyala,
+   klik biasa ke peta tidak lagi membuka panel titik dan orang bisa merasa
+   petanya rusak tanpa tahu sebabnya. Menyalakannya lagi cuma satu klik. */
+let skewtMode = false;
+let sktTitik = null;        // titik yang sedang diplot, dipakai saat waktu berubah
+
+function setSkewtMode(on) {
+  skewtMode = !!on;
+  $("skewt-toggle")?.classList.toggle("active", skewtMode);
+  document.getElementById("stage")?.classList.toggle("mode-skewt", skewtMode);
+  /* Tulisan di petunjuk kursor ikut berganti, jadi orang tahu klik
+     berikutnya akan melakukan hal yang berbeda dari biasanya. */
+  const t = $("klik-petunjuk");
+  if (t) t.textContent = skewtMode ? "Generate Plot Skew-T here" : "Click Here";
+}
+
+async function bukaSkewT(lat, lon) {
+  const ov = $("skt-overlay"), isi = $("skt-card")?.querySelector(".skt-isi");
+  if (!ov || !isi) return;
+  sktTitik = { lat, lon };
+  ov.classList.add("show");
+  isi.innerHTML = skewtSkeleton();
   let pd;
   try { pd = await loadProfileData(); }
-  catch (e) { wrap.innerHTML = `<div class="skt-load">Profil belum tersedia.</div>`; return; }
-  if (!skewtOpen) return;                     // keburu ditutup
+  catch (e) { isi.innerHTML = `<div class="skt-load">Profil belum tersedia untuk model ini.</div>`; return; }
+  if (!ov.classList.contains("show")) return;          // keburu ditutup
   const ti = profileTimeIndex(pd);
-  const prof = sampleProfile(pd, lastPoint.lat, lastPoint.lon, ti);
+  const prof = sampleProfile(pd, lat, lon, ti);
   const d = window.SkewT.derive(prof);
-  wrap.innerHTML =
-    `<div class="skt-note">Profil ${fmtValid(pd.meta.times[ti])} · indikasi model GFS (grid ~1°), bukan sounding asli.</div>` +
-    window.SkewT.svg(d, { W: 340, H: 380 }) +
-    `<div class="skt-exp-row"><button type="button" class="skt-export" id="skt-export">` +
-    `<span class="material-symbols-outlined">image</span> Export PNG</button></div>` +
-    skewtLegend() +
-    skewtIndexBox(d);
+  isi.innerHTML =
+    `<div class="skt-kepala">` +
+      `<span class="skt-tag">Profil Atmosfer · Skew-T</span>` +
+      `<span class="skt-koord mono">${fmtCoord(lat, lon)}</span>` +
+    `</div>` +
+    `<div class="skt-badan">` +
+      `<div class="skt-kiri">` +
+        window.SkewT.svg(d, { W: 340, H: 380 }) +
+      `</div>` +
+      `<div class="skt-kanan">` +
+        `<div class="skt-note">Profil ${fmtValid(pd.meta.times[ti])} · indikasi model GFS (grid ~1°), bukan sounding asli.</div>` +
+        skewtIndexBox(d) +
+        skewtLegend() +
+        `<div class="skt-exp-row"><button type="button" class="skt-export" id="skt-export">` +
+        `<span class="material-symbols-outlined">image</span> Export PNG</button></div>` +
+      `</div>` +
+    `</div>`;
   $("skt-export")?.addEventListener("click", exportSkewTPng);
+}
+function tutupSkewT() {
+  $("skt-overlay")?.classList.remove("show");
+  sktTitik = null;
+}
+/* Waktu frame berganti sementara kartunya terbuka, profilnya digambar ulang
+   untuk titik yang sama. Tanpa ini kartunya menunjukkan jam lama sedangkan
+   peta di belakangnya sudah pindah jam. */
+function segarkanSkewT() {
+  if (sktTitik && $("skt-overlay")?.classList.contains("show"))
+    bukaSkewT(sktTitik.lat, sktTitik.lon);
 }
 
 function fmtCoord(lat, lon) {
@@ -1758,29 +1823,12 @@ function renderPoint(pd, lat, lon) {
     `<div class="pt-table-wrap"><table class="pt-table"><thead><tr>` +
     kolom.map(([h]) => `<th>${h}</th>`).join("") +
     `</tr></thead><tbody>${rows}</tbody></table></div>` +
-    // Kartu LANJUTAN: profil vertikal Skew-T (dimuat malas saat dibuka).
-    // Cuma dibuat kalau profile_meta.json ada di folder model, lihat SKEWT_ADA.
-    // Tanpa berkas itu kartunya tidak ditampilkan daripada dibuka lalu gagal.
-    (SKEWT_ADA
-      ? `<button type="button" class="pt-skewt-head${skewtOpen ? " open" : ""}" id="pt-skewt-toggle">` +
-        `<span class="skt-lead material-symbols-outlined">stacked_line_chart</span>` +
-        `<span class="skt-label">Profil Atmosfer · Skew-T</span>` +
-        `<span class="skt-caret material-symbols-outlined">expand_more</span></button>` +
-        `<div class="pt-skewt-wrap${skewtOpen ? " open" : ""}" id="pt-skewt-wrap"></div>`
-      : "");
-
-  const tog = $("pt-skewt-toggle");
-  if (tog) tog.addEventListener("click", () => {
-    skewtOpen = !skewtOpen;
-    tog.classList.toggle("open", skewtOpen);
-    $("pt-skewt-wrap")?.classList.toggle("open", skewtOpen);
-    if (skewtOpen) {
-      renderSkewTCard();
-      // Jump: bawa kartu ke atas panel supaya profil mengisi layar (kondisi tergulir ke atas).
-      requestAnimationFrame(() => $("pt-skewt-toggle")?.scrollIntoView({ behavior: "smooth", block: "start" }));
-    } else { const w = $("pt-skewt-wrap"); if (w) w.innerHTML = ""; }
-  });
-  if (skewtOpen) renderSkewTCard();   // titik/waktu berubah saat kartu terbuka -> render ulang
+    // KARTU LIPAT SKEW-T DIBUANG DARI SINI 4 Oktober 2026, diminta user.
+    // Dulu dia duduk di kaki panel ini, jadi orang harus mengklik peta dulu,
+    // menggulir sampai dasar, baru menemukannya. Sekarang dia alat sendiri di
+    // kartu Fitur, dipilih dulu lalu titiknya ditunjuk, dan hasilnya tampil
+    // di kartu tengah layar. Cari MODE SKEW-T di bawah.
+    "";
 }
 
 function exportCSV() {
@@ -3400,7 +3448,22 @@ async function init() {
     });
 
     // Point detail: klik peta → panel titik
-    map.on("click", (e) => openPoint(e.latlng.lat, e.latlng.lng));
+    /* Klik peta BERCABANG. Dalam mode Skew-T dia memilih titik plot, di luar
+       itu dia membuka panel titik seperti biasa. */
+    map.on("click", (e) => {
+      if (skewtMode) { setSkewtMode(false); bukaSkewT(e.latlng.lat, e.latlng.lng); }
+      else openPoint(e.latlng.lat, e.latlng.lng);
+    });
+    $("skewt-toggle")?.addEventListener("click", () => setSkewtMode(!skewtMode));
+    $("skt-close")?.addEventListener("click", tutupSkewT);
+    $("skt-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupSkewT(); });
+    /* Escape mematikan modenya kalau kartunya belum terbuka, dan menutup
+       kartunya kalau sudah. Dua duanya jalan keluar yang orang harapkan. */
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if ($("skt-overlay")?.classList.contains("show")) tutupSkewT();
+      else if (skewtMode) setSkewtMode(false);
+    });
 
     /* ---- petunjuk kursor ----
        Label "Click Here" yang mengikuti kursor selama dia di atas peta.

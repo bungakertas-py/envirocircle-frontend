@@ -1295,6 +1295,15 @@ html, body {
 #city-toggle, #cond-legend,
 #itcz-note, #phenom-panel,
 .level-bar, #pt-skewt-wrap { display: none !important; }
+/* PEMBUNGKUSNYA ikut disembunyikan, 4 Oktober 2026. Sejak keterangan masuk
+   ke dalam kartu, tiap tombol fitur duduk di dalam pembungkus bersama
+   keterangannya, dan daftar fitur itu flex bercelah 18 px. Menyembunyikan
+   tombolnya saja meninggalkan pembungkus kosong yang tetap memakan satu
+   celah, jadi ada lubang di tengah daftar tanpa isi apa pun. */
+.sisi-body .fit-wrap:has(> #cyclone-toggle),
+.sisi-body .fit-wrap:has(> #itcz-toggle),
+.sisi-body .city-wrap,
+.sisi-body .phenom-wrap { display: none !important; }
 .selects .field:nth-child(2) { display: none; }   /* dropdown LEVEL desktop */
 
 /* Tombol parameter dimatikan selama data belum ada. */
@@ -1468,6 +1477,14 @@ sub { font-size: .72em; line-height: 0; vertical-align: baseline; position: rela
   /* ---- kontrol lama disembunyikan, sudah diwakili bilah bawah ---- */
   .layer-bar, .level-bar, .panel.selects,
   #ctrl-toggle, .lang, .zoom, .city-wrap, #cyclone-toggle, #itcz-toggle,
+  /* Pembungkus Siklon dan ITCZ ikut, 4 Oktober 2026. Sejak keterangan masuk
+     ke dalam kartu, tombolnya duduk di dalam pembungkus, dan menyembunyikan
+     tombolnya saja meninggalkan pembungkus kosong yang tetap memakan celah
+     flex. Daftarnya jadi berlubang tanpa isi.
+     DISEBUT SATU SATU lewat :has(), BUKAN .fit-wrap polos. Titik Api juga
+     memakai pembungkus yang sama dan dia TETAP DIPAKAI di layar sempit,
+     jadi menyembunyikan semua pembungkus akan ikut membunuhnya. */
+  .fit-wrap:has(> #cyclone-toggle), .fit-wrap:has(> #itcz-toggle),
   .phenom-wrap, #share-btn, #fs-btn, .search-wrap,
   /* Kontainer khas dua app lain: Daya Dukung (Emisi) dan Indeks Iklim
      (Fenomena). Isinya sudah pindah jadi seksi di bilah bawah. */
@@ -2497,14 +2514,43 @@ body { font-weight: 200; }
    muncul menimpa daftar fitur di bawahnya. Sekarang mereka keluar dari kartu,
    mengambang DI SEBELAH KIRI-nya, sejajar dengan tombol yang memanggilnya.
    Jadi tetap dekat pemicunya, tapi tidak pernah menutupi fitur lain. */
-.sisi-body .city-wrap, .sisi-body .phenom-wrap { position: relative; }
-.sisi-body #cond-legend, .sisi-body #phenom-panel {
-  position: absolute; top: 0; right: calc(100% + 14px); left: auto; bottom: auto;
-  width: max-content; max-width: 300px; z-index: 60;
-  background: var(--paper); border: 0.7px solid var(--ink-20); border-radius: 4px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, .12);
-  padding: 12px 14px;
+/* ---- KETERANGAN MASUK KE DALAM KARTU, 4 Oktober 2026 ----
+   Diminta user, blok ini IDENTIK dengan yang di Atmosight. Keterangan
+   Kondisi, Titik Api, Siklon, ITCZ, dan Fenomena sekarang muncul PERSIS DI
+   BAWAH tombolnya sendiri, seperti dropdown, dan mendorong baris di
+   bawahnya. Dimatikan tombolnya, keterangannya menutup lagi.
+
+   Ini membalik keputusan sebelumnya yang melemparkan mereka mengambang di
+   sebelah kiri kartu dan di pita tengah atas. Alasan lama, supaya tidak
+   menutupi daftar fitur. Alasan itu gugur sebab sekarang mereka tidak
+   menimpa apa apa, mereka MENDORONG.
+
+   Semuanya memakai kelas .show yang sudah ada, tidak ada mekanisme baru. */
+.sisi-body .fit-wrap, .sisi-body .city-wrap, .sisi-body .phenom-wrap {
+  position: static; width: 100%;
 }
+.sisi-body #cond-legend,
+.sisi-body #phenom-panel,
+.sisi-body .cyc-note {
+  position: static; display: none;
+  width: auto; max-width: none; transform: none;
+  margin: 0 0 4px; padding: 11px 12px 12px;
+  background: var(--surface-low); border: 0; border-left: 2px solid var(--ink-20);
+  border-radius: 0; box-shadow: none !important;
+  font-size: 11px;
+}
+.sisi-body #cond-legend.show,
+.sisi-body #phenom-panel.show,
+.sisi-body .cyc-note.show { display: block; }
+/* TOMBOL PANAHNYA DIBUANG dan rinciannya SELALU TERBUKA, 4 Oktober 2026,
+   diminta user. Di tempat lamanya, melayang di pita tengah atas, melipat
+   rinciannya masuk akal, pita itu menutupi peta. Di dalam kartu dia tidak
+   menutupi apa apa, dia mendorong, jadi satu klik tambahan cuma menghalangi.
+   Lebar kartunya yang ditambah supaya rinciannya muat, bukan rinciannya yang
+   disembunyikan. */
+.sisi-body .cyc-note .cyc-tab { display: none; }
+.sisi-body .cyc-note .cyc-detail { display: flex; padding: 0; margin-top: 8px; }
+.sisi-body .cyc-note .cyc-note-top { padding: 0; }
 
 /* =====================================================================
    PANEL TITIK, DIBONGKAR HABIS
@@ -2541,13 +2587,22 @@ body { font-weight: 200; }
 .ident .brand-info:hover .material-symbols-outlined,
 .ident .nav-arrow:hover .material-symbols-outlined { color: #fff; }
 
-/* Kartu Fitur TIDAK BOLEH menggulir. `overflow-y: auto` membuatnya jadi
-   wadah gulir, dan wadah gulir MEMOTONG apa pun yang keluar ke samping,
-   termasuk legenda Kondisi dan panel Fenomena yang justru sengaja
-   ditaruh di luar kartu. Isinya cuma tujuh baris, jadi tidak ada yang
-   perlu digulir. Kartu Parameter tetap boleh menggulir, isinya lebih panjang
-   dan tidak ada yang menjulur keluar dari sana. */
-.alat .sisi--kanan .sisi-body { overflow: visible; max-height: none; }
+/* Kartu Fitur BOLEH MENGGULIR LAGI, 4 Oktober 2026, diminta user.
+   Larangan lama ada sebabnya, wadah gulir MEMOTONG apa pun yang keluar ke
+   samping, dan dulu legenda Kondisi serta panel Fenomena memang sengaja
+   mengambang di luar kartu. Sebab itu GUGUR, kelima keterangan sekarang
+   duduk di dalam kartu dan tidak ada lagi yang menjulur keluar.
+   Tingginya dipatok supaya kartunya tidak memanjang sampai menutupi peta
+   waktu beberapa keterangan dibuka sekaligus. */
+.alat .sisi--kanan .sisi-body {
+  overflow-y: auto; overflow-x: hidden;
+  max-height: min(560px, calc(100vh - 220px));
+  /* DILEBARKAN 300 -> 376 px, diminta user. Keterangan Siklon dan ITCZ
+     isinya baris berlajur, nama di kiri dan ambangnya di kanan, dan di 300 px
+     lajurnya patah jadi dua baris di hampir tiap butir. Yang dilebarkan
+     kartunya, bukan keterangannya yang dipangkas. */
+  width: 376px;
+}
 
 /* Tombol ekspor CSV. Dari blok penuh selebar panel jadi pil bergaris, sama
    dengan setiap tombol lain di app ini. Isian tinta disimpan sebab dia satu
@@ -2798,8 +2853,8 @@ body { font-weight: 200; }
 
 .about-card, .pw-card { box-shadow: 0 18px 50px rgba(0, 0, 0, .14) !important; }
 .alat .search-results { box-shadow: 0 14px 40px rgba(0, 0, 0, .18) !important; }
-.sisi-body #cond-legend,
-.sisi-body #phenom-panel { box-shadow: 0 14px 40px rgba(0, 0, 0, .12) !important; }
+/* Bayangan melayang DIBUANG, keduanya sekarang duduk di dalam kartu dan
+   bayangan hanya masuk akal untuk benda yang mengambang di atas yang lain. */
 
 /* Bingkai tebal yang angkanya ditulis mati, 2px dan 3px, ikut ditipiskan.
    Yang bergaris-nol tidak terpengaruh, sebab lebar border tidak digambar
@@ -3726,3 +3781,59 @@ body { font-weight: 200; }
    satu benda dan bukan separuh terang separuh redup. */
 .sisi-body .panel.layers .layer-btn.active .lb-kode,
 .sisi-body .panel.layers .layer-btn:hover:not(.disabled) .lb-kode { opacity: .82; }
+
+
+/* =====================================================================
+   GELEMBUNG TITIK API, 4 Oktober 2026
+   Gayanya disamakan dengan alarm hujan di Atmosight, diminta user. Dulu
+   titik kanvas berjari jari tetap, sekarang gelembung DOM berskala FRP.
+   Ukurannya dihitung di app.js, cari GELEMBUNG TITIK API.
+
+   MERAH SAJA, tidak ada tangga warna. Warna sudah dipakai untuk menandai
+   "ini titik api", dan besarnya yang bercerita seberapa kuat. Memberi warna
+   bertingkat di atas ukuran bertingkat membuat dua bahasa untuk satu hal.
+
+   YANG BERDENYUT CUMA YANG DI ATAS 100 MW. Datanya 666 titik, dan 666
+   elemen beranimasi sekaligus itu beban nyata di HP. Yang lewat ambang itu
+   kira kira sepersepuluhnya, dan memang itu yang pantas menarik mata.
+   ===================================================================== */
+.api-bulat span {
+  display: block; width: var(--d, 10px); height: var(--d, 10px);
+  border-radius: 50%; box-sizing: border-box;
+  background: rgba(168, 0, 0, .34);
+  border: 1.5px solid #a80000;
+  position: relative;
+}
+/* Cincin mengembang, cuma untuk yang kuat. Elemen semu, jadi markup tiap
+   titik tetap satu span dan tidak ada simpul DOM tambahan untuk 666 titik. */
+.api-bulat.api-kuat span::after {
+  content: ""; position: absolute; inset: -1.5px; border-radius: 50%;
+  border: 1.5px solid #a80000;
+  animation: api-denyut 1.9s ease-out infinite;
+}
+@keyframes api-denyut {
+  0%   { transform: scale(1);   opacity: .75; }
+  70%  { transform: scale(2.1); opacity: 0; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+.api-bulat { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .api-bulat.api-kuat span::after { animation: none; opacity: 0; }
+}
+
+
+/* =====================================================================
+   LAYAR PENUH SEJAJAR ZOOM, 4 Oktober 2026
+   Identik dengan Atmosight. TIDAK ADA GAYA SENDIRI, tombolnya dibungkus
+   kelas .zoom yang sama persis dengan pasangan zoom di sebelahnya, jadi
+   tepi, isian, tinggi, dan warna hurufnya diwarisi dari aturan yang sudah
+   ada dan dijamin serupa, termasuk waktu bilahnya melayang di atas peta dan
+   tepinya berganti putih tembus pandang.
+   ===================================================================== */
+.zoom-baris { display: flex; align-items: stretch; gap: 8px; pointer-events: auto; }
+.zoom--fs { flex: none; }
+
+@media (max-width: 640px) {
+  .zoom-baris { gap: 6px; }
+}

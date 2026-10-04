@@ -3004,7 +3004,32 @@ function toggleCyclones() {
 // waktu forecast; disaring oleh slider waktu khusus di atas legenda (jendela jam
 // ke belakang dari deteksi terbaru).
 const FIRE_WARNA = "#a80000";
-let fireRenderer = null;
+
+/* ---- GELEMBUNG TITIK API, 4 Oktober 2026 ----
+   Diminta user, gayanya disamakan dengan alarm hujan di Atmosight, merah
+   dan berdenyut. Dulu titik kanvas berjari jari tetap 3,5 px.
+
+   DUA HAL IKUT BERUBAH, dan dua duanya perbaikan.
+   Satu, ukurannya sekarang IKUT FRP. Dulu kebakaran 30 MW dan 378 MW
+   digambar sama besar, padahal bedanya dua belas kali lipat.
+   Dua, gambarnya pindah dari KANVAS ke elemen DOM, sebab kanvas tidak bisa
+   dianimasikan CSS.
+
+   YANG BERDENYUT CUMA YANG KUAT. Diukur, datanya 666 titik, dan 666 elemen
+   beranimasi sekaligus itu beban nyata di HP. Ambangnya 100 MW, angka yang
+   sama dengan yang dipakai banner, dan yang lewat ambang itu kira kira
+   sepersepuluh titiknya. Sisanya gelembung diam, tetap berskala.
+
+   Luas yang sebanding dengan FRP, bukan garis tengahnya, jadi akarnya
+   diambil. Domain 30 sampai 200 MW dipatok, bukan ikut data, supaya
+   gelembung sebesar yang sama selalu berarti FRP yang sama. */
+const API_DENYUT = 100;      // MW, batas ikut berdenyut
+const API_MIN = 9, API_MAKS = 26, API_LANTAI = 30, API_ATAP = 200;
+function apiGaris(frp) {
+  const v = Math.max(API_LANTAI, Math.min(+frp || API_LANTAI, API_ATAP));
+  const p = (v - API_LANTAI) / (API_ATAP - API_LANTAI);
+  return Math.round(API_MIN + (API_MAKS - API_MIN) * Math.sqrt(p));
+}
 let fireMaxT = 0;             // waktu deteksi TERBARU (jangkar jendela slider), ms
 let fireWinJam = 48;         // jendela slider aktif: N jam ke belakang dari fireMaxT
 
@@ -3044,8 +3069,11 @@ function drawFire() {
   for (const p of titik) {
     if ((+new Date(p.t) || 0) < ambang) continue;
     n++;
-    const m = L.circleMarker([p.la, p.lo], { pane: "fire", renderer: fireRenderer,
-      radius: 3.5, weight: 0.5, color: "#3a0a0a", fillColor: FIRE_WARNA, fillOpacity: 0.9 });
+    const d = apiGaris(p.f);
+    const m = L.marker([p.la, p.lo], { pane: "fire", keyboard: false,
+      icon: L.divIcon({ className: "api-bulat" + (p.f >= API_DENYUT ? " api-kuat" : ""),
+        iconSize: [d, d], iconAnchor: [d / 2, d / 2],
+        html: '<span style="--d:' + d + 'px"></span>' }) });
     m.on("click", (ev) => { L.DomEvent.stopPropagation(ev); openFirePopup(p); });
     fireGroup.addLayer(m);
   }
@@ -3081,7 +3109,6 @@ function toggleFire() {
   $("api-toggle") && $("api-toggle").classList.toggle("active", fireOn);
   const note = $("api-note"), box = $("fire-slider-box");
   if (fireOn) {
-    if (!fireRenderer) fireRenderer = L.canvas({ pane: "fire", padding: 0.5 });
     if (!fireGroup) fireGroup = L.layerGroup([], { pane: "fire" });
     fireGroup.addTo(map);
     if (note) note.classList.add("show");

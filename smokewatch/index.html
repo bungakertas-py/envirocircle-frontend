@@ -107,56 +107,6 @@
              tertutup, sedangkan banner ini harus tetap terlihat.
              Siklon dan ITCZ memang disembunyikan CSS di app ini, yang benar
              benar dipakai cuma banner titik api. -->
-          <div class="notes">
-          <div id="cyc-note" class="cyc-note">
-            <div class="cyc-note-top">
-              <span class="material-symbols-outlined">error</span>
-              <span class="cyc-note-txt">Indikasi model GFS, bukan peringatan resmi BMKG/TCWC</span>
-            </div>
-            <div class="cyc-detail">
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#7a1fa2">cyclone</span><b>Siklon Lintang Tinggi</b><span class="cyc-th">lintang ≥30° · angin ≥25 kt</span></div>
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#d61f1f">cyclone</span><b>Siklon Tropis</b><span class="cyc-th">angin ≥34 kt · putaran kuat</span></div>
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#f59f00">cyclone</span><b>Bibit Siklon</b><span class="cyc-th">angin 25-33 kt · berputar</span></div>
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#1b7a3d">cyclone</span><b>Sirkulasi Siklonik</b><span class="cyc-th">angin ~20-24 kt · pusaran lemah</span></div>
-            </div>
-            <button type="button" class="cyc-tab" id="cyc-note-toggle" aria-label="Tampilkan keterangan siklon">
-              <span class="material-symbols-outlined cyc-caret">expand_more</span>
-            </button>
-          </div>
-
-          <!-- Catatan ITCZ + dropdown penjelasan awam (muncul saat toggle aktif). -->
-          <div id="itcz-note" class="cyc-note itcz-note">
-            <div class="cyc-note-top">
-              <span class="material-symbols-outlined">looks</span>
-              <span class="cyc-note-txt">Zona pertemuan angin (ITCZ), indikasi model GFS</span>
-            </div>
-            <div class="cyc-detail">
-              <div class="itcz-lead">Sabuk tempat angin pasat dua belahan bumi bertemu lalu naik, memicu banyak awan dan hujan. Posisinya bergeser tiap musim, dan bisa putus-putus di sekitar Indonesia.</div>
-              <div class="cyc-row"><span class="itcz-sw itcz-sw-line"></span><b>Garis</b><span class="cyc-th">sumbu pertemuan angin</span></div>
-              <div class="cyc-row"><span class="itcz-sw itcz-sw-band"></span><b>Pita</b><span class="cyc-th">zona konvergensi, awan &amp; hujan</span></div>
-            </div>
-            <button type="button" class="cyc-tab" id="itcz-note-toggle" aria-label="Tampilkan keterangan ITCZ">
-              <span class="material-symbols-outlined cyc-caret">expand_more</span>
-            </button>
-          </div>
-
-          <!-- Banner TITIK API: hotspot VIIRS 48 jam terakhir (pengamatan satelit).
-               Muncul saat toggle Titik Api aktif. Diisi app.js dari titik_api.json. -->
-          <div id="api-note" class="cyc-note api-note">
-            <div class="cyc-note-top">
-              <span class="material-symbols-outlined">local_fire_department</span>
-              <span class="cyc-note-txt" id="api-ringkas">Titik panas VIIRS</span>
-            </div>
-            <div class="cyc-detail">
-              <div class="api-lead">Titik api KUAT (FRP di atas 100 MW) dari satelit VIIRS, disaring dari jendela 48 jam terakhir. Ini PENGAMATAN (telat sekitar 3 jam), bukan ramalan, dan bisa terlewat bila tertutup awan. Klik titik untuk detail, dan geser slider di atas legenda untuk mempersempit jendela waktu.</div>
-              <div class="cyc-row"><span class="api-sw" style="background:#a80000"></span><b>Titik api</b><span class="cyc-th">FRP &ge; 100 MW</span></div>
-            </div>
-            <button type="button" class="cyc-tab" id="api-note-toggle" aria-label="Tampilkan keterangan titik api">
-              <span class="material-symbols-outlined cyc-caret">expand_more</span>
-            </button>
-          </div>
-
-          </div>
         <!-- ============ KARTU TEPI KIRI ============
              Pola "Stock Information" dari raja.co.id. Tulang punggung tipis
              menempel di tepi layar, labelnya diputar 90 derajat, badannya
@@ -334,9 +284,19 @@
             <button disabled title="Segera">EN</button>
           </div>
           </div>
-          <div class="zoom">
-            <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
-            <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
+          <!-- Layar penuh DIKELUARKAN dari kartu Fitur 4 Oktober 2026, diminta
+               user, ditaruh sejajar di kiri tombol zoom. Dibungkus kelas .zoom
+               yang SAMA dengan pasangan di sebelahnya, jadi tepi, isian, dan
+               tingginya diwarisi dari aturan yang sudah ada dan dijamin
+               serupa. Blok ini identik dengan yang di Atmosight. -->
+          <div class="zoom-baris">
+            <div class="zoom zoom--fs">
+              <button id="fs-btn" aria-label="Layar penuh" title="Layar penuh"><span class="material-symbols-outlined">fullscreen</span></button>
+            </div>
+            <div class="zoom">
+              <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
+              <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
+            </div>
           </div>
         <!-- ============ KARTU TEPI KANAN, FITUR ============
              Kembaran kartu kiri, menempel di tepi kanan. Tombolnya SENGAJA
@@ -360,9 +320,57 @@
             <button id="city-toggle" class="icon-btn" aria-label="Ikon kondisi per kota" data-tip="Kondisi"><span class="material-symbols-outlined">partly_cloudy_day</span></button>
             <div id="cond-legend" class="cond-legend"></div>
           </div>
-          <button id="cyclone-toggle" class="icon-btn" aria-label="Deteksi siklon + jalur prakiraan" data-tip="Siklon"><span class="material-symbols-outlined">cyclone</span></button>
-          <button id="itcz-toggle" class="icon-btn" aria-label="Zona pertemuan angin (ITCZ)" data-tip="ITCZ"><span class="material-symbols-outlined">looks</span></button>
-          <button id="api-toggle" class="icon-btn" aria-label="Titik panas satelit VIIRS (FIRMS)" data-tip="Titik Api"><span class="material-symbols-outlined">local_fire_department</span></button>
+          <div class="fit-wrap">
+            <button id="cyclone-toggle" class="icon-btn" aria-label="Deteksi siklon + jalur prakiraan" data-tip="Siklon"><span class="material-symbols-outlined">cyclone</span></button>
+            <div id="cyc-note" class="cyc-note">
+            <div class="cyc-note-top">
+            <span class="material-symbols-outlined">error</span>
+            <span class="cyc-note-txt">Indikasi model GFS, bukan peringatan resmi BMKG/TCWC</span>
+            </div>
+            <div class="cyc-detail">
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#7a1fa2">cyclone</span><b>Siklon Lintang Tinggi</b><span class="cyc-th">lintang ≥30° · angin ≥25 kt</span></div>
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#d61f1f">cyclone</span><b>Siklon Tropis</b><span class="cyc-th">angin ≥34 kt · putaran kuat</span></div>
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#f59f00">cyclone</span><b>Bibit Siklon</b><span class="cyc-th">angin 25-33 kt · berputar</span></div>
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#1b7a3d">cyclone</span><b>Sirkulasi Siklonik</b><span class="cyc-th">angin ~20-24 kt · pusaran lemah</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="cyc-note-toggle" aria-label="Tampilkan keterangan siklon">
+            <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+            </div>
+          </div>
+          <div class="fit-wrap">
+            <button id="itcz-toggle" class="icon-btn" aria-label="Zona pertemuan angin (ITCZ)" data-tip="ITCZ"><span class="material-symbols-outlined">looks</span></button>
+            <div id="itcz-note" class="cyc-note itcz-note">
+            <div class="cyc-note-top">
+            <span class="material-symbols-outlined">looks</span>
+            <span class="cyc-note-txt">Zona pertemuan angin (ITCZ), indikasi model GFS</span>
+            </div>
+            <div class="cyc-detail">
+            <div class="itcz-lead">Sabuk tempat angin pasat dua belahan bumi bertemu lalu naik, memicu banyak awan dan hujan. Posisinya bergeser tiap musim, dan bisa putus-putus di sekitar Indonesia.</div>
+            <div class="cyc-row"><span class="itcz-sw itcz-sw-line"></span><b>Garis</b><span class="cyc-th">sumbu pertemuan angin</span></div>
+            <div class="cyc-row"><span class="itcz-sw itcz-sw-band"></span><b>Pita</b><span class="cyc-th">zona konvergensi, awan &amp; hujan</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="itcz-note-toggle" aria-label="Tampilkan keterangan ITCZ">
+            <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+            </div>
+          </div>
+          <div class="fit-wrap">
+            <button id="api-toggle" class="icon-btn" aria-label="Titik panas satelit VIIRS (FIRMS)" data-tip="Titik Api"><span class="material-symbols-outlined">local_fire_department</span></button>
+            <div id="api-note" class="cyc-note api-note">
+            <div class="cyc-note-top">
+            <span class="material-symbols-outlined">local_fire_department</span>
+            <span class="cyc-note-txt" id="api-ringkas">Titik panas VIIRS</span>
+            </div>
+            <div class="cyc-detail">
+            <div class="api-lead">Titik api KUAT (FRP di atas 100 MW) dari satelit VIIRS, disaring dari jendela 48 jam terakhir. Ini PENGAMATAN (telat sekitar 3 jam), bukan ramalan, dan bisa terlewat bila tertutup awan. Klik titik untuk detail, dan geser slider di atas legenda untuk mempersempit jendela waktu.</div>
+            <div class="cyc-row"><span class="api-sw" style="background:#a80000"></span><b>Titik api</b><span class="cyc-th">FRP &ge; 100 MW</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="api-note-toggle" aria-label="Tampilkan keterangan titik api">
+            <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+            </div>
+          </div>
           <button id="info-toggle" class="icon-btn" aria-label="Kualitas udara: peringatan &amp; populasi terpapar" data-tip="Kualitas Udara"><span class="material-symbols-outlined">groups</span></button>
           <button id="paparan-btn" class="icon-btn" aria-label="Peta paparan penduduk: jiwa di sel yang ISPU-nya Tidak Sehat" data-tip="Paparan"><span class="material-symbols-outlined">person_pin_circle</span></button>
           <div class="phenom-wrap">
@@ -370,7 +378,6 @@
             <div id="phenom-panel" class="phenom-panel"></div>
           </div>
           <button id="share-btn" class="icon-btn" aria-label="Bagikan tampilan ini" data-tip="Bagikan"><span class="material-symbols-outlined">share</span></button>
-          <button id="fs-btn" class="icon-btn" aria-label="Layar penuh" data-tip="Layar Penuh"><span class="material-symbols-outlined">fullscreen</span></button>
         </div>
           </div>
         </aside>

@@ -127,40 +127,6 @@
         <!-- Banner siklon dan ITCZ. DIPINDAH keluar dari kolom kiri 8 Sep 2026,
              sebab kolom itu sekarang tinggal di dalam kartu Parameter yang bisa
              tertutup, sedangkan banner ini harus tetap terlihat. -->
-        <div class="notes">
-          <div id="cyc-note" class="cyc-note">
-            <div class="cyc-note-top">
-              <span class="material-symbols-outlined">error</span>
-              <span class="cyc-note-txt">Indikasi model GFS, bukan peringatan resmi BMKG/TCWC</span>
-            </div>
-            <div class="cyc-detail">
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#7a1fa2">cyclone</span><b>Siklon Lintang Tinggi</b><span class="cyc-th">lintang ≥30° · angin ≥25 kt</span></div>
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#d61f1f">cyclone</span><b>Siklon Tropis</b><span class="cyc-th">angin ≥34 kt · putaran kuat</span></div>
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#f59f00">cyclone</span><b>Bibit Siklon</b><span class="cyc-th">angin 25-33 kt · berputar</span></div>
-              <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#1b7a3d">cyclone</span><b>Sirkulasi Siklonik</b><span class="cyc-th">angin ~20-24 kt · pusaran lemah</span></div>
-            </div>
-            <button type="button" class="cyc-tab" id="cyc-note-toggle" aria-label="Tampilkan keterangan siklon">
-              <span class="material-symbols-outlined cyc-caret">expand_more</span>
-            </button>
-          </div>
-
-          <!-- Catatan ITCZ + dropdown penjelasan awam (muncul saat toggle aktif). -->
-          <div id="itcz-note" class="cyc-note itcz-note">
-            <div class="cyc-note-top">
-              <span class="material-symbols-outlined">looks</span>
-              <span class="cyc-note-txt">Zona pertemuan angin (ITCZ), indikasi model GFS</span>
-            </div>
-            <div class="cyc-detail">
-              <div class="itcz-lead">Sabuk tempat angin pasat dua belahan bumi bertemu lalu naik, memicu banyak awan dan hujan. Posisinya bergeser tiap musim, dan bisa putus-putus di sekitar Indonesia.</div>
-              <div class="cyc-row"><span class="itcz-sw itcz-sw-line"></span><b>Garis</b><span class="cyc-th">sumbu pertemuan angin</span></div>
-              <div class="cyc-row"><span class="itcz-sw itcz-sw-band"></span><b>Pita</b><span class="cyc-th">zona konvergensi, awan &amp; hujan</span></div>
-            </div>
-            <button type="button" class="cyc-tab" id="itcz-note-toggle" aria-label="Tampilkan keterangan ITCZ">
-              <span class="material-symbols-outlined cyc-caret">expand_more</span>
-            </button>
-          </div>
-
-          </div>
 
         <!-- kiri: layer + model -->
         <!-- ============ KARTU TEPI KIRI, PARAMETER ============
@@ -294,9 +260,29 @@
               <button disabled title="Segera">EN</button>
             </div>
           </div>
-          <div class="zoom">
-            <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
-            <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
+          <!-- Layar penuh DIKELUARKAN dari kartu Fitur 4 Oktober 2026, diminta
+               user, dan ditaruh sejajar di kiri tombol zoom. Dia memang bukan
+               lapisan peta seperti isi kartu Fitur yang lain, dia perkakas
+               jendela, jadi tempatnya memang bersama zoom.
+               TANPA LABEL, cukup ikon, juga diminta. data-tip dibuang supaya
+               tooltip melayangnya pun tidak muncul, keterangannya cukup di
+               aria-label untuk pembaca layar. -->
+          <div class="zoom-baris">
+            <!-- Dibungkus .zoom, kelas yang SAMA dengan pasangan zoom di
+                 sebelahnya. Bukan kemalasan. Dengan kelas yang sama dia
+                 mewarisi tepi, isian, tinggi, dan warna huruf dari aturan
+                 yang sudah ada, jadi dua duanya DIJAMIN serupa selamanya,
+                 termasuk waktu bilahnya melayang di atas peta dan tepinya
+                 berganti jadi putih tembus pandang. Menulis gaya tandingan
+                 untuk satu tombol berarti dua tempat yang harus diingat
+                 tiap kali gaya bilah ini disetel. -->
+            <div class="zoom zoom--fs">
+              <button id="fs-btn" aria-label="Layar penuh" title="Layar penuh"><span class="material-symbols-outlined">fullscreen</span></button>
+            </div>
+            <div class="zoom">
+              <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
+              <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
+            </div>
           </div>
         <aside class="sisi sisi--kanan" id="sisi-fitur">
           <button type="button" class="sisi-spine" id="spine-fitur"
@@ -316,18 +302,58 @@
             <button id="city-toggle" class="icon-btn" aria-label="Ikon kondisi cuaca per kota" data-tip="Kondisi"><span class="material-symbols-outlined">partly_cloudy_day</span></button>
             <div id="cond-legend" class="cond-legend"></div>
           </div>
-          <button id="cyclone-toggle" class="icon-btn" aria-label="Deteksi siklon + jalur prakiraan" data-tip="Siklon"><span class="material-symbols-outlined">cyclone</span></button>
-          <button id="itcz-toggle" class="icon-btn" aria-label="Zona pertemuan angin (ITCZ)" data-tip="ITCZ"><span class="material-symbols-outlined">looks</span></button>
+          <div class="fit-wrap">
+            <button id="cyclone-toggle" class="icon-btn" aria-label="Deteksi siklon + jalur prakiraan" data-tip="Siklon"><span class="material-symbols-outlined">cyclone</span></button>
+            <div id="cyc-note" class="cyc-note">
+            <div class="cyc-note-top">
+            <span class="material-symbols-outlined">error</span>
+            <span class="cyc-note-txt">Indikasi model GFS, bukan peringatan resmi BMKG/TCWC</span>
+            </div>
+            <div class="cyc-detail">
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#7a1fa2">cyclone</span><b>Siklon Lintang Tinggi</b><span class="cyc-th">lintang ≥30° · angin ≥25 kt</span></div>
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#d61f1f">cyclone</span><b>Siklon Tropis</b><span class="cyc-th">angin ≥34 kt · putaran kuat</span></div>
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#f59f00">cyclone</span><b>Bibit Siklon</b><span class="cyc-th">angin 25-33 kt · berputar</span></div>
+            <div class="cyc-row"><span class="material-symbols-outlined cyc-ic" style="color:#1b7a3d">cyclone</span><b>Sirkulasi Siklonik</b><span class="cyc-th">angin ~20-24 kt · pusaran lemah</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="cyc-note-toggle" aria-label="Tampilkan keterangan siklon">
+            <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+            </div>
+          </div>
+          <div class="fit-wrap">
+            <button id="itcz-toggle" class="icon-btn" aria-label="Zona pertemuan angin (ITCZ)" data-tip="ITCZ"><span class="material-symbols-outlined">looks</span></button>
+            <div id="itcz-note" class="cyc-note itcz-note">
+            <div class="cyc-note-top">
+            <span class="material-symbols-outlined">looks</span>
+            <span class="cyc-note-txt">Zona pertemuan angin (ITCZ), indikasi model GFS</span>
+            </div>
+            <div class="cyc-detail">
+            <div class="itcz-lead">Sabuk tempat angin pasat dua belahan bumi bertemu lalu naik, memicu banyak awan dan hujan. Posisinya bergeser tiap musim, dan bisa putus-putus di sekitar Indonesia.</div>
+            <div class="cyc-row"><span class="itcz-sw itcz-sw-line"></span><b>Garis</b><span class="cyc-th">sumbu pertemuan angin</span></div>
+            <div class="cyc-row"><span class="itcz-sw itcz-sw-band"></span><b>Pita</b><span class="cyc-th">zona konvergensi, awan &amp; hujan</span></div>
+            </div>
+            <button type="button" class="cyc-tab" id="itcz-note-toggle" aria-label="Tampilkan keterangan ITCZ">
+            <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+            </div>
+          </div>
           <!-- Alarm hujan, 4 Oktober 2026. MENYALA sejak awal, beda dengan
                fitur lain di baris ini yang mati sampai dinyalakan. Dia alarm,
                jadi dia harus sudah bekerja sebelum orang mencarinya. -->
           <button id="alarm-toggle" class="icon-btn active" aria-label="Alarm hujan di kota" data-tip="Alarm Hujan"><span class="material-symbols-outlined">notifications_active</span></button>
+          <!-- Skew-T, 4 Oktober 2026. DIPINDAH KE SINI dari dalam panel titik,
+               diminta user. Dulu dia kartu lipat di kaki sidebar titik, jadi
+               orang harus mengklik peta dulu, menggulir sampai dasar, baru
+               menemukannya. Sekarang dia alat yang dipilih dulu lalu
+               titiknya ditunjuk.
+               Disembunyikan kalau model yang dipilih tidak punya
+               profile_meta.json, lihat SKEWT_ADA. -->
+          <button id="skewt-toggle" class="icon-btn" aria-label="Plot profil atmosfer Skew-T" data-tip="Skew-T" hidden><span class="material-symbols-outlined">stacked_line_chart</span></button>
           <div class="phenom-wrap">
             <button id="mon-toggle" class="icon-btn" aria-label="Fenomena atmosfer" data-tip="Fenomena"><span class="material-symbols-outlined">explore</span></button>
             <div id="phenom-panel" class="phenom-panel"></div>
           </div>
           <button id="share-btn" class="icon-btn" aria-label="Bagikan tampilan ini" data-tip="Bagikan"><span class="material-symbols-outlined">share</span></button>
-          <button id="fs-btn" class="icon-btn" aria-label="Layar penuh" data-tip="Layar Penuh"><span class="material-symbols-outlined">fullscreen</span></button>
         </div>
           </div>
         </aside>
@@ -438,6 +464,16 @@
             <figcaption class="tm-name">Andreas Boni Baik Simamora</figcaption>
           </figure>
         </div>
+      </div>
+    </div>
+
+    <!-- ============ KARTU SKEW-T ============
+         Lapisan dan cara menutupnya meniru #akr-overlay dan #about-overlay,
+         klik di luar dan Escape, supaya perilakunya seragam. -->
+    <div id="skt-overlay" class="about-overlay">
+      <div id="skt-card" class="skt-kartu" role="dialog" aria-modal="true">
+        <button id="skt-close" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <div class="skt-isi"></div>
       </div>
     </div>
 
