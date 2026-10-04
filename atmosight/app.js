@@ -1914,39 +1914,207 @@ function drawPosHujan() {
   posLayer.addTo(map);
 }
 
+/* ================= KARTU AKURASI =================
+   4 Oktober 2026, diminta user. Isinya dibangun dari catalog.akurasi, tidak
+   satu angka pun dipatok di sini maupun di HTML. Kalau backend mengubah
+   angkanya, kartunya ikut sendiri.
+
+   TIDAK ADA GSAP di app ini, cuma di landing. Jadi hitungan naiknya ditulis
+   tangan pakai requestAnimationFrame. Tiga puluh baris, dan itu jauh lebih
+   murah daripada memuat pustaka animasi cuma untuk satu kartu. */
+function angkaNaik(el, akhir, des, lama) {
+  var mulai = null, selesai = false;
+  function tulis(v) {
+    /* Titik desimal, bukan koma. Kartu ini berbahasa Inggris, sedangkan
+       badge di belakangnya tetap memakai koma mengikuti kebiasaan Indonesia.
+       Dua duanya disengaja. */
+    el.textContent = v.toFixed(des);
+  }
+  function tuntas() {
+    if (selesai) return;
+    selesai = true;
+    tulis(akhir);
+  }
+  tulis(0);
+  function langkah(t) {
+    if (selesai) return;
+    if (mulai === null) mulai = t;
+    var p = Math.min(1, (t - mulai) / lama);
+    /* Perlambatan di ujung, bukan laju rata. Angka yang berhenti mendadak
+       terbaca seperti patah, yang melambat terbaca seperti mendarat. */
+    tulis(akhir * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(langkah);
+    else tuntas();
+  }
+  requestAnimationFrame(langkah);
+  /* PENJAGA. requestAnimationFrame BISA tidak pernah berdetak, dan kalau itu
+     terjadi angkanya berhenti di 0,0 selamanya. Bukan kemungkinan teoretis,
+     di Chrome headless rAF cuma berdetak dua kali dalam delapan detik dan
+     kartunya memang tampil kosong. Peramban sungguhan juga menahan rAF di
+     tab latar belakang. Jadi sesudah durasinya lewat jauh, nilainya dipaksa
+     ke angka akhir. Kalau animasinya sudah jalan, tuntas() tidak melakukan
+     apa apa, dia dijaga bendera. */
+  setTimeout(tuntas, lama + 600);
+}
+
+function ribuan(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/* Kartunya BERBAHASA INGGRIS, diminta user. Tapi sebagian isinya datang dari
+   backend dalam bahasa Indonesia, nama parameter, nama sumber, nama bulan,
+   dan satu paragraf catatan. Jadi yang bisa dipetakan dipetakan, dan yang
+   tidak cocok JATUH BALIK ke teks aslinya, bukan dibuang. Kalau backend
+   suatu saat mengubah kata-katanya, kartunya tetap tampil, cuma sebagian
+   kembali berbahasa Indonesia. Itu lebih baik daripada kosong. */
+var AKR_PARAM = {
+  "Suhu": "Temperature",
+  "Angin": "Wind speed",
+  "Arah angin": "Wind direction",
+  "Kelembapan": "Humidity",
+  "Tekanan": "Pressure",
+  "Hujan": "Rainfall",
+};
+var AKR_BULAN = {
+  "Januari": "January", "Februari": "February", "Maret": "March",
+  "April": "April", "Mei": "May", "Juni": "June", "Juli": "July",
+  "Agustus": "August", "September": "September", "Oktober": "October",
+  "November": "November", "Desember": "December",
+};
+function akrBulan(t) {
+  return String(t).replace(/[A-Za-z]+/g, function (w) { return AKR_BULAN[w] || w; });
+}
+/* "METAR 21 stasiun" -> "21 METAR stations". Pola tunggal dengan jaring
+   pengaman, bukan penerjemah serba bisa. */
+function akrSumber(t) {
+  var m = /^METAR\s+(\d+)\s+stasiun$/i.exec(String(t).trim());
+  return m ? m[1] + " METAR stations" : t;
+}
+/* Jangkauan prakiraannya cuma ada di dalam kalimat catatan, tidak ada
+   medannya sendiri. Jadi angkanya DICOMOT, bukan kalimatnya diterjemahkan. */
+function akrJangkau(cat) {
+  var m = /(\d+)\s*sampai\s*(\d+)\s*jam/i.exec(String(cat || ""));
+  return m ? m[1] + " to " + m[2] + " h lead time" : null;
+}
+
+function isiKartuAkurasi() {
+  var kartu = $("akr-card");
+  var isi = kartu && kartu.querySelector(".akr-isi");
+  if (!isi) return;
+  var a = catalog && catalog.akurasi;
+  kartu.classList.remove("jalan");
+
+  if (!a || a.status === "soon" || a.nilai == null) {
+    isi.innerHTML =
+      '<div class="akr-kiri akr-sendiri">' +
+      '<span class="akr-tag">Verification</span>' +
+      '<p class="akr-kosong" style="margin:14px 0 0">No verification figure yet for this model. ' +
+      'Accuracy is scored automatically against METAR observations, and the number appears here ' +
+      'once a full daily run has been checked.</p></div>';
+    return;
+  }
+
+  var asal = [];
+  if (a.sumber) asal.push(akrSumber(a.sumber));
+  if (a.periode) asal.push(akrBulan(a.periode));
+  if (a.pasangan) asal.push(ribuan(a.pasangan) + " observation pairs");
+  var jangkau = akrJangkau(a.catatan);
+  if (jangkau) asal.push(jangkau);
+
+  var par = a.parameter || {};
+  var nama = Object.keys(par);
+  var baris = nama.map(function (n) {
+    var p = par[n];
+    var ket = [];
+    if (p.tol != null && p.sat) ket.push("within " + p.tol + " " + p.sat);
+    if (p.mae != null && p.sat) ket.push("mean error " + p.mae + " " + p.sat);
+    return '<div class="akr-par">' +
+      '<div class="akr-par-atas"><span class="akr-par-nama">' + escHtml(AKR_PARAM[n] || n) + '</span>' +
+      '<span class="akr-par-nil"><b data-akr="' + p.tepat + '">0.0</b>%</span></div>' +
+      '<div class="akr-bar"><i style="--isi:' + p.tepat + '%"></i></div>' +
+      (ket.length ? '<div class="akr-par-ket">' + escHtml(ket.join(" · ")) + '</div>' : '') +
+      '</div>';
+  }).join("");
+
+  /* DUA KOLOM, 4 Oktober 2026. Angka pokok dan asal datanya di kiri, rincian
+     per parameter di kanan. Dulu satu kolom dan kartunya menjulang tinggi
+     kurus, user minta dibuat melebar. Catatan kakinya merentang dua kolom. */
+  isi.innerHTML =
+    '<div class="akr-kiri">' +
+      '<span class="akr-tag">Verification</span>' +
+      '<div class="akr-besar" id="akr-judul"><b data-akr="' + a.nilai + '">0.0</b><span>%</span></div>' +
+      '<div class="akr-sub">Average across ' + nama.length + ' surface parameters, scored against airport observations.</div>' +
+      (asal.length ? '<div class="akr-garis"></div><div class="akr-asal"><span>' +
+        asal.map(escHtml).join("</span><span>") + '</span></div>' : '') +
+    '</div>' +
+    '<div class="akr-kanan">' + (baris ? '<div class="akr-daftar">' + baris + '</div>' : '') + '</div>' +
+    '<div class="akr-catatan">Each figure is the share of forecasts that landed inside the tolerance shown. ' +
+    'Mean error is the average miss, sign ignored.</div>';
+}
+
+function bukaAkurasi() {
+  var ov = $("akr-overlay"), kartu = $("akr-card");
+  if (!ov) return;
+  isiKartuAkurasi();
+  ov.classList.add("show");
+
+  var sudah = false;
+  function jalankan() {
+    if (sudah) return;
+    sudah = true;
+    if (kartu) kartu.classList.add("jalan");
+    var n = ov.querySelectorAll("[data-akr]");
+    for (var i = 0; i < n.length; i++) {
+      var v = parseFloat(n[i].getAttribute("data-akr"));
+      if (!isNaN(v)) angkaNaik(n[i], v, 1, 1100);
+    }
+  }
+
+  /* Yang minta gerakannya dikurangi dapat angka jadi, tanpa hitungan dan
+     tanpa batang yang tumbuh. Transisi batangnya dimatikan CSS lewat
+     prefers-reduced-motion, dan angkanya dilompatkan di sini. */
+  var pelan = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (pelan) {
+    if (kartu) kartu.classList.add("jalan");
+    var m = ov.querySelectorAll("[data-akr]");
+    for (var j = 0; j < m.length; j++) {
+      var w = parseFloat(m[j].getAttribute("data-akr"));
+      if (!isNaN(w)) m[j].textContent = w.toFixed(1);
+    }
+    return;
+  }
+
+  /* DUA rAF, bukan satu. Kalau width diisi di frame yang sama dengan
+     elemennya lahir, peramban tidak punya nilai awal untuk ditransisikan dan
+     batangnya langsung melompat penuh tanpa tumbuh.
+     setTimeout di bawahnya penjaga, sebab rAF bisa tidak pernah berdetak. */
+  requestAnimationFrame(function () { requestAnimationFrame(jalankan); });
+  setTimeout(jalankan, 250);
+}
+function tutupAkurasi() { $("akr-overlay")?.classList.remove("show"); }
+
 function updateAkurasi() {
-  const box = $("acc-badge"), el = $("acc-text");
+  var box = $("acc-badge"), el = $("acc-text");
   if (!box || !el) return;
-  const a = catalog?.akurasi;
+  var a = catalog?.akurasi;
   if (!a) { box.hidden = true; return; }
   box.hidden = false;
-  // Belum ada angka (mis. Private Model saat uji coba): tampil "segera",
-  // nanti terisi otomatis setelah run harian penuh diverifikasi lawan METAR.
+  /* ATRIBUT title DIBUANG 4 Oktober 2026, diminta user. Rinciannya sekarang
+     ada di kartu yang dibuka dengan mengklik badge ini, dan tooltip yang
+     berisi hal yang sama cuma menunda orang menemukan kartunya. Tooltip
+     bawaan itu juga tidak pernah muncul di HP, tidak bisa disalin, dan
+     tidak bisa diberi gaya. Kode penyusun teksnya ikut dibuang, bukan
+     disisakan menganggur. */
   if (a.status === "soon" || a.nilai == null) {
     el.textContent = "Akurasi : segera";
-    box.title = "Akurasi otomatis lawan pengamatan METAR. Tampil setelah run harian penuh.";
     box.classList.add("acc-soon");
     return;
   }
   box.classList.remove("acc-soon");
-  // Koma sebagai pemisah desimal, ikut kebiasaan Indonesia.
-  const nil = a.nilai.toFixed(1).replace(".", ",");
+  // Koma sebagai pemisah desimal, ikut kebiasaan Indonesia. Kartunya sendiri
+  // berbahasa Inggris dan memakai titik, dan itu memang disengaja.
+  var nil = a.nilai.toFixed(1).replace(".", ",");
   el.textContent = `Akurasi : ${nil}% ${a.label || ""}`.trim();
-
-  // Rinciannya ditaruh di title, bukan di layar. Angka telanjang gampang dibaca
-  // sebagai klaim yang lebih kuat dari yang sebenarnya, jadi dasarnya harus
-  // selalu bisa dilihat. Dua model bentuk datanya beda, keduanya ditangani.
-  const baris = [];
-  if (a.catatan) baris.push(a.catatan);
-  if (a.parameter) {
-    baris.push("");
-    for (const [nama, p] of Object.entries(a.parameter))
-      baris.push(`${nama}: ${p.tepat}% dalam ${p.tol} ${p.sat}, MAE ${p.mae} ${p.sat}`);
-  }
-  if (a.dasar !== undefined) baris.push(`Tebakan sepele "selalu kering" dapat ${a.dasar}%.`);
-  if (a.pod !== undefined) baris.push(`Tertangkap ${a.pod}% kejadian, ${a.far}% alarm palsu.`);
-  if (a.pasangan) baris.push(`${a.pasangan} pasangan pengamatan.`);
-  box.title = baris.join("\n");
 }
 
 let toastTimer = null;
@@ -2143,6 +2311,85 @@ function timeIndexOf(times) {
   return bi;
 }
 
+/* ================= ALARM HUJAN =================
+   4 Oktober 2026, diminta user. Tanda berdenyut di kota yang SEKARANG kering
+   tapi akan kena hujan di sisa waktu model.
+
+   TIDAK ADA PERMINTAAN JARINGAN BARU. city_data.json sudah diunduh sejak awal
+   untuk label kota, dan di dalamnya hujan 514 tempat untuk SELURUH langkah
+   waktu, bukan cuma langkah yang sedang tampil. Jadi alarm ini cuma membaca
+   ulang yang sudah ada di memori.
+
+   PATOKANNYA JAM DINDING, bukan posisi slider, diminta user. Itu penting.
+   Kalau ikut slider, alarmnya berubah tiap orang menggeser waktu, dan
+   sesuatu yang berubah waktu digeser bukan alarm.
+
+   JENDELANYA SELURUH SISA HORIZON MODEL, bukan angka tetap. GFS sampai 72 jam
+   dengan langkah 3 jam, WRF sampai 42 jam dengan langkah 1 jam, dan kalau
+   backend mengubah jangkauannya alarm ini ikut sendiri. Juga diminta user.
+
+   KONSEKUENSINYA SUDAH DIUKUR DAN DITERIMA USER. Dengan jendela penuh dan
+   ambang 0,5 mm, yang berdenyut 24,5 persen kota di GFS dan 35,4 persen di
+   WRF. Itu banyak. Kalau suatu saat terasa terlalu ramai, yang disetel
+   ALARM_AMBANG atau jendelanya dipendekkan, bukan tandanya yang dikecilkan. */
+var ALARM_AMBANG = 0.5;   // mm, batas disebut hujan. Sama dengan cityCondition.
+/* Bisa dimatikan, pola yang sama dengan Siklon, ITCZ, dan Fenomena.
+   Menyala sejak awal, sebab ini alarm, tapi tiap lapisan di app ini punya
+   saklarnya sendiri dan yang satu ini tidak boleh jadi kekecualian.
+   Dengan seperempat sampai sepertiga kota berdenyut, orang yang sedang
+   membaca hal lain harus punya cara mematikannya. */
+let alarmOn = true;
+
+/* Indeks waktu terdekat dengan JAM SEKARANG. Sengaja dipisah dari
+   timeIndexOf() yang mengikuti frame tampil. */
+function indeksSekarang(times) {
+  if (!times || !times.length) return 0;
+  var kini = Date.now(), bi = 0, bd = Infinity;
+  for (var i = 0; i < times.length; i++) {
+    var d = Math.abs(new Date(times[i]).getTime() - kini);
+    if (d < bd) { bd = d; bi = i; }
+  }
+  return bi;
+}
+
+/* Berapa jam lagi hujan di tempat ke-i, dihitung dari jam sekarang.
+   Mengembalikan null kalau tidak ada hujan di sisa waktu model, dan juga
+   null kalau SEKARANG memang sudah hujan.
+
+   Yang sudah hujan sengaja tidak dialarmi. Ikon kotanya sudah bergambar
+   hujan, jadi tanda tambahan cuma mengulang. Alarm ini untuk yang sekarang
+   kering tapi nanti basah. */
+function alarmHujan(i) {
+  if (!cityData) return null;
+  var arr = cityData.data.rain;
+  if (!arr || !arr[i]) return null;
+  var sc = cityData.scales.rain, t = cityData.times;
+  var kini = indeksSekarang(t);
+  if (arr[i][kini] * sc >= ALARM_AMBANG) return null;   // sudah hujan sekarang
+  for (var k = kini + 1; k < arr[i].length; k++) {
+    if (arr[i][k] * sc >= ALARM_AMBANG) {
+      var jam = (new Date(t[k]).getTime() - Date.now()) / 3600000;
+      return { jam: Math.max(0, jam), mm: arr[i][k] * sc, waktu: t[k] };
+    }
+  }
+  return null;
+}
+
+/* Tandanya. Kelasnya ikut SEBERAPA DEKAT, bukan seberapa deras, sebab yang
+   paling berguna dari alarm itu waktunya. Deras sudah diwakili ikon kotanya
+   nanti waktu hujannya tiba. */
+function alarmKelas(jam) {
+  if (jam <= 3) return "ah-dekat";
+  if (jam <= 12) return "ah-sedang";
+  return "ah-jauh";
+}
+function alarmHtml(a) {
+  if (!a) return "";
+  var j = a.jam < 1 ? "<1" : String(Math.round(a.jam));
+  return '<span class="alarm-hujan ' + alarmKelas(a.jam) +
+         '" title="Hujan ' + j + ' jam lagi, sekitar ' + a.mm.toFixed(1).replace(".", ",") + ' mm"></span>';
+}
+
 // Tempatkan ikon kota: filter tier×zoom + dalam layar, urut prioritas, lalu
 // GREEDY anti-tabrakan piksel → hanya yang tak overlap yang digambar. Efeknya
 // zoom-out = ibukota provinsi saja; makin zoom-in makin banyak kota/kabupaten.
@@ -2250,7 +2497,8 @@ async function refreshCityIcons() {
     const i = cityIndexByName.get(p.n);
     if (i === undefined) continue;   // daftar tempat & city_data tak sinkron
     cands.push({ p, cond: cityCondition(cityRaw("rain", i, ti), cityRaw("cloud", i, ti)),
-                 val: cityValueText(i, ti) });
+                 val: cityValueText(i, ti),
+                 alarm: alarmOn ? alarmHujan(i) : null });
   }
   cands.sort((a, c) => a.p.tier - c.p.tier || c.cond.sev - a.cond.sev);
   cityGroup.clearLayers();
@@ -2273,7 +2521,8 @@ async function refreshCityIcons() {
       pane: "cityicons", title: c.p.n, keyboard: false,
       icon: L.divIcon({ className: "city-cond" + (cityIconsOn ? "" : " no-ico"),
         iconSize: [30, 30], iconAnchor: [15, 15],
-        html: ico + `<span class="cc-lbl"><b>${escHtml(cityShortName(c.p.n))}</b>` +
+        html: ico + alarmHtml(c.alarm) +
+              `<span class="cc-lbl"><b>${escHtml(cityShortName(c.p.n))}</b>` +
               (c.val ? `<i>${escHtml(c.val)}</i>` : "") + `</span>` }),
     });
     m.on("click", (e) => { L.DomEvent.stopPropagation(e); openPoint(c.p.lat, c.p.lon, c.p.n); });
@@ -3027,6 +3276,11 @@ async function init() {
     $("city-toggle")?.addEventListener("click", toggleCityIcons);
     $("cyclone-toggle")?.addEventListener("click", toggleCyclones);
     $("itcz-toggle")?.addEventListener("click", toggleItcz);
+    $("alarm-toggle")?.addEventListener("click", () => {
+      alarmOn = !alarmOn;
+      $("alarm-toggle").classList.toggle("active", alarmOn);
+      refreshCityIcons();
+    });
     $("mon-toggle")?.addEventListener("click", toggleMonsoon);
     map.on("moveend", () => { refreshCityIcons(); });
     map.on("zoomend", applyLabelTiles);   // ambang label CARTO vs label kota sendiri
@@ -3108,6 +3362,13 @@ async function init() {
     $("about-close-team")?.addEventListener("click", closeAbout);
     $("about-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) closeAbout(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAbout(); });
+    /* Kartu akurasi. Badge-nya sekarang DIKLIK, bukan cuma disorot. Rincian
+       di atribut title tidak pernah terbaca di HP, dan di desktop pun cuma
+       terbaca orang yang kebetulan mendiamkan kursornya di situ. */
+    $("acc-badge")?.addEventListener("click", bukaAkurasi);
+    $("akr-close")?.addEventListener("click", tutupAkurasi);
+    $("akr-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupAkurasi(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") tutupAkurasi(); });
     // Badge "Last update" (HP): tap ikon "!" → buka teks; tap lagi/panah → tutup.
     $("data-fresh")?.addEventListener("click", () => $("data-fresh").classList.toggle("open"));
     // Tempatkan badge: desktop → kontainer slider (atas-kanan); HP → dalam legend-col

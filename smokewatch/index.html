@@ -92,7 +92,7 @@
               <!-- Lambang ITERA di pojok kiri atas, diminta user. Pola dan
                    urutannya sama persis dengan bilah judul landing, ITERA di
                    kiri lalu garis rambut lalu Envirocircle. -->
-              <img class="itera-logo" src="../img/logo-itera.png" width="900" height="1095" alt="Institut Teknologi Sumatera" />
+              <img class="itera-logo" src="../img/logo-itera.png" width="217" height="263" alt="Institut Teknologi Sumatera" />
               <span class="itera-pisah" aria-hidden="true"></span>
               <img class="brand-logo" src="../img/logo-envirocircle.png" width="38" height="38" alt="" />
               <div class="brand-text">
@@ -179,6 +179,15 @@
               <span class="material-symbols-outlined param-caret">expand_more</span>
             </button>
             <button id="layer-prev" class="layer-nav" aria-label="Variabel sebelumnya"><span class="material-symbols-outlined">chevron_left</span></button>
+            <!-- NAMA DULU BARU KODENYA, diminta user 4 Oktober 2026. Dulu
+                 isinya kode kimia saja, PM2.5, CO, NO2, dan seterusnya, dan
+                 orang yang bukan orang udara tidak tahu itu apa.
+                 Yang dipakai NAMA PANJANG ASLINYA, bukan terjemahan pendek.
+                 Satuannya pakai simbol µm, dan simbol itu DIBUNGKUS .lb-sat
+                 yang text-transform-nya dimatikan. Daftar ini uppercase, dan
+                 uppercase mengubah µ jadi Μ, huruf Mu besar Yunani. Itu bukan
+                 sekadar beda rupa, satuannya jadi SALAH. Jebakan yang sama
+                 pernah kena waktu rebranding. -->
             <div class="panel layers">
               <div class="layer-split">
                 <button class="layer-btn layer-btn--half" data-layer="ispu" data-tip="Indeks Standar Pencemar Udara, Permen LHK 14/2020">
@@ -189,28 +198,28 @@
                 </button>
               </div>
               <button class="layer-btn" data-layer="pm25" data-tip="Partikel halus di bawah 2,5 mikron">
-                <span class="material-symbols-outlined">blur_on</span> <span class="lb-txt">PM<sub>2.5</sub></span>
+                <span class="material-symbols-outlined">blur_on</span> <span class="lb-txt">Particulate Matter <span class="lb-sat">&lt;2.5µm</span> <span class="lb-kode">PM<sub>2.5</sub></span></span>
               </button>
               <button class="layer-btn" data-layer="pm10" data-tip="Partikel di bawah 10 mikron">
-                <span class="material-symbols-outlined">grain</span> <span class="lb-txt">PM<sub>10</sub></span>
+                <span class="material-symbols-outlined">grain</span> <span class="lb-txt">Particulate Matter <span class="lb-sat">&lt;10µm</span> <span class="lb-kode">PM<sub>10</sub></span></span>
               </button>
               <button class="layer-btn" data-layer="co" data-tip="Karbon monoksida">
-                <span class="material-symbols-outlined">co2</span> <span class="lb-txt">CO</span>
+                <span class="material-symbols-outlined">co2</span> <span class="lb-txt">Carbon Monoxide <span class="lb-kode">CO</span></span>
               </button>
               <button class="layer-btn" data-layer="no2" data-tip="Nitrogen dioksida">
-                <span class="material-symbols-outlined">factory</span> <span class="lb-txt">NO<sub>2</sub></span>
+                <span class="material-symbols-outlined">factory</span> <span class="lb-txt">Nitrogen Dioxide <span class="lb-kode">NO<sub>2</sub></span></span>
               </button>
               <button class="layer-btn" data-layer="so2" data-tip="Sulfur dioksida">
-                <span class="material-symbols-outlined">volcano</span> <span class="lb-txt">SO<sub>2</sub></span>
+                <span class="material-symbols-outlined">volcano</span> <span class="lb-txt">Sulfur Dioxide <span class="lb-kode">SO<sub>2</sub></span></span>
               </button>
               <button class="layer-btn" data-layer="o3" data-tip="Ozon permukaan">
-                <span class="material-symbols-outlined">wb_sunny</span> <span class="lb-txt">O<sub>3</sub></span>
+                <span class="material-symbols-outlined">wb_sunny</span> <span class="lb-txt">Surface Ozone <span class="lb-kode">O<sub>3</sub></span></span>
               </button>
               <button class="layer-btn" data-layer="aod" data-tip="Ketebalan optis aerosol 550 nm">
-                <span class="material-symbols-outlined">foggy</span> <span class="lb-txt">Kabut Asap</span>
+                <span class="material-symbols-outlined">foggy</span> <span class="lb-txt">Aerosol Optical Depth <span class="lb-kode">AOD</span></span>
               </button>
               <button class="layer-btn" data-layer="pbl" data-tip="Planetary Boundary Layer Height">
-                <span class="material-symbols-outlined">vertical_align_bottom</span> <span class="lb-txt">PBLH</span>
+                <span class="material-symbols-outlined">vertical_align_bottom</span> <span class="lb-txt">Planetary Boundary Layer Height <span class="lb-kode">PBLH</span></span>
               </button>
             </div>
             <button id="layer-next" class="layer-nav" aria-label="Variabel berikutnya"><span class="material-symbols-outlined">chevron_right</span></button>

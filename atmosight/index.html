@@ -103,7 +103,7 @@
               <!-- Lambang ITERA di pojok kiri atas, diminta user. Pola dan
                    urutannya sama persis dengan bilah judul landing, ITERA di
                    kiri lalu garis rambut lalu Envirocircle. -->
-              <img class="itera-logo" src="../img/logo-itera.png" width="900" height="1095" alt="Institut Teknologi Sumatera" />
+              <img class="itera-logo" src="../img/logo-itera.png" width="217" height="263" alt="Institut Teknologi Sumatera" />
               <span class="itera-pisah" aria-hidden="true"></span>
               <img class="brand-logo" src="../img/logo-envirocircle.png" width="38" height="38" alt="" />
               <div class="brand-text">
@@ -318,6 +318,10 @@
           </div>
           <button id="cyclone-toggle" class="icon-btn" aria-label="Deteksi siklon + jalur prakiraan" data-tip="Siklon"><span class="material-symbols-outlined">cyclone</span></button>
           <button id="itcz-toggle" class="icon-btn" aria-label="Zona pertemuan angin (ITCZ)" data-tip="ITCZ"><span class="material-symbols-outlined">looks</span></button>
+          <!-- Alarm hujan, 4 Oktober 2026. MENYALA sejak awal, beda dengan
+               fitur lain di baris ini yang mati sampai dinyalakan. Dia alarm,
+               jadi dia harus sudah bekerja sebelum orang mencarinya. -->
+          <button id="alarm-toggle" class="icon-btn active" aria-label="Alarm hujan di kota" data-tip="Alarm Hujan"><span class="material-symbols-outlined">notifications_active</span></button>
           <div class="phenom-wrap">
             <button id="mon-toggle" class="icon-btn" aria-label="Fenomena atmosfer" data-tip="Fenomena"><span class="material-symbols-outlined">explore</span></button>
             <div id="phenom-panel" class="phenom-panel"></div>
@@ -434,6 +438,24 @@
             <figcaption class="tm-name">Andreas Boni Baik Simamora</figcaption>
           </figure>
         </div>
+      </div>
+    </div>
+
+    <!-- ============ KARTU AKURASI ============
+         4 Oktober 2026, diminta user. Dulu rincian verifikasi cuma ada di
+         atribut title badge, jadi dia tidak pernah terbaca di HP dan tidak
+         pernah terbaca orang yang tidak kebetulan mendiamkan kursornya.
+
+         Isinya DIBANGUN DARI catalog.akurasi, tidak satu angka pun ditulis
+         di sini. Model yang belum punya verifikasi mengirim {status:"soon"}
+         dan kartunya berganti jadi satu kalimat.
+
+         Lapisan dan cara menutupnya meniru #about-overlay yang sudah ada,
+         klik di luar dan Escape, supaya perilakunya seragam. -->
+    <div id="akr-overlay" class="about-overlay">
+      <div id="akr-card" class="akr-card" role="dialog" aria-modal="true" aria-labelledby="akr-judul">
+        <button id="akr-close" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <div class="akr-isi"></div>
       </div>
     </div>
 

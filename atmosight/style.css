@@ -702,7 +702,10 @@ html, body {
 .fresh-badge[data-segar="tidak"] .fresh-dot { background: #ff4d43; }
 /* Akurasi model. Warna & bentuk mengikuti badge arsip, bedanya rata KIRI
    supaya sejajar dengan tepi kiri slider, bukan tepi kanan. */
-.acc-badge { left: 0; right: auto; cursor: help; }
+/* cursor POINTER, bukan help. Sejak 4 Oktober 2026 badge ini membuka kartu
+   akurasi, jadi dia tombol. Kursor tanda tanya menjanjikan tooltip, dan itu
+   janji yang salah. */
+.acc-badge { left: 0; right: auto; cursor: pointer; }
 .acc-badge[hidden] { display: none; }
 .acc-badge.acc-soon { opacity: .82; }
 .fresh-chev { display: none; font-size: 15px; line-height: 1; }   /* kontrol tutup, HP saja */
@@ -3173,12 +3176,14 @@ body { font-weight: 200; }
    Envirocircle putih pekat, jadi dia cakram utuh yang terbaca di atas peta
    segelap apa pun.
 
-   ITERA lain ceritanya, tulisan di kakinya HITAM dan hilang di atas peta.
-   Dia diputihkan dengan brightness(0) lalu invert(1), perlakuan baku lambang
-   lembaga di atas latar gelap. Alfanya tidak tersentuh.
+   ITERA sempat diputihkan dengan brightness(0) lalu invert(1), lalu user
+   minta warnanya TETAP ASLI. Jadi tidak ada filter di sini.
+   KONSEKUENSINYA DIKETAHUI. Tulisan ITERA di kaki lambangnya hitam, dan di
+   atas peta gelap dia redup. Yang menolongnya peredam gelap di puncak peta
+   yang memang sudah ada untuk menaungi tulisan merek. Kalau suatu saat
+   terbaca terlalu samar, yang diubah peredamnya, BUKAN warna lambangnya.
    ===================================================================== */
-.ident .itera-logo { width: auto; height: 40px; display: block; flex: none;
-                     filter: brightness(0) invert(1); }
+.ident .itera-logo { width: auto; height: 40px; display: block; flex: none; }
 .ident .itera-pisah {
   width: 1px; height: 30px; flex: none; display: block;
   background: rgba(255, 255, 255, .45);
@@ -3196,4 +3201,223 @@ body { font-weight: 200; }
   .ident .itera-pisah { height: 24px; }
   .ident .brand-logo { width: 30px; height: 30px; }
   .sk-mark { width: 58px; height: 58px; }
+}
+
+
+/* =====================================================================
+   IDENTITAS DIBESARKAN, BADGE DIREDAM, 4 Oktober 2026
+   Diminta user, "harus lebih besar rasionya dibanding badge supaya lebih
+   menonjol". Blok ini IDENTIK di Atmosight dan Smokewatch.
+
+   DIKERJAKAN DARI DUA ARAH, bukan satu. Kalau identitasnya saja yang
+   dibesarkan, seluruh isi di bawahnya ikut terdorong turun dan di layar
+   pendek itu memakan peta. Jadi identitasnya naik sekitar sepertiga DAN
+   badgenya diturunkan sedikit. Jarak antar keduanya melebar dua kali lipat
+   tanpa blok atasnya tumbuh sebesar itu.
+
+     lambang ITERA        40 -> 52
+     lambang Envirocircle 36 -> 46
+     nama app             15 -> 19
+     penjelas              11 -> 12
+     huruf badge           11 -> 10, isiannya dan garisnya ikut diredupkan
+
+   Rasio nama app lawan huruf badge jadi 19 banding 10, dulu 15 banding 11.
+   Dari 1,36 jadi 1,90.
+
+   Dua angka di bawahnya WAJIB ikut turun, kalau tidak badge menabrak nama
+   app. .status dari 58 jadi 76, dan .rel--kiri dari 138 jadi 154.
+   ===================================================================== */
+.ident .itera-logo { height: 52px; }
+.ident .itera-pisah { height: 40px; }
+.ident .brand-logo { width: 46px; height: 46px; }
+.ident .brand { gap: 13px; }
+.ident .brand-text strong { font-size: 19px; letter-spacing: .17em; }
+.ident .brand-text span { font-size: 12px; letter-spacing: .05em; }
+
+.status { top: 76px; }
+.status .fresh-badge {
+  font-size: 10px; padding: 4px 11px; gap: 7px;
+  border-color: rgba(255, 255, 255, .3); color: rgba(255, 255, 255, .78);
+}
+.status .fresh-ico { font-size: 13px; }
+.status .fresh-src { font-size: 9px; }
+.rel--kiri { top: 154px; }
+
+/* Di layar sempit ruangnya tidak ada, jadi pembesaran ini dibatalkan dan
+   angkanya dikembalikan ke ukuran lama. */
+@media (max-width: 640px) {
+  .ident .itera-logo { height: 32px; }
+  .ident .itera-pisah { height: 24px; }
+  .ident .brand-logo { width: 30px; height: 30px; }
+  .ident .brand-text strong { font-size: 15px; letter-spacing: .16em; }
+  .ident .brand-text span { font-size: 11px; }
+}
+
+
+/* =====================================================================
+   KARTU AKURASI, 4 Oktober 2026
+   Diminta user. Rincian verifikasi dulu cuma ada di atribut title badge,
+   dan atribut itu TIDAK PERNAH terbaca di HP. Angka 76,6% berdiri telanjang
+   di layar tanpa ada cara melihat dasarnya, dan angka telanjang gampang
+   dibaca sebagai klaim yang lebih kuat dari yang sebenarnya.
+
+   Lapisannya memakai .about-overlay yang sudah ada, jadi cara menutupnya,
+   z-index-nya, dan peredam latarnya sama persis dengan kartu Tim.
+   ===================================================================== */
+.akr-card {
+  /* 640, bukan 880. Diukur di lima lebar, dan di 880 rasionya 1,95 yang
+     sudah terbaca sebagai pita memanjang bukan kartu. Di 640 jatuh 1,36,
+     praktis 4:3 seperti yang diminta. Tinggi kartunya nyaris tidak berubah
+     sepanjang rentang itu, 452 lawan 472, jadi yang menentukan rasionya
+     memang lebarnya saja. */
+  position: relative; width: 100%; max-width: 640px; max-height: 88vh;
+  overflow-y: auto; background: var(--paper); color: var(--ink);
+  border: var(--bw) solid var(--ink-20); border-radius: 0;
+  padding: 34px 38px 30px;
+}
+/* DUA KOLOM, diminta user, supaya kartunya melebar bukan menjulang.
+   Kiri angka pokoknya, kanan rinciannya, catatan kaki merentang dua duanya.
+   Kolom kiri dibuat lebih sempit, angka 68 px dan beberapa label pendek
+   tidak butuh lebar yang sama dengan lima baris parameter berbatang.
+   Rasionya jatuh dekat 4:3 dengan sendirinya, TIDAK dipatok aspect-ratio.
+   Kalau dipatok, kartu model yang belum terverifikasi isinya cuma satu
+   kalimat dan dia akan jadi kotak raksasa yang kosong melompong. */
+.akr-isi {
+  display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  gap: 0 46px; align-items: start;
+}
+.akr-kiri { display: flex; flex-direction: column; }
+.akr-kanan { min-width: 0; }
+/* Varian "belum terverifikasi" isinya sedikit, jadi dia merentang penuh dan
+   kartunya dipersempit lewat aturan di bawah. */
+.akr-sendiri { grid-column: 1 / -1; }
+.akr-card:has(.akr-sendiri) { max-width: 520px; }
+
+.akr-tag {
+  font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  font-weight: 300; color: var(--ink-50);
+}
+/* Angka besar. tabular-nums WAJIB, dia dihitung naik dan tanpa itu lebar tiap
+   digit berbeda sehingga angkanya bergoyang sepanjang hitungan. */
+.akr-besar {
+  font-size: 68px; line-height: 1; font-weight: 200; letter-spacing: -.01em;
+  margin: 10px 0 6px; font-variant-numeric: tabular-nums;
+}
+.akr-besar span { font-size: .42em; letter-spacing: .04em; }
+.akr-sub { font-size: 13px; font-weight: 200; color: var(--ink-70); }
+
+.akr-garis {
+  height: 0; border-top: var(--bw) solid var(--ink-20); margin: 20px 0 18px;
+}
+/* Asal data. Dia yang membuat angka di atas bisa dipercaya, jadi dia dekat
+   dengan angkanya, bukan di kaki kartu. */
+/* Di kolom kiri yang sempit, asal data DITUMPUK bukan dijajar. Dijajar, tiap
+   butir pecah jadi dua baris dan pemisah tegaknya jatuh di tempat yang salah. */
+.akr-asal { display: flex; flex-direction: column; gap: 7px; }
+.akr-asal span {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  font-weight: 200; color: var(--ink-50);
+}
+/* Pemisah tegak DIBUANG, dia cuma masuk akal waktu butirnya berjajar. */
+
+.akr-daftar { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
+.akr-par-atas { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.akr-par-nama {
+  font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  font-weight: 200; color: var(--ink);
+}
+.akr-par-nil {
+  font-size: 15px; font-weight: 300; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+/* Batang. Alasnya tinta 20 persen dan isinya --aksen, sama dengan penunjuk
+   di seluruh app. Lebarnya diisi lewat --isi dari JS, dan dia BERANGKAT DARI
+   NOL lalu tumbuh, searah dengan angkanya yang dihitung naik. */
+.akr-bar {
+  position: relative; height: 3px; margin: 7px 0 5px;
+  background: var(--ink-20); overflow: hidden;
+}
+.akr-bar i {
+  position: absolute; inset: 0 auto 0 0; width: 0;
+  background: var(--aksen);
+  transition: width 1.1s cubic-bezier(.2, .7, .2, 1);
+}
+.akr-card.jalan .akr-bar i { width: var(--isi, 0%); }
+@media (prefers-reduced-motion: reduce) {
+  .akr-bar i { transition: none; }
+}
+.akr-par-ket {
+  font-size: 11px; line-height: 17px; font-weight: 200; color: var(--ink-50);
+}
+.akr-catatan {
+  grid-column: 1 / -1;
+  margin-top: 26px; padding-top: 16px;
+  border-top: var(--bw) solid var(--ink-20);
+  font-size: 12px; line-height: 20px; font-weight: 200; color: var(--ink-70);
+}
+.akr-kosong { font-size: 14px; line-height: 23px; font-weight: 200; color: var(--ink-70); }
+
+/* Di bawah 760 px dua kolom tidak muat, kolom kanannya tinggal 200-an px dan
+   nama parameter mulai patah di tengah kata. Jadi dia ditumpuk lagi. */
+@media (max-width: 760px) {
+  .akr-card { max-width: 420px; }
+  .akr-isi { grid-template-columns: 1fr; gap: 0; }
+  .akr-kanan { margin-top: 22px; }
+  .akr-daftar { margin-top: 0; }
+}
+@media (max-width: 560px) {
+  .akr-card { max-width: 340px; padding: 24px 22px 22px; }
+  .akr-besar { font-size: 52px; }
+}
+
+
+/* =====================================================================
+   ALARM HUJAN, 4 Oktober 2026
+   Tanda berdenyut di kota yang sekarang kering tapi akan kena hujan di sisa
+   waktu model. Perilakunya di app.js, cari ALARM HUJAN.
+
+   Letaknya MENEMPEL DI POJOK ikon kondisi, bukan menggantikannya. Ikonnya
+   bercerita soal SEKARANG, alarmnya soal NANTI, dan dua duanya perlu terbaca
+   bersamaan.
+
+   WARNANYA IKUT SEBERAPA DEKAT, bukan seberapa deras. Yang paling berguna
+   dari sebuah alarm itu waktunya, dan derasnya nanti sudah diceritakan ikon
+   kotanya sendiri waktu hujannya tiba.
+   Merah SENGAJA TIDAK DIPAKAI. Di app ini merah sudah berarti bahaya, dipakai
+   ISPU Sangat Tidak Sehat dan titik api, sedangkan hujan ringan bukan bahaya.
+   ===================================================================== */
+.alarm-hujan {
+  position: absolute; top: -3px; right: -3px; z-index: 2;
+  width: 9px; height: 9px; border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--surface);
+  pointer-events: auto; cursor: help;
+}
+/* Cincin yang mengembang lalu memudar. Elemen semu, bukan elemen kedua, jadi
+   markup tiap kota tetap satu span. */
+.alarm-hujan::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: inherit; opacity: .55;
+  animation: alarm-denyut 1.8s ease-out infinite;
+}
+@keyframes alarm-denyut {
+  0%   { transform: scale(1);   opacity: .55; }
+  70%  { transform: scale(2.6); opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+/* Makin dekat makin cepat dan makin pekat. Tiga tingkat saja, lebih dari itu
+   tidak terbaca sebagai beda. */
+.alarm-hujan.ah-dekat  { background: #2360c8; }
+.alarm-hujan.ah-dekat::after  { animation-duration: 1.1s; }
+.alarm-hujan.ah-sedang { background: #22a5e0; }
+.alarm-hujan.ah-sedang::after { animation-duration: 1.8s; opacity: .45; }
+.alarm-hujan.ah-jauh   { background: #8FA0B3; }
+.alarm-hujan.ah-jauh::after   { animation: none; opacity: 0; }
+
+/* Tanpa ikon kondisi, tumpukannya lebih pendek dan pojoknya pindah. */
+.city-cond.no-ico .alarm-hujan { top: 2px; right: 6px; }
+
+/* Denyut dimatikan untuk yang minta gerakan dikurangi. Titiknya TETAP ADA,
+   cuma diam. Membuang titiknya sama saja membuang peringatannya. */
+@media (prefers-reduced-motion: reduce) {
+  .alarm-hujan::after { animation: none; opacity: 0; }
 }

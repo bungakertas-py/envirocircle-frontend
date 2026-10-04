@@ -67,7 +67,7 @@
              dalamnya. Kalau di dalam, mengklik lambang ITERA malah memulangkan
              ke beranda Envirocircle, dan itu salah baca. Tanpa tautan dia
              cuma pernyataan naungan, dan itu memang yang diminta. -->
-        <span class="brand-itera"><img src="img/logo-itera.png" width="900" height="1095" alt="Institut Teknologi Sumatera" /></span>
+        <span class="brand-itera"><img src="img/logo-itera.png" width="217" height="263" alt="Institut Teknologi Sumatera" /></span>
         <span class="brand-pisah" aria-hidden="true"></span>
         <a class="brand" href="#top" data-anim="top">
           <span class="brand-mark"><img src="img/logo-envirocircle.png" width="614" height="614" alt="" /></span>
@@ -189,18 +189,42 @@
            di luar dia, supaya tetap menempel di tepi bawah. -->
       <div class="hero-tengah">
       <div class="hero-teks">
-        <span class="hero-kicker" data-anim="fade">Atmospheric maps for Indonesia</span>
+        <span class="hero-kicker" data-anim="fade">Atmospheric work for Indonesia</span>
 
-        <!-- Dua baris = dua produk, satu baris satu peta. Kata "Where the"
-             berulang di dua baris, jadi yang berulang itu yang diredupkan
-             lewat kelas .glow dan yang membedakan dibiarkan penuh. Titiknya
-             terakota, meneruskan motif titik dari judul lama. -->
+        <!-- Judul diganti 4 Oktober 2026 jadi slogan resmi, menggantikan
+             "Where the rain lands. / Where the smoke goes." Sekarang satu
+             kalimat yang sama dengan yang ada di kepala halaman About, jadi
+             dua pintu masuk situs ini mengucapkan hal yang sama.
+
+             Tetap DUA BARIS, sebab kerangka buka layarnya memang dua jendela
+             .hl yang naik bergantian. Pemenggalannya di "to", bukan asal
+             patah, supaya baris pertama jadi ancang ancang dan baris kedua
+             jadi isinya.
+
+             Baris ancang ancang seluruhnya diredupkan lewat .glow, baris
+             isinya dibiarkan penuh. Pola yang sama dengan judul sebelumnya,
+             cuma dulu redupnya per potongan baris dan sekarang per baris.
+             Titik penutupnya tetap .kilau, meneruskan motif titik yang sudah
+             ada sejak judul paling pertama. -->
         <h1 class="hero-title">
-          <span class="hl hl-1"><span class="hl-in"><span class="glow">Where the </span>rain lands<span class="ttk">.</span></span></span>
-          <span class="hl hl-2"><span class="hl-in"><span class="glow">Where the </span>smoke goes<span class="ttk">.</span></span></span>
+          <span class="hl hl-1"><span class="hl-in"><span class="glow">From Atmospheric Data to</span></span></span>
+          <span class="hl hl-2"><span class="hl-in">Environmental Insight<span class="ttk">.</span></span></span>
         </h1>
 
-        <p class="hero-lead" data-anim="fade">Two live maps built from open atmospheric models. Weather out to three days, air quality down to the regency.</p>
+        <!-- Ditulis ulang 4 Oktober 2026. Yang lama berbunyi "Two live maps built
+             from open atmospheric models" dan itu mengunci seluruh halaman ke dua
+             peta, padahal pekerjaannya jauh lebih luas, Pertek, AMDAL,
+             inventarisasi emisi, dispersi skala kota, daya tampung.
+             Yang menyatukan semuanya BUKAN daftar bendanya, tapi dua arah
+             pemakaiannya, yang dibuka untuk umum dan yang dikerjakan untuk
+             seseorang. Kalimat ini memuat kelima kelompok pekerjaan tanpa
+             menyebut satu pun, jadi dia tidak perlu diubah tiap ada jenis
+             pekerjaan baru.
+             Klausa lama "Weather out to three days, air quality down to the
+             regency" SENGAJA DIBUANG, bukan kelupaan. Isinya bagus tapi cuma
+             soal peta, dan justru dia yang menarik hero balik ke dua peta.
+             Keterangan itu sudah ada di kartu Showcase. -->
+        <p class="hero-lead" data-anim="fade">Modelling Indonesia&rsquo;s air and weather. Open as maps, or worked up into the studies behind permits and plans.</p>
       </div>
 
       <!-- Dua pintu untuk dua kebutuhan. Yang cari hujan dan yang cari asap
@@ -230,9 +254,13 @@
              DITARIK dari tengah ke dua sisi waktu masuk. Border tidak bisa
              dianimasikan seperti itu, transform butuh elemen sendiri. -->
         <span class="hb-garis" aria-hidden="true"></span>
-        <span class="hb-butir">4 atmospheric models</span>
-        <span class="hb-butir">514 cities and regencies</span>
-        <span class="hb-butir">76.6% agreement with METAR</span>
+        <!-- Angkanya DIPISAH ke span sendiri supaya bisa dihitung naik, pola
+             yang sama dengan pita angka di About. Nilai akhirnya ditulis apa
+             adanya di dalam span, jadi kalau JS mati yang tampil tetap angka
+             yang benar, bukan nol. -->
+        <span class="hb-butir"><b class="hb-num">4</b> atmospheric models</span>
+        <span class="hb-butir"><b class="hb-num">514</b> cities and regencies</span>
+        <span class="hb-butir"><b class="hb-num" data-desimal="1">76.6</b>% agreement with METAR</span>
         <span class="hb-butir" id="hero-segar" hidden></span>
       </div>
     </div>
@@ -274,9 +302,18 @@
              lalu garis rambut. Pembungkusnya yang menggambar garisnya. -->
         <div class="sec-head">
           <span class="section-head" data-sc>Showcase</span>
-          <h2 class="sc-title" data-sc>Dua peta, satu <span class="glow">sumber</span>.</h2>
+          <!-- Judul pendek dan TANPA PENJELAS, 4 Oktober 2026.
+               Penjelasnya dibuang, bukan diperbaiki. Sesudah penjelas hero
+               ditulis ulang jadi "Open as maps, or worked up into the studies
+               behind permits and plans", paragraf di sini mengatakan hal yang
+               persis sama dengan kalimat yang lebih panjang, satu layar di
+               bawahnya. Tiga kartunya sudah punya keterangan sendiri, jadi
+               tidak ada keterangan yang hilang.
+               Judulnya ajakan, bukan keterangan, supaya dia tidak basi kalau
+               nanti kartunya bertambah. Yang lama berbunyi "Dua peta, dan
+               kerja di belakangnya", dan itu masih mengunci ke dua peta. -->
+          <h2 class="sc-title" data-sc>Start here.</h2>
         </div>
-        <p class="sc-lead" data-sc>Keduanya berdiri di atas model atmosfer yang terbuka dan gratis, dari model sedunia sampai model wilayah yang dijalankan sendiri. Diolah otomatis tiap hari, lalu disajikan sebagai peta yang bisa dibaca tanpa latar belakang teknis.</p>
 
         <!-- TIGA KARTU BERJAJAR, ditulis ulang 27 September 2026.
 
@@ -309,9 +346,17 @@
             </span>
             <span class="sc-kartu-isi">
               <span class="sc-kartu-nama">Atmosight</span>
-              <span class="sc-kartu-desc">Prakiraan cuaca interaktif seluruh Indonesia, sampai tiga hari ke depan.</span>
+              <span class="sc-kartu-desc">Interactive weather forecast for all of Indonesia, out to three days.</span>
+              <!-- Daftar model LENGKAP, termasuk yang pipeline-nya belum jalan,
+                   diambil dari MODELS dan MODEL_PAJANGAN di app.js masing
+                   masing. Yang sudah jalan GFS, WRF, CAMS, WRF-Chem. Yang
+                   belum ECMWF, WRFDA, CAMx, CMAQ, Flexpart.
+                   TIDAK ADA PEMBEDA SAMA SEKALI di antara keduanya, diminta
+                   user. Penanda kata, garis putus, dan huruf yang dipudarkan
+                   sudah diusulkan dan ditolak satu per satu. Jadi kartu ini
+                   menampilkan kesembilannya sebagai satu daftar rata. -->
               <span class="chips">
-                <span class="chip">GFS</span><span class="chip">ECMWF</span><span class="chip">WRF</span>
+                <span class="chip">GFS</span><span class="chip">WRF</span><span class="chip">ECMWF</span><span class="chip">WRFDA</span>
               </span>
             </span>
           </a>
@@ -323,9 +368,9 @@
             </span>
             <span class="sc-kartu-isi">
               <span class="sc-kartu-nama">Smokewatch</span>
-              <span class="sc-kartu-desc">Peta polusi udara seluruh Indonesia, dari ISPU sampai daya tampung wilayah.</span>
+              <span class="sc-kartu-desc">Air pollution across Indonesia, from the ISPU index to regional carrying capacity.</span>
               <span class="chips">
-                <span class="chip">CAMS</span><span class="chip">WRF-Chem</span><span class="chip">CAMx</span><span class="chip">CMAQ</span>
+                <span class="chip">CAMS</span><span class="chip">WRF-Chem</span><span class="chip">CAMx</span><span class="chip">CMAQ</span><span class="chip">Flexpart</span>
               </span>
             </span>
           </a>
@@ -342,7 +387,7 @@
             </span>
             <span class="sc-kartu-isi">
               <span class="sc-kartu-nama">Publication &amp; Project</span>
-              <span class="sc-kartu-desc">Satu makalah dan empat belas pekerjaan pemodelan kualitas udara di sembilan kota.</span>
+              <span class="sc-kartu-desc">Pertek, AMDAL, emission inventories and carrying capacity studies. Fourteen jobs across nine cities.</span>
               <span class="chips">
                 <span class="chip">AERMOD</span><span class="chip">WRF-Chem</span><span class="chip">GIS</span>
               </span>
@@ -382,11 +427,11 @@
           <div class="ins-teks">
             <span class="ins-no">01</span>
             <h3 class="ins-nama">Meteodrone</h3>
-            <p class="ins-desc">Drone pengukur profil atmosfer. Mengambil suhu, kelembapan, tekanan, dan angin dari permukaan sampai ketinggian, langsung di lokasi.</p>
+            <p class="ins-desc">A drone that profiles the atmosphere. Temperature, humidity, pressure and wind from the ground up, measured on site.</p>
           </div>
           <div class="ins-foto">
             <img src="img/instrumen-meteodrone.webp" width="1246" height="701" loading="lazy" decoding="async"
-                 alt="Meteodrone, drone pengukur profil atmosfer" />
+                 alt="Meteodrone, a drone that profiles the atmosphere" />
           </div>
         </div>
 
@@ -399,11 +444,11 @@
           <div class="ins-teks">
             <span class="ins-no">02</span>
             <h3 class="ins-nama">AWS Portable</h3>
-            <p class="ins-desc">Stasiun cuaca otomatis yang bisa dipindah. Mencatat parameter permukaan terus menerus di titik yang tidak terjangkau jaringan tetap.</p>
+            <p class="ins-desc">An automatic weather station you can move. Records surface conditions without a break, at points no fixed station reaches.</p>
           </div>
           <div class="ins-foto">
-            <img src="img/instrumen-aws.webp" width="690" height="388" loading="lazy" decoding="async"
-                 alt="AWS portable, stasiun cuaca otomatis yang bisa dipindah" />
+            <img src="img/instrumen-aws.webp" width="576" height="324" loading="lazy" decoding="async"
+                 alt="AWS Portable, a movable automatic weather station" />
           </div>
         </div>
       </div>
@@ -478,12 +523,19 @@
               <span class="f-brand-mark"><img src="img/logo-envirocircle.png" width="614" height="614" alt="" /></span>
               <span>Envirocircle</span>
             </a>
-            <p class="f-note">Peta atmosfer dan lingkungan Indonesia, dari model global yang terbuka. Diolah otomatis tiap hari.</p>
+            <!-- Diganti ISINYA, bukan cuma diterjemahkan, 4 Oktober 2026. Yang lama
+                 berbunyi "Peta atmosfer dan lingkungan Indonesia", dan itu
+                 kembaran penjelas hero yang sudah dilebarkan. Kalau cuma
+                 diterjemahkan, kaki halaman tetap bilang situs ini soal peta.
+                 BLOK FOOTER INI TIDAK LAGI SAMA dengan yang di work/ dan
+                 about/. Itu disengaja. Dua halaman itu berbahasa Indonesia,
+                 jadi kakinya ikut bahasa halamannya. -->
+            <p class="f-note">Modelling Indonesia&rsquo;s air and weather. Run daily, open to anyone.</p>
             <a class="f-surel" href="mailto:envirocircleind@gmail.com">envirocircleind@gmail.com</a>
           </div>
 
           <div class="f-kanan">
-            <span class="f-sos-label">Ikuti kami</span>
+            <span class="f-sos-label">Follow us</span>
             <div class="f-sos">
               <a class="f-sos-btn" href="https://www.youtube.com/@enviroCircle"
                  target="_blank" rel="noopener" aria-label="YouTube Envirocircle"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg></a>

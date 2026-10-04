@@ -56,24 +56,37 @@
     var sec = document.querySelector(".abt-atas");
     if (!sec) return;
     var tl = garis(sec, "94%");
-    var label = sec.querySelector(".kry-atas-label");
+    /* NAMA KELASNYA BERUBAH 4 Oktober 2026 waktu kepala halaman disusun
+       ulang. Ini WAJIB ikut diganti, bukan pilihan. Semua yang ber-data-abt
+       berangkat dari opacity 0 lewat CSS, dan yang memunculkannya cuma
+       adegan di sini. Selektor yang tidak lagi cocok berarti elemennya
+       TIDAK PERNAH MUNCUL. Sempat terjadi, .abt-logo diganti namanya tanpa
+       mengubah baris ini, dan lambangnya hilang sama sekali di peramban
+       biasa. Chrome headless tidak menunjukkannya sebab dia dijalankan
+       dengan prefers-reduced-motion, dan di jalur itu semuanya dipaksa
+       tampil. JANGAN percaya potret headless untuk memeriksa hal ini. */
     var kata  = sec.querySelector(".abt-pernyataan");
     var par   = sec.querySelectorAll(".abt-paragraf p");
-    var logo  = sec.querySelector(".abt-logo");
+    var itera = sec.querySelector(".abt-itera");
+    var pisahLogo = sec.querySelector(".abt-pisah");
+    var logo  = sec.querySelector(".abt-ec");
     /* JANGAN dinamai `garis`. Fungsi pembuat barisan waktu di atas sudah
        bernama garis(), dan `var` terangkat ke puncak fungsi ini, jadi
        variabel lokal bernama sama akan MENUTUPI fungsinya sejak baris
        pertama. Akibatnya garis(sec, "94%") memanggil undefined, TypeError,
        dan SELURUH IIFE mati tanpa satu pun adegan dibuat. Kena sekali. */
     var pemisah = sec.querySelector(".abt-garis");
-    if (logo)  tl.fromTo(logo,  { opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.8, ease: "power3.out" }, 0);
-    if (label) tl.fromTo(label, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 0.12);
-    if (kata)  tl.fromTo(kata,  { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 1.0, ease: "power4.out" }, 0.2);
+    /* Urutannya mengikuti urutan baca, yang menaungi dulu baru yang punya
+       halaman, lalu pernyataannya. */
+    if (itera) tl.fromTo(itera, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0);
+    if (pisahLogo) tl.fromTo(pisahLogo, { opacity: 1, scaleY: 0 }, { scaleY: 1, duration: 0.45, ease: "power2.inOut", transformOrigin: "50% 0%" }, 0.22);
+    if (logo)  tl.fromTo(logo,  { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.8, ease: "power3.out" }, 0.3);
+    if (kata)  tl.fromTo(kata,  { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 1.0, ease: "power4.out" }, 0.5);
     /* Garisnya DITARIK dari kiri, bukan dipudarkan. Gerak yang sama dipakai
        garis pita bukti di hero landing, dan di sini dia yang memisahkan
        pernyataan dari badan teks. */
-    if (pemisah) tl.fromTo(pemisah, { opacity: 1, scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power3.inOut" }, 0.5);
-    if (par.length) tl.fromTo(par, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.12 }, 0.66);
+    if (pemisah) tl.fromTo(pemisah, { opacity: 1, scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power3.inOut" }, 0.8);
+    if (par.length) tl.fromTo(par, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.12 }, 0.96);
   })();
 
   /* --- pita angka, dihitung naik ---

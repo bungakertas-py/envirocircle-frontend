@@ -435,7 +435,17 @@ section { padding: 0; }
    angkanya turun dari 100 ke 76. */
 .hero-title {
   font-weight: 300;
-  font-size: clamp(26px, 5.2vw, 76px);
+  /* DIKECILKAN 4 Oktober 2026 waktu judulnya diganti jadi slogan resmi.
+     Dulu 5,2vw dengan puncak 76. Judul lama baris terpanjangnya 21 huruf,
+     yang sekarang 24, dan selisih 14 persen itu cukup untuk membuat baris
+     pertamanya MELIPAT. Melipat di sini bukan cuma jelek, .hl memotong apa
+     pun yang lewat satu baris, jadi kata "TO" hilang sama sekali.
+     Angkanya diukur, bukan ditaksir. Lebar teks sebenarnya diukur lewat
+     canvas measureText di 13 lebar layar, lalu dicari vw terbesar yang masih
+     menyisakan 5 persen napas. Yang paling mengikat 4,85 di 1280 px, jadi
+     dipakai 4,8. Puncaknya 70, sebab di atas 1462 px hurufnya tidak lagi
+     ikut layar dan di sana baris pertama butuh paling banyak 72. */
+  font-size: clamp(26px, 4.8vw, 70px);
   line-height: 1.22; letter-spacing: .1em; margin: 0;
   text-transform: uppercase;
   color: var(--hero-teks);
@@ -517,6 +527,14 @@ section { padding: 0; }
   background: currentColor; opacity: .6;
 }
 .hb-butir[hidden] { display: none; }
+/* Angka di pita bukti, 4 Oktober 2026, ikut dihitung naik seperti pita angka
+   di About. Dia <b> supaya di HTML polos tetap terbaca sebagai angka yang
+   ditonjolkan, TAPI beratnya dikembalikan ke berat sekitarnya. Di seluruh
+   situs ini tidak ada satu pun huruf tebal, dan satu angka tebal di hero
+   akan langsung terbaca sebagai benda asing.
+   tabular-nums WAJIB. Tanpa dia lebar tiap digit berbeda, dan selama
+   hitungan naik seluruh kalimat di kanannya bergoyang tiap frame. */
+.hb-num { font-weight: inherit; font-variant-numeric: tabular-nums; }
 /* Garis rambut pita bukti. Elemen sendiri supaya bisa ditarik dari tengah. */
 .hb-garis {
   position: absolute; left: 0; right: 0; top: 0; height: 0;
@@ -600,8 +618,10 @@ section { padding: 0; }
    yang tetap rata kiri.
    ===================================================================== */
 #showcase .sec-head { align-items: center; text-align: center; }
-#showcase .sc-title { max-width: 28ch; margin-inline: auto; }
-#showcase .sc-lead  { margin-inline: auto; text-align: center; }
+/* 20ch, bukan 28. Judul barunya 35 huruf jadi dia memang dua baris, dan di
+   28ch patahnya jatuh sesudah "di" sehingga baris kedua tinggal satu kata.
+   Di 20ch patahnya naik satu kata dan dua barisnya jadi 19 lawan 15. */
+#showcase .sc-title { max-width: 20ch; margin-inline: auto; }
 
 /* Tiga kolom sama lebar, mengisi penuh lebar isi .wrap, jadi tepi kiri kanan
    kartunya segaris dengan judul bagian di atasnya. Tidak ada yang menjorok
@@ -896,8 +916,12 @@ a.sc-kartu:hover .sc-kartu-gambar img { opacity: 1; }
    dulu bertuliskan "Foto menyusul". Fotonya yang menyesuaikan slotnya, bukan
    sebaliknya. Sempat dibuat sebaliknya, tiap baris memakai rasio foto
    aslinya, dan hasilnya dua baris beda tinggi jauh dan barisannya kelihatan
-   miring. Foto AWS aslinya tegak, jadi dia dipotong ke 16:9 dengan jendela
-   dipusatkan ke kepala anemometernya, bukan ke tengah foto. */
+   miring.
+   Foto AWS diganti 4 Oktober 2026. Yang lama tegak dan dipotong dengan
+   jendela dipusatkan ke kepala anemometer. Yang sekarang sudah mendatar,
+   576x369, jadi yang dipotong tingginya saja, 45 px, dan jendelanya DIGESER
+   KE ATAS bukan dipusatkan, sebab alatnya ada di separuh atas dan sisa
+   bawahnya cuma atap dan kabel. */
 .ins-foto .material-symbols-outlined {
   font-size: 64px; color: var(--sisi-20);
 }
@@ -1294,14 +1318,15 @@ footer a.f-link { color: var(--ink); border-bottom: var(--rambut) solid var(--in
   .hero-inner { padding: 88px var(--gutter) 16px; }
   .hero-tengah { gap: 22px; }
   .hero-teks { gap: 14px; }
-  /* Diukur di browser, bukan ditaksir. Yang menentukan BARIS KEDUA, bukan
-     yang pertama, sebab M, K, dan W itu lebar sedangkan I dan L tipis.
+  /* Diukur di browser, bukan ditaksir. Sejak judulnya diganti 4 Oktober 2026
+     yang menentukan BARIS PERTAMA, "From Atmospheric Data to", 24 huruf lawan
+     22 huruf baris kedua.
      Jaraknya di sini diturunkan 0,1 jadi 0,06em. Jarak selebar 0,1em di layar
-     sesempit ini memakan ruang yang tidak ada dan barisnya langsung melipat. */
-  /* Batas atasnya 42, bukan 30. Blok ini berlaku sampai 720 px, bukan 640,
+     sesempit ini memakan ruang yang tidak ada dan barisnya langsung melipat.
+     Batas atasnya 42, bukan 30. Blok ini berlaku sampai 720 px, bukan 640,
      dan di 700 px judul 30 px terbaca seperti anak kalimat, bukan judul.
-     Diukur, di 720 px baris kedua butuh 599 px sedangkan ruangnya 640. */
-  .hero-title { font-size: clamp(20px, 5.9vw, 42px); letter-spacing: .06em; }
+     vw-nya diturunkan 5,9 jadi 5,1, angka paling mengikat ada di 640 px. */
+  .hero-title { font-size: clamp(20px, 5.1vw, 42px); letter-spacing: .06em; }
   .hero-kicker { font-size: 11px; letter-spacing: .2em; }
   .hero-lead { font-size: 14px; line-height: 1.55; }
   .hero-foot { gap: 10px; }
@@ -1398,13 +1423,14 @@ footer a.f-link { color: var(--ink); border-bottom: var(--rambut) solid var(--in
    dibatalkan di tempat lain.
    ===================================================================== */
 .hero-top:not(.padat) .brand-name { color: #fff; }
-/* Lambang ITERA dijadikan PUTIH POLOS selama bilahnya masih melayang di atas
-   foto. Emasnya masih terbaca di atas foto gelap, tapi tulisan ITERA di
-   kakinya hitam dan hilang sama sekali. brightness(0) meratakan semuanya jadi
-   hitam dulu, invert(1) membalikkannya jadi putih, dan alfanya tidak
-   tersentuh. Ini perlakuan baku lambang lembaga di atas latar gelap, satu
-   berkas saja, tidak perlu versi putih terpisah. */
-.hero-top:not(.padat) .brand-itera img { filter: brightness(0) invert(1); }
+/* Lambang ITERA sempat DIPUTIHKAN di atas foto, 4 Oktober pagi, lalu user
+   minta warnanya tetap asli. Jadi tidak ada filter apa pun di sini.
+   KONSEKUENSINYA DIKETAHUI DAN DITERIMA. Tulisan ITERA di kaki lambangnya
+   hitam, dan di atas foto gelap dia memang redup. Yang menolongnya cuma
+   peredam gelap di puncak foto plus bidang putih yang muncul begitu bilahnya
+   melewati hero. Kalau suatu saat terbaca terlalu samar, yang diubah
+   peredamnya atau diberi alas terang di belakang lambangnya, BUKAN warnanya.
+   Pemisahnya tetap diputihkan, dia garis milik situs bukan milik lambang. */
 .hero-top:not(.padat) .brand-pisah { background: rgba(255, 255, 255, .45); }
 .hero-top:not(.padat) .hero-nav a {
   color: rgba(255, 255, 255, .82);
@@ -1481,8 +1507,6 @@ body.foto-atas-terang .hero-foto::after {
   --teduh-atas: linear-gradient(to bottom, rgba(255, 255, 255, .55) 0%, rgba(255, 255, 255, 0) 26%);
 }
 body.foto-atas-terang .hero-top:not(.padat) .brand-name { color: var(--ink); }
-/* Foto atasnya terang, jadi pemutihan di atas dibatalkan lagi. */
-body.foto-atas-terang .hero-top:not(.padat) .brand-itera img { filter: none; }
 body.foto-atas-terang .hero-top:not(.padat) .brand-pisah { background: var(--ink-20); }
 body.foto-atas-terang .hero-top:not(.padat) .hero-nav a {
   color: var(--ink-50); border-top-color: var(--ink-20);
@@ -1756,61 +1780,57 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
 
 .abt-atas { padding: 64px 0 56px; }
 
-/* KISI EDITORIAL. Kolom kiri sempit khusus lambang, kolom kanan isinya.
-   Lambangnya LENGKET waktu digulir selama bagian ini masih terlihat, itu
-   ciri halaman majalah, satu benda diam sementara tulisannya berjalan. */
-.abt-kisi {
-  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px;
-  align-items: start;
+/* ---- KEPALA HALAMAN ABOUT, disusun ulang 4 Oktober 2026 ----
+   KISI DUA KOLOM DIBUANG. Dulu lambangnya berdiri di rel sempit 220 px di
+   kiri, lengket waktu digulir, dan seluruh tulisan di kolom kanan. Di
+   susunan itu lambangnya cuma hiasan tepi. User minta lambangnya IKUT
+   MENYUSUN halaman, bukan sekadar ditempel.
+
+   Sekarang kepalanya DITENGAHKAN, dan ini satu satunya bagian About yang
+   ditengahkan. Alasannya sama dengan hero landing, halaman ini butuh satu
+   titik pembuka sebelum isinya dibaca, dan pembuka yang ditengahkan terbaca
+   sebagai halaman judul. Badan teks di bawahnya tetap rata kiri.
+
+   ITERA DI KIRI, Envirocircle di kanan, diminta user 4 Oktober. Sempat
+   bertumpuk ITERA di atas, lalu diubah jadi bersebelahan. Label teks
+   "Envirocircle" yang dulu ada di sini DIBUANG, lambangnya sudah menuliskan
+   namanya sendiri. */
+.abt-kepala { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.abt-duo { display: flex; align-items: center; gap: 30px; }
+/* Dua duanya dipatok TINGGINYA, bukan lebarnya, sebab rasionya berbeda jauh.
+   ITERA tegak, Envirocircle melebar sebab ada tulisan mereknya. Dipatok
+   lebar, ITERA akan menjulang tiga kali lipat.
+   Tingginya dibuat HAMPIR SAMA, 96 lawan 104, dan itu sudah membuat
+   Envirocircle menang jelas sebab lebarnya tiga kali lipat. Kalau tingginya
+   juga dibuat timpang, ITERA jadi terlalu kecil untuk lembaga yang menaungi. */
+.abt-itera { width: auto; height: 96px; display: block; flex: none; }
+.abt-ec { width: auto; height: 104px; display: block; max-width: 100%; }
+/* Pemisah TEGAK di antara keduanya, menggantikan kalimat naungan yang
+   dibuang atas permintaan user. Tanpa pemisah, dua lambang yang
+   berdampingan terbaca seperti satu merek gabungan, bukan dua lembaga. */
+.abt-pisah {
+  display: block; width: var(--rambut); height: 66px; flex: none;
+  background: var(--ink-20); margin: 0;
 }
-/* Kolom kiri berisi dua lambang bertumpuk, jadi yang LENGKET pembungkusnya.
-   Kalau lengketnya ditaruh di salah satu lambang, yang satunya ditinggal diam
-   sementara pasangannya berjalan turun. */
-.abt-sisi { position: sticky; top: 118px; }
-
-/* ---- DUA LAMBANG, 4 Oktober 2026 ----
-   KOTAKNYA DIBUANG, diminta user. Dulu kotak bujur sangkar bergaris rambut
-   berisian tinta 5 persen, sisa dari masa slot ini masih kosong dan perlu
-   ditandai. Begitu lambangnya ada, kotaknya jadi bingkai yang mengurung dan
-   tidak menambah apa apa.
-
-   ITERA DI ATAS, Envirocircle di bawahnya, urutan diminta user.
-
-   Rata KIRI, bukan rata tengah. Seluruh kolom di sebelahnya rata kiri, dan
-   lambang yang ditengahkan di kolomnya sendiri akan terbaca melayang. */
-.abt-lambang { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
-/* Dua duanya dipatok TINGGINYA, bukan lebarnya, sebab rasionya berbeda jauh,
-   ITERA tegak dan Envirocircle bujur sangkar. Dipatok lebar, ITERA akan
-   menjulang dua kali lipat. */
-.abt-lambang-itera { width: auto; height: 112px; display: block; }
-.abt-lambang-ec { width: auto; height: 104px; display: block; }
-/* Pemisah, menggantikan kalimat naungan yang dibuang. Pendek saja, selebar
-   lambang terkecil, bukan selebar kolom. */
-.abt-lambang-pisah {
-  display: block; width: 86px; height: var(--rambut);
-  background: var(--ink-20);
-}
-
-.abt-utama { display: flex; flex-direction: column; align-items: flex-start; }
-/* Garis rambut pemisah antara pernyataan dan badan teks. Elemen sendiri,
-   bukan border, supaya bisa ditarik dari kiri waktu masuk. */
+/* Garis rambut pemisah antara kepala dan badan teks. Elemen sendiri, bukan
+   border, supaya bisa ditarik dari kiri waktu masuk. */
 .abt-garis {
   display: block; width: 100%; height: 0;
   border-top: var(--rambut) solid var(--ink-20);
-  transform-origin: 0 50%; margin-bottom: 30px;
+  transform-origin: 0 50%; margin: 48px 0 32px;
 }
 /* Pernyataan besar. Ini SATU SATUNYA judul di seluruh situs yang bukan huruf
    besar berjarak lebar, dan itu disengaja. Isinya kalimat penuh, bukan label.
    Kalimat sepanjang ini dalam huruf besar 0,1em berhenti terbaca sebagai
    kalimat dan berubah jadi papan pengumuman. */
 .abt-pernyataan {
-  margin: 0 0 28px; max-width: 20ch;
+  margin: 34px auto 0; max-width: 22ch;
   font-size: clamp(28px, 4.2vw, 54px); line-height: 1.2;
   letter-spacing: .01em; font-weight: 300; color: var(--ink);
 }
 .abt-paragraf {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 48px;
-  max-width: 96ch; width: 100%;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 56px;
+  width: 100%;
 }
 .abt-paragraf p {
   margin: 0; font-size: 16px; line-height: 28px; letter-spacing: .4px;
@@ -1895,8 +1915,12 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
   font-weight: 200; color: var(--ink-50);
 }
+/* max-width 62ch DIBUANG 4 Oktober 2026, diminta user. Kolom teks di baris
+   tim ini lebarnya sudah ditentukan kisinya, dan 62ch mematahkan barisnya
+   jauh sebelum tepi kolom itu. Akibatnya ada pita kosong di kanan tiap bio,
+   dan di bio Alvin yang dua paragraf pita itu jadi sangat kentara. */
 .tim-bio {
-  margin: 6px 0 4px; max-width: 62ch;
+  margin: 6px 0 4px;
   font-size: 15px; line-height: 27px; letter-spacing: .3px;
   font-weight: 200; color: var(--ink-70);
 }
@@ -1942,19 +1966,14 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   .abt-atas { padding: 44px 0 40px; }
   /* Kisi editorialnya ditumpuk, dan lambangnya berhenti lengket lalu
      menyusut. Kotak 220 px di layar sempit memakan satu layar sendiri. */
-  .abt-kisi { grid-template-columns: 1fr; gap: 28px; }
-  /* Satu kolom, jadi tidak ada lagi tulisan yang berjalan di sebelahnya
-     untuk ditemani. Lengketnya dimatikan, kalau tidak lambangnya menempel
-     di puncak layar sepanjang halaman. */
-  /* Satu kolom, jadi tidak ada lagi tulisan yang berjalan di sebelahnya untuk
-     ditemani. Lengketnya dimatikan, dan dua lambangnya berjajar mendatar
-     supaya tidak memakan tinggi sebelum tulisannya mulai. Pemisahnya ikut
-     diputar jadi tegak. */
-  .abt-sisi { position: static; }
-  .abt-lambang { flex-direction: row; align-items: center; gap: 18px; }
-  .abt-lambang-itera { height: 78px; }
-  .abt-lambang-ec { height: 70px; }
-  .abt-lambang-pisah { width: var(--rambut); height: 56px; }
+  /* Di layar sempit tetap bersebelahan, cuma dikecilkan dan jaraknya
+     dirapatkan. Diukur di 390 px, ITERA 56 px plus jarak 18 plus Envirocircle
+     172 px sama dengan 246, sedangkan ruang yang ada 358. Masih lapang. */
+  .abt-duo { gap: 18px; }
+  .abt-itera { height: 62px; }
+  .abt-ec { height: 58px; }
+  .abt-pisah { height: 44px; }
+  .abt-garis { margin: 34px 0 24px; }
   .abt-paragraf { grid-template-columns: 1fr; gap: 20px; }
   .abt-paragraf p { font-size: 14px; line-height: 25px; }
   .abt-angka-baris { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 24px; }

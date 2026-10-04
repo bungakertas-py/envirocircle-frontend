@@ -45,6 +45,11 @@
       semua[i].style.opacity = "1";
       semua[i].style.transform = "none";
     }
+    /* Angka pita bukti ikut dikembalikan ke nilai akhirnya. Tanpa ini, kalau
+       ticker GSAP tidak pernah berdetak angkanya mandek di "0" dan "000". */
+    var ang = document.querySelectorAll(".hb-num");
+    for (var ai = 0; ai < ang.length; ai++)
+      ang[ai].textContent = ang[ai].dataset.akhir || ang[ai].textContent;
     /* Tanpa animasi, titik tidak pernah berpindah ke slot i. Kalau dibiarkan,
        yang terbaca "Precıse" tanpa titik, kelihatan seperti salah ketik.
        Jadi batangnya dikembalikan jadi "i" bertitik apa adanya. */
@@ -248,6 +253,44 @@
       if (butir.length) {
         tl.fromTo(butir, { opacity: 0, y: 8 },
                          { opacity: 1, y: 0, duration: 0.6, stagger: 0.08 }, 1.45);
+
+        /* ANGKANYA DIHITUNG NAIK, diminta user 4 Oktober 2026, pola yang sama
+           dengan pita angka di About.
+
+           Yang dianimasikan OBJEK PEMBANTU, bukan elemennya, lalu tiap frame
+           nilainya ditulis ulang ke teksnya. GSAP tidak bisa men-tween isi
+           teks, cuma properti objek.
+
+           Nilai akhirnya DIBACA dari teks yang sudah tertulis di markup, bukan
+           dipatok di sini. Jadi kalau angkanya berubah, yang disunting cukup
+           HTML-nya dan baris ini tidak perlu disentuh. Nilainya disimpan ke
+           dataset dulu sebab tween akan menimpanya.
+
+           Desimalnya ikut berapa desimal nilai akhirnya, 76.6 dihitung dengan
+           satu angka di belakang koma sedangkan 514 bulat. Tanpa itu, angka
+           persen akan berkedip antara bulat dan desimal selama hitungan. */
+        for (var bi2 = 0; bi2 < butir.length; bi2++) {
+          (function (el, urut) {
+            var span = el.querySelector(".hb-num");
+            if (!span) return;
+            if (!span.dataset.akhir) span.dataset.akhir = span.textContent.trim();
+            var akhir = parseFloat(span.dataset.akhir);
+            if (isNaN(akhir)) return;
+            var des = parseInt(span.dataset.desimal || "0", 10);
+            var kotak = { n: 0 };
+            /* Titik berangkatnya DISAMAKAN LEBARNYA dengan nilai akhirnya,
+               514 berangkat dari "000" bukan dari "0". Kalau tidak, jumlah
+               digitnya bertambah di tengah hitungan dan seluruh pita yang
+               rata tengah itu bergeser. tabular-nums cuma menyamakan lebar
+               ANTAR digit, dia tidak menolong kalau cacah digitnya berubah. */
+            span.textContent = span.dataset.akhir.replace(/\d/g, "0");
+            tl.to(kotak, {
+              n: akhir, duration: 1.1, ease: "power2.out",
+              onUpdate: function () { span.textContent = kotak.n.toFixed(des); },
+              onComplete: function () { span.textContent = span.dataset.akhir; }
+            }, 1.5 + urut * 0.08);
+          })(butir[bi2], bi2);
+        }
       }
 
       /* JARING PENGAMAN TERAKHIR, dan ini bukan kehati hatian berlebihan.

@@ -3600,12 +3600,14 @@ body { font-weight: 200; }
    Envirocircle putih pekat, jadi dia cakram utuh yang terbaca di atas peta
    segelap apa pun.
 
-   ITERA lain ceritanya, tulisan di kakinya HITAM dan hilang di atas peta.
-   Dia diputihkan dengan brightness(0) lalu invert(1), perlakuan baku lambang
-   lembaga di atas latar gelap. Alfanya tidak tersentuh.
+   ITERA sempat diputihkan dengan brightness(0) lalu invert(1), lalu user
+   minta warnanya TETAP ASLI. Jadi tidak ada filter di sini.
+   KONSEKUENSINYA DIKETAHUI. Tulisan ITERA di kaki lambangnya hitam, dan di
+   atas peta gelap dia redup. Yang menolongnya peredam gelap di puncak peta
+   yang memang sudah ada untuk menaungi tulisan merek. Kalau suatu saat
+   terbaca terlalu samar, yang diubah peredamnya, BUKAN warna lambangnya.
    ===================================================================== */
-.ident .itera-logo { width: auto; height: 40px; display: block; flex: none;
-                     filter: brightness(0) invert(1); }
+.ident .itera-logo { width: auto; height: 40px; display: block; flex: none; }
 .ident .itera-pisah {
   width: 1px; height: 30px; flex: none; display: block;
   background: rgba(255, 255, 255, .45);
@@ -3624,3 +3626,103 @@ body { font-weight: 200; }
   .ident .brand-logo { width: 30px; height: 30px; }
   .sk-mark { width: 58px; height: 58px; }
 }
+
+
+/* =====================================================================
+   IDENTITAS DIBESARKAN, BADGE DIREDAM, 4 Oktober 2026
+   Diminta user, "harus lebih besar rasionya dibanding badge supaya lebih
+   menonjol". Blok ini IDENTIK di Atmosight dan Smokewatch.
+
+   DIKERJAKAN DARI DUA ARAH, bukan satu. Kalau identitasnya saja yang
+   dibesarkan, seluruh isi di bawahnya ikut terdorong turun dan di layar
+   pendek itu memakan peta. Jadi identitasnya naik sekitar sepertiga DAN
+   badgenya diturunkan sedikit. Jarak antar keduanya melebar dua kali lipat
+   tanpa blok atasnya tumbuh sebesar itu.
+
+     lambang ITERA        40 -> 52
+     lambang Envirocircle 36 -> 46
+     nama app             15 -> 19
+     penjelas              11 -> 12
+     huruf badge           11 -> 10, isiannya dan garisnya ikut diredupkan
+
+   Rasio nama app lawan huruf badge jadi 19 banding 10, dulu 15 banding 11.
+   Dari 1,36 jadi 1,90.
+
+   Dua angka di bawahnya WAJIB ikut turun, kalau tidak badge menabrak nama
+   app. .status dari 58 jadi 76, dan .rel--kiri dari 138 jadi 154.
+   ===================================================================== */
+.ident .itera-logo { height: 52px; }
+.ident .itera-pisah { height: 40px; }
+.ident .brand-logo { width: 46px; height: 46px; }
+.ident .brand { gap: 13px; }
+.ident .brand-text strong { font-size: 19px; letter-spacing: .17em; }
+.ident .brand-text span { font-size: 12px; letter-spacing: .05em; }
+
+.status { top: 76px; }
+.status .fresh-badge {
+  font-size: 10px; padding: 4px 11px; gap: 7px;
+  border-color: rgba(255, 255, 255, .3); color: rgba(255, 255, 255, .78);
+}
+.status .fresh-ico { font-size: 13px; }
+.status .fresh-src { font-size: 9px; }
+.rel--kiri { top: 154px; }
+
+/* Di layar sempit ruangnya tidak ada, jadi pembesaran ini dibatalkan dan
+   angkanya dikembalikan ke ukuran lama. */
+@media (max-width: 640px) {
+  .ident .itera-logo { height: 32px; }
+  .ident .itera-pisah { height: 24px; }
+  .ident .brand-logo { width: 30px; height: 30px; }
+  .ident .brand-text strong { font-size: 15px; letter-spacing: .16em; }
+  .ident .brand-text span { font-size: 11px; }
+}
+
+
+/* =====================================================================
+   NAMA PARAMETER, 4 Oktober 2026
+   Diminta user, nama dulu baru kode kimianya. Dulu isinya kode saja dan
+   orang yang bukan orang udara tidak tahu PM2.5 atau AOD itu apa.
+
+   Kodenya diredupkan, jadi yang ditangkap mata duluan NAMANYA dan kodenya
+   menyusul sebagai keterangan. Kalau dua duanya sepekat, barisnya terbaca
+   seperti dua label yang berdiri sendiri.
+
+   Barisnya boleh MELIPAT dua baris, dan itu disengaja. Kartu sisi lebarnya
+   300 px dan "Partikel <2,5 Mikron (PM2.5)" memang tidak muat satu baris di
+   situ. Memaksakan satu baris berarti mengecilkan hurufnya di bawah 13 px,
+   dan di berat 200 itu sudah berhenti nyaman dibaca. Jadi tinggi barisnya
+   yang mengalah.
+   ===================================================================== */
+/* KARTU PARAMETER DILEBARKAN, 300 -> 360 px, KHUSUS SMOKEWATCH.
+   Nama panjang aslinya butuh ruang. Diukur di browser, di 300 px ada EMPAT
+   dari delapan baris yang melipat, di 360 px tinggal SATU, yaitu Planetary
+   Boundary Layer Height yang memang 38 huruf. Baris yang melipat tingginya
+   dua kali lipat, dan dengan empat baris melipat daftarnya tidak lagi muat
+   di kartu dan mulai perlu digulir. Itu kemunduran, sebab orang jadi tidak
+   tahu ada parameter lain di bawahnya.
+   Yang dilebarkan HANYA kartu Parameter, bukan .sisi-body semuanya. Kartu
+   Fitur isinya label pendek dan tidak perlu ikut melebar.
+   Atmosight tidak kena, nama parameternya masih pendek. */
+#sisi-param .sisi-body { width: 360px; }
+
+.sisi-body .panel.layers .layer-btn { align-items: flex-start; }
+.sisi-body .panel.layers .layer-btn .material-symbols-outlined { margin-top: 1px; }
+.sisi-body .panel.layers .lb-txt { line-height: 1.45; }
+/* Kurungnya digambar CSS, TIDAK ditulis di markup. Sebabnya kepala legenda
+   dan chip parameter di HP menyalin isi span ini apa adanya, dan di dua
+   tempat itu yang dipakai kodenya SAJA, tanpa kurung. Kalau kurungnya ada di
+   markup, dia ikut tersalin dan legendanya berbunyi "(PM2.5)". */
+.lb-kode { opacity: .62; white-space: nowrap; }
+.lb-kode::before { content: "("; }
+.lb-kode::after { content: ")"; }
+/* SATUAN, text-transform DIMATIKAN dan itu WAJIB.
+   Daftar ini uppercase, dan uppercase mengubah µ jadi Μ, huruf Mu besar
+   Yunani. Rupanya mirip tapi itu huruf LAIN, dan satuannya jadi salah tulis.
+   Jebakan yang sama pernah kena waktu rebranding 8 September.
+   Huruf kecil m di tengah tulisan huruf besar itu BENAR, bukan kelalaian.
+   Satuan SI memang tidak pernah dibesarkan. */
+.lb-sat { text-transform: none; white-space: nowrap; }
+/* Yang aktif kodenya ikut dipekatkan, supaya satu baris terbaca utuh sebagai
+   satu benda dan bukan separuh terang separuh redup. */
+.sisi-body .panel.layers .layer-btn.active .lb-kode,
+.sisi-body .panel.layers .layer-btn:hover:not(.disabled) .lb-kode { opacity: .82; }

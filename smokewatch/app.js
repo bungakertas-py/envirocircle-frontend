@@ -925,8 +925,18 @@ function tombolLayer(layerKey) {
           ? document.querySelector(`.layer-btn[data-layer="${BASE_OF[layerKey]}"]`)
           : null);
 }
+/* Di kepala legenda dan di chip parameter HP yang dipakai KODENYA saja,
+   bukan nama panjangnya, diminta user. Sejak 4 Oktober 2026 tombolnya
+   berbunyi "Particulate Matter <2.5um (PM2.5)", dan nama sepanjang itu tidak
+   muat di kepala legenda yang cuma selebar pita warnanya.
+   Kalau tombolnya tidak punya .lb-kode, misalnya ISPU dan AQI yang memang
+   sudah kode, jatuh balik ke .lb-txt. */
+function _kodeAtau(btn) {
+  if (!btn) return null;
+  return btn.querySelector(".lb-kode") || btn.querySelector(".lb-txt");
+}
 function isiKepalaLegenda(head, layerKey, satuan) {
-  const t = tombolLayer(layerKey)?.querySelector(".lb-txt");
+  const t = _kodeAtau(tombolLayer(layerKey));
   const nama = t ? t.textContent.trim() : "";
   let sat = String(satuan || "");
   if (!nama) { head.textContent = sat; return; }
@@ -3817,12 +3827,13 @@ function _ikonDari(btn) {
   return i ? i.textContent.trim() : "";
 }
 function _labelDari(btn) {
-  // Urutan: .lb-txt, lalu TEKS TOMBOL ITU SENDIRI, baru data-tip.
+  // Urutan: .lb-kode kalau ada, lalu .lb-txt, lalu TEKS TOMBOL ITU SENDIRI,
+  // baru data-tip.
   // data-tip sering berisi keterangan panjang ("Daya tampung PM2,5",
   // "Convective Available Potential Energy") yang tak muat di tombol selebar
   // sepertiga layar. Teks tombolnya sendiri sudah ringkas ("PM2.5", "CAPE").
   // Ikon dikeluarkan dulu, kalau tidak nama ligature Material ikut terbaca.
-  const t = btn.querySelector(".lb-txt")?.textContent.trim();
+  const t = _kodeAtau(btn)?.textContent.trim();
   if (t) return t;
   const salin = btn.cloneNode(true);
   salin.querySelectorAll(".material-symbols-outlined").forEach((e) => e.remove());
