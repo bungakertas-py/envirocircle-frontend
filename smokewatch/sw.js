@@ -1,7 +1,7 @@
 /* Service worker Smokewatch — cache SHELL app (berversi), data cuaca TETAP
  * online. Naikkan VERSION tiap rilis frontend agar user dapat versi terbaru
  * (cache lama dihapus saat activate). */
-const VERSION = "v22";
+const VERSION = "v23";
 const CACHE = "kertas-emisi-" + VERSION;
 
 // Saat REVIEW LOKAL, jangan cache shell sama sekali. Strategi cache-first membuat
@@ -17,7 +17,11 @@ const DEV = ["127.0.0.1", "localhost", "0.0.0.0"].includes(location.hostname) ||
 // berada DI LUAR path frontend → sengaja tak di-cache (lihat handler fetch).
 const SHELL = [
   "./", "./index.html", "./style.css", "./app.js", "./sisi.js", "./wilayah.js", "./dtw-preview.png",
-  "./favicon.svg", "./manifest.webmanifest",
+  "./favicon.png", "./manifest.webmanifest",
+  /* Lambang dipakai bersama landing, jadi dia di ../img/ dan BUKAN di
+     folder app. Satu berkas untuk seluruh situs, bukan satu salinan per
+     app. Masih satu origin, jadi sah masuk daftar ini. */
+  "../img/logo-envirocircle.png", "../img/logo-itera.png",
   "./icon-192.png", "./icon-512.png",
   "./data/world_countries.geojson", "./data/idn_provinces.geojson", "./data/id_places.json",
 ];

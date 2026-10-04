@@ -243,8 +243,36 @@ section { padding: 0; }
    nama 16 jadi 20, menu 14 jadi 16, tinggi bilah 70 jadi 84. Jarak hurufnya
    ikut dilebarkan sedikit, sebab huruf setipis ini kalau dibesarkan tanpa
    menambah jarak malah terbaca lebih rapat dari sebelumnya. */
-.brand-mark { display: grid; place-items: center; color: var(--ink); }
-.brand-mark .material-symbols-outlined { font-size: 28px; }
+/* ---- Lambang di bilah judul, 4 Oktober 2026 ----
+   Ikon Material `hub` DIBUANG, diganti lambang Envirocircle yang sungguhan.
+   Ikon generik sebagai tanda merek itu lebih buruk daripada lambang asli yang
+   sedikit melunak di ukuran kecil.
+
+   Lambangnya gambar, bukan huruf, jadi `color` tidak lagi berpengaruh
+   padanya. Itu penting diingat, aturan lama yang memutihkan merek waktu bilah
+   masih melayang di atas foto sekarang cuma mengenai NAMANYA. Lambang
+   Envirocircle tidak perlu diputihkan, bagian dalamnya memang putih pekat
+   jadi dia sudah jadi cakram utuh yang terbaca di atas apa pun. */
+.bar-kiri { display: inline-flex; align-items: center; gap: 14px; }
+.brand-mark { display: grid; place-items: center; }
+.brand-mark img { width: 34px; height: 34px; display: block; }
+
+/* ITERA. Tingginya dipatok, bukan lebarnya, sebab lambang ini rasionya tegak.
+   42 px, dicoba 30 dulu dan tulisan ITERA di kaki lambangnya tidak terbaca
+   sama sekali. Lambang ini memang butuh tinggi lebih daripada lambang bundar
+   di sebelahnya, sebab isinya dua benda bertumpuk, bulir di atas dan tulisan
+   di bawah, sedangkan Envirocircle cuma satu bidang bundar. Lebarnya tetap
+   lebih kecil, 35 lawan 34 px, jadi bobotnya seimbang. */
+.brand-itera { display: grid; place-items: center; }
+.brand-itera img { width: auto; height: 42px; display: block; }
+/* Garis rambut pemisah. Ini yang menggantikan kalimat "di bawah naungan"
+   yang dibuang atas permintaan user. Dua lambang yang didempetkan tanpa
+   pemisah terbaca seperti satu merek gabungan. */
+.brand-pisah {
+  width: var(--rambut); height: 34px; background: var(--ink-20);
+  display: block; flex: none;
+  transition: background .3s ease;
+}
 .brand-name {
   font-size: 20px; font-weight: 300; letter-spacing: .14em;
   text-transform: uppercase; color: var(--ink);
@@ -1169,19 +1197,6 @@ footer .wrap { padding: 56px var(--gutter) 32px; display: block; }
 }
 .f-kiri { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 46ch; }
 
-/* ---- Naungan di footer ----
-   Lambang di KIRI, dua baris tulisan di kanannya, bukan ditumpuk seperti di
-   halaman About. Di footer ruangnya mendatar dan blok tegak di sini akan
-   memanjangkan kolom kiri melewati kolom sosial di seberangnya.
-   Tingginya 58 px, lebih kecil daripada 100 px yang di About, sebab di sini
-   dia keterangan dan bukan pernyataan. Dicoba 46 dulu dan tulisan ITERA di
-   kaki lambangnya sudah berhenti terbaca. */
-.f-naung { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
-.f-naung img { width: auto; height: 58px; display: block; }
-.f-naung-teks {
-  font-size: 11px; line-height: 17px; letter-spacing: .1em;
-  text-transform: uppercase; font-weight: 200; color: var(--ink-50);
-}
 
 /* Merek footer memakai lambang dan jarak huruf yang SAMA PERSIS dengan bilah
    judul di atas, cuma lebih kecil. Kalau dibuat lain, dua ujung halaman
@@ -1192,7 +1207,7 @@ footer .wrap { padding: 56px var(--gutter) 32px; display: block; }
   text-transform: uppercase; color: var(--ink);
 }
 .f-brand-mark { display: grid; place-items: center; }
-.f-brand-mark .material-symbols-outlined { font-size: 22px; }
+.f-brand-mark img { width: 26px; height: 26px; display: block; }
 .f-note {
   margin: 0; font-size: 14px; line-height: 24px; letter-spacing: .5px;
   font-weight: 200; color: var(--ink-70);
@@ -1272,7 +1287,9 @@ footer a.f-link { color: var(--ink); border-bottom: var(--rambut) solid var(--in
   .hero-nav a { font-size: 13px; padding-top: 9px; letter-spacing: .04em; }
   .brand { gap: 8px; }
   .brand-name { font-size: 15px; letter-spacing: .09em; }
-  .brand-mark .material-symbols-outlined { font-size: 22px; }
+  .brand-mark img { width: 28px; height: 28px; }
+  .brand-itera img { height: 34px; }
+  .brand-pisah { height: 22px; }
   .hero-bar { height: 72px; gap: 12px; }
   .hero-inner { padding: 88px var(--gutter) 16px; }
   .hero-tengah { gap: 22px; }
@@ -1380,8 +1397,15 @@ footer a.f-link { color: var(--ink); border-bottom: var(--rambut) solid var(--in
    Aturan di bawah ini memakai :not(.padat), jadi tidak perlu ada yang
    dibatalkan di tempat lain.
    ===================================================================== */
-.hero-top:not(.padat) .brand-mark,
 .hero-top:not(.padat) .brand-name { color: #fff; }
+/* Lambang ITERA dijadikan PUTIH POLOS selama bilahnya masih melayang di atas
+   foto. Emasnya masih terbaca di atas foto gelap, tapi tulisan ITERA di
+   kakinya hitam dan hilang sama sekali. brightness(0) meratakan semuanya jadi
+   hitam dulu, invert(1) membalikkannya jadi putih, dan alfanya tidak
+   tersentuh. Ini perlakuan baku lambang lembaga di atas latar gelap, satu
+   berkas saja, tidak perlu versi putih terpisah. */
+.hero-top:not(.padat) .brand-itera img { filter: brightness(0) invert(1); }
+.hero-top:not(.padat) .brand-pisah { background: rgba(255, 255, 255, .45); }
 .hero-top:not(.padat) .hero-nav a {
   color: rgba(255, 255, 255, .82);
   border-top-color: rgba(255, 255, 255, .38);
@@ -1456,8 +1480,10 @@ body.foto-bawah-terang .hero-foto::after {
 body.foto-atas-terang .hero-foto::after {
   --teduh-atas: linear-gradient(to bottom, rgba(255, 255, 255, .55) 0%, rgba(255, 255, 255, 0) 26%);
 }
-body.foto-atas-terang .hero-top:not(.padat) .brand-mark,
 body.foto-atas-terang .hero-top:not(.padat) .brand-name { color: var(--ink); }
+/* Foto atasnya terang, jadi pemutihan di atas dibatalkan lagi. */
+body.foto-atas-terang .hero-top:not(.padat) .brand-itera img { filter: none; }
+body.foto-atas-terang .hero-top:not(.padat) .brand-pisah { background: var(--ink-20); }
 body.foto-atas-terang .hero-top:not(.padat) .hero-nav a {
   color: var(--ink-50); border-top-color: var(--ink-20);
 }
@@ -1490,7 +1516,9 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
 }
 
 @media (max-width: 374px) {
-  .brand-mark .material-symbols-outlined { font-size: 20px; }
+  .brand-mark img { width: 26px; height: 26px; }
+  .brand-itera img { height: 30px; }
+  .bar-kiri { gap: 10px; }
   .hero-nav { gap: 12px; }
   .hero-nav a { font-size: 12px; letter-spacing: .02em; }
 }
@@ -1735,41 +1763,34 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px;
   align-items: start;
 }
-/* Kolom kiri sekarang berisi DUA benda, lambang dan blok naungan, jadi yang
-   LENGKET pindah ke pembungkusnya. Kalau tetap di .abt-logo, blok naungan
-   ditinggal diam di atas sementara lambangnya berjalan turun, dan dua benda
-   yang tadinya sepasang jadi berpisah. */
-.abt-sisi { position: sticky; top: 118px; display: flex; flex-direction: column; gap: 22px; }
-.abt-logo {
-  aspect-ratio: 1 / 1; display: grid; place-items: center; gap: 12px;
-  border: var(--rambut) solid var(--ink-20); background: var(--ink-5);
-  align-content: center;
-}
-/* Padding 18 persen itu RUANG NAPAS lambang, bukan hiasan. Lambangnya bundar
-   penuh tanpa marginnya sendiri, dan menempel ke garis rambut kotaknya dia
-   terbaca sesak. */
-.abt-logo img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 18%; }
+/* Kolom kiri berisi dua lambang bertumpuk, jadi yang LENGKET pembungkusnya.
+   Kalau lengketnya ditaruh di salah satu lambang, yang satunya ditinggal diam
+   sementara pasangannya berjalan turun. */
+.abt-sisi { position: sticky; top: 118px; }
 
-/* ---- Blok naungan ----
-   Lambang ITERA aslinya tegak dan jauh lebih tinggi daripada lebar, jadi dia
-   dipatok TINGGINYA bukan lebarnya. Kalau dipatok lebar, dia menjulang dan
-   bobot visualnya melampaui lambang Envirocircle di atasnya, padahal urutan
-   bacanya harus sebaliknya. */
-.abt-naung { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.abt-naung-label {
-  font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
-  font-weight: 200; color: var(--ink-50);
+/* ---- DUA LAMBANG, 4 Oktober 2026 ----
+   KOTAKNYA DIBUANG, diminta user. Dulu kotak bujur sangkar bergaris rambut
+   berisian tinta 5 persen, sisa dari masa slot ini masih kosong dan perlu
+   ditandai. Begitu lambangnya ada, kotaknya jadi bingkai yang mengurung dan
+   tidak menambah apa apa.
+
+   ITERA DI ATAS, Envirocircle di bawahnya, urutan diminta user.
+
+   Rata KIRI, bukan rata tengah. Seluruh kolom di sebelahnya rata kiri, dan
+   lambang yang ditengahkan di kolomnya sendiri akan terbaca melayang. */
+.abt-lambang { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+/* Dua duanya dipatok TINGGINYA, bukan lebarnya, sebab rasionya berbeda jauh,
+   ITERA tegak dan Envirocircle bujur sangkar. Dipatok lebar, ITERA akan
+   menjulang dua kali lipat. */
+.abt-lambang-itera { width: auto; height: 112px; display: block; }
+.abt-lambang-ec { width: auto; height: 104px; display: block; }
+/* Pemisah, menggantikan kalimat naungan yang dibuang. Pendek saja, selebar
+   lambang terkecil, bukan selebar kolom. */
+.abt-lambang-pisah {
+  display: block; width: 86px; height: var(--rambut);
+  background: var(--ink-20);
 }
-/* 100 px, bukan 58. Dicoba 58 dulu dan terlalu kecil, deretan bulir emasnya
-   jadi noda dan tulisan ITERA di bawahnya nyaris tidak terbaca. Lambang ini
-   rasionya tegak, 900 banding 1095, jadi tinggi 100 cuma selebar 82 dan
-   masih jauh lebih ringan daripada kotak lambang 220 px di atasnya. Urutan
-   bobotnya tetap benar, yang punya halaman dulu baru yang menaungi. */
-.abt-naung-logo { width: auto; height: 100px; display: block; }
-.abt-naung-nama {
-  font-size: 12px; line-height: 18px; letter-spacing: .3px;
-  font-weight: 200; color: var(--ink-70);
-}
+
 .abt-utama { display: flex; flex-direction: column; align-items: flex-start; }
 /* Garis rambut pemisah antara pernyataan dan badan teks. Elemen sendiri,
    bukan border, supaya bisa ditarik dari kiri waktu masuk. */
@@ -1925,11 +1946,15 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   /* Satu kolom, jadi tidak ada lagi tulisan yang berjalan di sebelahnya
      untuk ditemani. Lengketnya dimatikan, kalau tidak lambangnya menempel
      di puncak layar sepanjang halaman. */
-  .abt-sisi { position: static; flex-direction: row; align-items: flex-end; gap: 28px; }
-  .abt-logo { width: 150px; flex: none; }
-  .abt-naung-logo { height: 76px; }
-  .abt-logo { position: static; width: 132px; aspect-ratio: 1 / 1; }
-  .abt-logo-tanda { font-size: 42px; }
+  /* Satu kolom, jadi tidak ada lagi tulisan yang berjalan di sebelahnya untuk
+     ditemani. Lengketnya dimatikan, dan dua lambangnya berjajar mendatar
+     supaya tidak memakan tinggi sebelum tulisannya mulai. Pemisahnya ikut
+     diputar jadi tegak. */
+  .abt-sisi { position: static; }
+  .abt-lambang { flex-direction: row; align-items: center; gap: 18px; }
+  .abt-lambang-itera { height: 78px; }
+  .abt-lambang-ec { height: 70px; }
+  .abt-lambang-pisah { width: var(--rambut); height: 56px; }
   .abt-paragraf { grid-template-columns: 1fr; gap: 20px; }
   .abt-paragraf p { font-size: 14px; line-height: 25px; }
   .abt-angka-baris { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 24px; }

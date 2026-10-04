@@ -3581,3 +3581,46 @@ body { font-weight: 200; }
 @media (hover: none), (pointer: coarse) {
   .klik-petunjuk { display: none; }
 }
+
+
+/* =====================================================================
+   LAMBANG SUNGGUHAN, 4 Oktober 2026
+   Ikon Material `hub` DIBUANG dari pojok kiri atas dan dari rangka muat,
+   diganti lambang Envirocircle. Lambang ITERA ditambahkan di sebelah
+   kirinya, diminta user, pola dan urutannya sama persis dengan bilah judul
+   landing. Blok ini IDENTIK di Atmosight dan Smokewatch.
+
+   Berkasnya di `../img/`, SATU untuk seluruh situs, bukan satu salinan per
+   app. Masih satu origin jadi service worker tetap menyimpannya, dan sudah
+   dimasukkan ke daftar SHELL.
+
+   Keduanya sekarang GAMBAR, bukan SVG berwarna currentColor. Jadi aturan
+   lama `.ident .brand-logo { color: #fff }` tidak lagi berpengaruh pada
+   lambangnya, dan itu memang tidak apa apa. Bagian dalam lambang
+   Envirocircle putih pekat, jadi dia cakram utuh yang terbaca di atas peta
+   segelap apa pun.
+
+   ITERA lain ceritanya, tulisan di kakinya HITAM dan hilang di atas peta.
+   Dia diputihkan dengan brightness(0) lalu invert(1), perlakuan baku lambang
+   lembaga di atas latar gelap. Alfanya tidak tersentuh.
+   ===================================================================== */
+.ident .itera-logo { width: auto; height: 40px; display: block; flex: none;
+                     filter: brightness(0) invert(1); }
+.ident .itera-pisah {
+  width: 1px; height: 30px; flex: none; display: block;
+  background: rgba(255, 255, 255, .45);
+}
+/* Lambang Envirocircle di pojok kiri atas sedikit lebih besar daripada
+   ikon lama yang 30 px, sebab isinya bidang bundar bukan garis tipis, dan
+   di 30 px ranting di dalamnya mulai hilang. */
+.ident .brand-logo { width: 36px; height: 36px; }
+
+/* Rangka muat. Denyutnya dipertahankan, cuma bendanya yang berganti. */
+.sk-mark { width: 72px; height: 72px; display: block; }
+
+@media (max-width: 640px) {
+  .ident .itera-logo { height: 32px; }
+  .ident .itera-pisah { height: 24px; }
+  .ident .brand-logo { width: 30px; height: 30px; }
+  .sk-mark { width: 58px; height: 58px; }
+}

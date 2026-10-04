@@ -13,7 +13,7 @@
   <meta property="og:url" content="https://envirocircle.info/work/" />
   <meta property="og:image" content="https://envirocircle.info/og-image.jpg" />
   <meta name="theme-color" content="#ffffff" />
-  <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+  <link rel="icon" type="image/png" href="../favicon.png" />
   <link rel="apple-touch-icon" href="../icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,10 +30,18 @@
        awal, kalau tidak tulisannya teal di atas kertas putih tanpa alas. -->
   <header class="hero-top padat">
     <div class="hero-bar">
-      <a class="brand" href="../">
-        <span class="brand-mark"><span class="material-symbols-outlined">hub</span></span>
-        <span class="brand-name">Envirocircle</span>
-      </a>
+      <div class="bar-kiri">
+        <!-- Lambang ITERA berdiri SENDIRI di luar tautan merek, bukan di
+             dalamnya. Kalau di dalam, mengklik lambang ITERA malah memulangkan
+             ke beranda Envirocircle, dan itu salah baca. Tanpa tautan dia
+             cuma pernyataan naungan, dan itu memang yang diminta. -->
+        <span class="brand-itera"><img src="../img/logo-itera.png" width="900" height="1095" alt="Institut Teknologi Sumatera" /></span>
+        <span class="brand-pisah" aria-hidden="true"></span>
+        <a class="brand" href="../">
+          <span class="brand-mark"><img src="../img/logo-envirocircle.png" width="614" height="614" alt="" /></span>
+          <span class="brand-name">Envirocircle</span>
+        </a>
+      </div>
       <nav class="hero-nav">
         <a href="../">Home</a>
         <a href="../#showcase">Showcase</a>
@@ -498,20 +506,11 @@
       <div class="f-atas" data-kry>
         <div class="f-kiri">
           <a class="f-brand" href="../">
-            <span class="f-brand-mark"><span class="material-symbols-outlined">hub</span></span>
+            <span class="f-brand-mark"><img src="../img/logo-envirocircle.png" width="614" height="614" alt="" /></span>
             <span>Envirocircle</span>
           </a>
           <p class="f-note">Peta atmosfer dan lingkungan Indonesia, dari model global yang terbuka. Diolah otomatis tiap hari.</p>
           <a class="f-surel" href="mailto:envirocircleind@gmail.com">envirocircleind@gmail.com</a>
-            <!-- Naungan, 4 Oktober 2026. Ditaruh di kolom kiri bersama merek,
-                 bukan di bilah paling bawah, sebab dia bagian dari JATI DIRI
-                 situs dan bukan keterangan hak cipta. Blok ini IDENTIK di
-                 landing, work, dan about. -->
-            <div class="f-naung">
-              <img src="../img/logo-itera.png" width="900" height="1095"
-                   alt="Lambang Institut Teknologi Sumatera" />
-              <span class="f-naung-teks">Di bawah naungan<br />Institut Teknologi Sumatera</span>
-            </div>
         </div>
         <div class="f-kanan">
           <span class="f-sos-label">Ikuti kami</span>
