@@ -337,6 +337,28 @@
             </button>
             </div>
           </div>
+          <!-- MJO, 5 Oktober 2026. Pita BUJUR, kebalikan geometri ITCZ yang
+               pita LINTANG. Tombolnya disembunyikan sampai modelnya punya
+               mjo.json atau profil yang cukup lebar, lihat terapkanFiturModel. -->
+          <div class="fit-wrap">
+            <button id="mjo-toggle" class="icon-btn" aria-label="Selubung MJO di ekuator" data-tip="MJO"><span class="material-symbols-outlined">waves</span></button>
+            <div id="mjo-note" class="cyc-note mjo-note">
+            <div class="cyc-note-top">
+            <span class="material-symbols-outlined">waves</span>
+            <span class="cyc-note-txt">MJO</span>
+            </div>
+            <div class="cyc-detail">
+            <div class="itcz-lead">Gelombang hujan raksasa yang berjalan ke timur di sepanjang khatulistiwa, dari Afrika timur sampai Pasifik. Satu putarannya 30 sampai 60 hari. Waktu dia lewat Indonesia, hujan bertambah banyak.</div>
+            <div id="mjo-fase" class="mjo-fase" hidden></div>
+            <div class="cyc-row"><span class="itcz-sw mjo-sw-band"></span><b>Pita</b><span class="cyc-th">selubung lembap, tepinya kabur</span></div>
+            <div class="cyc-row"><span class="itcz-sw mjo-sw-line"></span><b>Garis</b><span class="cyc-th">pusat selubung</span></div>
+            <div id="mjo-sumber" class="mjo-sumber"></div>
+            </div>
+            <button type="button" class="cyc-tab" id="mjo-note-toggle" aria-label="Tampilkan keterangan MJO">
+            <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+            </div>
+          </div>
           <!-- Alarm hujan, 4 Oktober 2026. MENYALA sejak awal, beda dengan
                fitur lain di baris ini yang mati sampai dinyalakan. Dia alarm,
                jadi dia harus sudah bekerja sebelum orang mencarinya. -->

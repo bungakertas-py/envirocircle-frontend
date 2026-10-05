@@ -773,6 +773,50 @@ html, body {
 .itcz-sw-line { height: 0; border: none; border-top: 3px dashed #ff2ea6; }
 .itcz-sw-band { background: rgba(255,46,166,.28); }
 
+/* MJO. Banernya SENGAJA TIDAK diberi bidang berwarna, walau tetangganya di
+   blok ini punya. Bidang warna di kepala baner sudah dibuang 4 Oktober 2026,
+   lihat blok "Warna peringatan diganti label kelabu" di bawah, dan aturan itu
+   menang di kaskade untuk siklon dan ITCZ tapi TIDAK akan menyentuh kelas baru
+   yang tidak disebut namanya. Sempat terjadi, ungu dipasang di sini dan
+   hurufnya jadi tinta di atas ungu, rasio 1,6, praktis tak terbaca.
+   Ungunya tinggal di PETA dan di contoh warna, tempat dia memang berarti.
+   Warna itu sengaja jauh dari magenta ITCZ sebab dua fitur ini sering
+   dinyalakan bersamaan di peta yang sama, dan ungu tidak dipakai satu pun
+   palet data jadi dia tidak bisa disalahartikan sebagai nilai. */
+.mjo-sw-band { background: rgba(108,75,209,.26); }
+.mjo-sw-line { height: 0; border: none; border-top: 3px dashed #6C4BD1; }
+/* OKTAGON RMM. Juring dibagi garis kertas, bukan garis tinta, sebab delapan
+   garis penuh di kotak 240 px terbaca sebagai sarang laba laba dan menelan
+   titiknya sendiri. Yang harus menonjol cuma dua, titik hari ini dan juring
+   yang padam. */
+.mjo-fase { display: block; }
+.mjo-okt { display: block; width: 100%; max-width: 236px; height: auto; margin: 2px auto 6px; }
+/* Garisnya --ink-20, BUKAN --paper. Percobaan pertama memakai --paper dan
+   hasilnya putih di atas putih, oktagonnya tidak punya bentuk sama sekali,
+   yang terlihat cuma juring padam di kiri. --surface dan --paper di berkas
+   ini dua duanya #ffffff. */
+.okt-juring { fill: none; stroke: var(--ink-20); stroke-width: 0.7; }
+/* Juring di luar bujur pantauan. DIPUDARKAN, bukan dihapus. Fasenya tetap ada
+   di alam, yang tidak ada cuma pantauan kita, dan dua hal itu berbeda. */
+.okt-luar { fill: var(--ink-5); }
+.okt-no { fill: var(--ink-50); font-family: var(--font-ui); font-size: 11px;
+  font-weight: 300; text-anchor: middle; }
+.okt-no-luar { fill: var(--ink-20); }
+.okt-satuan { fill: none; stroke: var(--ink-50); stroke-width: 1;
+  stroke-dasharray: 3 3; }
+.okt-ekor { fill: none; stroke: var(--aksen); stroke-width: 1.6; opacity: .55;
+  stroke-linejoin: round; stroke-linecap: round; }
+.okt-kini { fill: #6C4BD1; stroke: var(--paper); stroke-width: 2; }
+.okt-sisi { fill: var(--ink-50); font-family: var(--font-ui); font-size: 8px;
+  font-weight: 300; letter-spacing: .08em; }
+.mjo-kaki { font-family: var(--font-ui); font-size: 10px; color: var(--variant);
+  line-height: 1.45; max-width: 240px; }
+.mjo-kaki b { font-weight: 700; color: var(--ink); }
+.mjo-sumber {
+  font-family: var(--font-ui); font-size: 9px; line-height: 1.4;
+  max-width: 240px; color: var(--variant);
+}
+
 /* Panel FENOMENA: popover ke kiri tombol Fenomena; daftar fenomena + status dot
    (hijau neon = sedang terjadi, merah = belum). Baris tak-aktif diredupkan.
    Arus monsun digambar leaflet-velocity. */

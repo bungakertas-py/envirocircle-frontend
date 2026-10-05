@@ -473,6 +473,26 @@ function terapkanFiturModel() {
      paling pasti punya Skew-T. Sempat terjadi. */
   var tbSkt = $("skewt-toggle");
   if (tbSkt) tbSkt.hidden = !SKEWT_ADA;
+  /* MJO disetel di sini juga, sebelum cabang PUNYA_EKSTRA, dengan sebab yang
+     persis sama seperti Skew-T di atas. Yang disembunyikan PEMBUNGKUSNYA,
+     sebab tombol ini duduk di .fit-wrap bersama banernya dan pembungkus kosong
+     tetap memakan satu celah flex 18 px. */
+  var tbMjo = $("mjo-toggle");
+  if (tbMjo) {
+    var wMjo = tbMjo.closest(".fit-wrap") || tbMjo;
+    wMjo.style.display = "none";
+    (async function () {
+      if (await berkasAda("mjo.json")) { wMjo.style.display = ""; return; }
+      /* Tanpa mjo.json, fitur ini cuma masuk akal kalau profil modelnya LEBAR.
+         Selubung MJO sendiri lebarnya 30 sampai 40 derajat bujur, jadi di
+         domain seukuran Indonesia saja amplopnya pasti menyentuh kedua tepi
+         dan angkanya tidak berarti apa apa. */
+      try {
+        var m = await fetch(DATA_BASE + "profile_meta.json").then(function (r) { return r.ok ? r.json() : null; });
+        if (m && m.bounds && (m.bounds[2] - m.bounds[0]) >= MJO_LEBAR_MIN) wMjo.style.display = "";
+      } catch (e) { /* tetap tersembunyi */ }
+    })();
+  }
   if (PUNYA_EKSTRA) return;
   // Sembunyikan dulu semuanya, baru dimunculkan satu satu yang berkasnya ada.
   // Urutannya begini supaya tombol tidak sempat terlihat lalu hilang lagi.
@@ -727,6 +747,14 @@ cyclonePane.style.zIndex = 664;
 const itczPane = map.createPane("itcz");
 itczPane.style.zIndex = 459;
 itczPane.style.pointerEvents = "none";
+
+/* MJO: pita bujur, latar paling bawah di antara lapisan fitur. zIndex 448
+   SENGAJA di bawah pane admin (450) supaya garis batas provinsi tetap tajam
+   di atasnya. Pita ini menutupi seperempat layar, jadi dia harus berperilaku
+   sebagai latar, bukan sebagai isi. */
+const mjoPane = map.createPane("mjo");
+mjoPane.style.zIndex = 448;
+mjoPane.style.pointerEvents = "none";
 // Isobar: garis kontur tekanan + penanda H/L (otomatis di layer Tekanan).
 const isobarPane = map.createPane("isobar");
 isobarPane.style.zIndex = 461;
@@ -1170,6 +1198,7 @@ async function showFrame(i) {
   refreshCityIcons();                    // label kota (+ikon bila aktif) ikut waktu aktif
   if (cyclonesOn) refreshCyclones();     // siklon + jalur ikut waktu aktif
   if (itczOn) refreshItcz();             // zona ITCZ ikut waktu aktif
+  if (mjoOn) { refreshMjo(); mjoIsiNote(); }   // amplop MJO ikut waktu aktif
   if (activeLayer === "pressure_surface") refreshIsobars();   // isobar ikut waktu aktif
   segarkanSkewT();   // kartu Skew-T ikut jam yang sedang tampil
   updateHash();
@@ -1398,7 +1427,12 @@ function setSkewtMode(on) {
   /* Tulisan di petunjuk kursor ikut berganti, jadi orang tahu klik
      berikutnya akan melakukan hal yang berbeda dari biasanya. */
   const t = $("klik-petunjuk");
-  if (t) t.textContent = skewtMode ? "Generate Plot Skew-T here" : "Click Here";
+  /* "Generate Skew-T plot here", BUKAN "Generate Plot Skew-T here". Yang lama
+     memakai urutan Indonesia, diterangkan lalu menerangkan. Di Inggris
+     penerangnya di depan, jadi Skew-T menerangkan plot. Dikoreksi pemilik
+     5 Oktober 2026. "Click Here" dibiarkan apa adanya, itu tulisan yang
+     dia minta persis begitu. */
+  if (t) t.textContent = skewtMode ? "Generate Skew-T plot here" : "Click Here";
 }
 
 async function bukaSkewT(lat, lon) {
@@ -2191,6 +2225,7 @@ function updateHash() {
   }
   if (cyclonesOn) p.set("c", "1");
   if (itczOn) p.set("z", "1");
+  if (mjoOn) p.set("j", "1");
   if (monsoonOn) p.set("m", "1");
   history.replaceState(null, "", location.pathname + location.search + "#" + p.toString());
 }
@@ -2221,6 +2256,7 @@ function restoreFromHash() {
   }
   if (p.get("c") === "1" && !cyclonesOn) toggleCyclones();
   if (p.get("z") === "1" && !itczOn) toggleItcz();
+  if (p.get("j") === "1" && !mjoOn) toggleMjo();
   if (p.get("m") === "1" && !monsoonOn) toggleMonsoon();
   const pt = p.get("p");
   if (pt) {
@@ -2844,6 +2880,381 @@ function toggleItcz() {
   updateHash();
 }
 
+// ================= MJO (Madden-Julian Oscillation) =================
+//
+// Dua sumber, dan frontend memakai yang terbaik yang tersedia.
+//
+// 1. `mjo.json` dari backend. Ini yang BENAR. Indeks RMM dihitung mengikuti
+//    Wheeler dan Hendon 2004, dan resep itu WAJIB memakai data SELURUH bujur
+//    bumi, sebab EOF-nya global. Backend punya GFS global, jadi dia bisa.
+//    Kontrak berkasnya ditulis di UNTUK-TEMAN-mjo.md.
+//
+// 2. Kalau `mjo.json` belum ada, frontend menghitung AMPLOP LEMBAP sendiri
+//    dari `profile.bin.gz` yang memang sudah diunduh untuk Skew-T.
+//
+// SOAL NAMA, ini penting. Yang dihitung sendiri di nomor 2 BUKAN RMM dan tidak
+// boleh disebut RMM. Dia cuma letak selubung lembap di dalam kotak data kita,
+// 62 sampai 180 BT. Dia tidak bisa membedakan MJO dari El Nino, monsun, atau
+// gelombang Kelvin, sebab ketiganya hidup di kotak yang sama dan untuk
+// memisahkannya perlu rentang waktu puluhan hari yang tidak kita punya.
+// Karena itu banernya berganti kalimat menurut sumbernya, dan mode lokal
+// menyebut dirinya "perkiraan", bukan indeks.
+//
+// KENAPA KELEMBAPAN, BUKAN ANGIN. Diuji 5 Oktober 2026 pada run GFS nyata.
+// U200 ternyata timuran di 118 dari 119 bujur pada SEMUA langkah waktu, jadi
+// tes baroklinik yang biasa dipakai tidak membedakan apa apa di sini. Pelacak
+// puncak baratan U850 lompat 30 derajat dalam 6 jam, setara 120 derajat per
+// hari, padahal MJO bergerak sekitar 5. Kelembapan lapis tengah jauh lebih
+// tenang, goyangannya 0,74 derajat antar langkah, dan pusat amplop yang
+// ditemukannya 85,5 BT cocok dengan keterangan BMKG hari itu bahwa MJO sedang
+// melintasi Samudra Hindia sebelah barat Sumatra.
+const MJO_COLOR = "#6C4BD1";    // ungu nila, sengaja BUKAN magenta ITCZ (#ff2ea6)
+const MJO_LINTANG = 17;         // pita digambar 17 LS sampai 17 LU
+const MJO_HALUS = 15;           // penghalusan, derajat bujur
+const MJO_K_SD = 0.6;           // ambang = rata rata + k x simpangan baku
+const MJO_LEBAR_MIN = 60;       // domain lebih sempit dari ini, mode lokal MATI
+
+let mjoOn = false;
+let mjo = null, mjoLoading = null, mjoGroup = null;
+let mjoLokal = null;            // hasil hitung sendiri, per model, dihitung sekali
+let mjoSibuk = false;
+
+async function loadMjo() {
+  if (mjo) return mjo;
+  if (!mjoLoading) mjoLoading = fetch(DATA_BASE + "mjo.json")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => (mjo = j || { kosong: true }))
+    .catch(() => (mjo = { kosong: true }));
+  return mjoLoading;
+}
+const mjoPunyaIndeks = () => !!(mjo && !mjo.kosong && mjo.indeks);
+const mjoPunyaAmplop = () => !!(mjo && !mjo.kosong && Array.isArray(mjo.amplop) && mjo.amplop.length);
+
+/* Amplop lembap dari satu profil RH per bujur.
+   Ambangnya ADAPTIF, rata rata ditambah 0,6 simpangan baku dari bujur yang ada,
+   bukan angka tetap. Ambang tetap akan gagal total di dua arah. Tahun El Nino
+   kuat seluruh kotak kita bisa kering sehingga tidak ada yang lewat ambang, dan
+   di puncak musim hujan semuanya lewat sehingga amplopnya selebar layar.
+   Yang ditanya memang pertanyaan relatif, di mana yang paling lembap SEKARANG,
+   dan itu tidak butuh iklim acuan yang memang tidak kita punya. */
+function mjoAmplopDari(prof, lonBarat, dx) {
+  const nx = prof.length;
+  const sp = Math.max(1, Math.round(MJO_HALUS / dx / 2));
+  const sm = new Float32Array(nx);
+  for (let i = 0; i < nx; i++) {
+    let s = 0, c = 0;
+    for (let k = -sp; k <= sp; k++) {
+      const j = i + k;
+      if (j < 0 || j >= nx) continue;         // tepi dirata ratakan dari yang ADA,
+      s += prof[j]; c++;                      // bukan dianggap nol, biar tidak bias turun
+    }
+    sm[i] = s / c;
+  }
+  let rata = 0; for (let i = 0; i < nx; i++) rata += sm[i]; rata /= nx;
+  let va = 0; for (let i = 0; i < nx; i++) va += (sm[i] - rata) * (sm[i] - rata);
+  const amb = rata + MJO_K_SD * Math.sqrt(va / nx);
+  /* SEMUA amplop dikembalikan, bukan yang terkuat saja. Ini bukan kemewahan.
+     Diuji 5 Oktober 2026, run GFS saat itu punya DUA zona lembap, satu di
+     Samudra Hindia sekitar 69 sampai 99 BT dan satu lagi di Pasifik tengah
+     dari 165 BT terus ke timur. Yang terkuat justru yang Pasifik, dan itu
+     konveksi El Nino, bukan MJO. Menampilkan yang terkuat saja berarti
+     menunjuk tempat yang salah dengan penuh percaya diri. */
+  const hasil = []; let i = 0;
+  while (i < nx) {
+    if (sm[i] >= amb) {
+      let j = i; while (j + 1 < nx && sm[j + 1] >= amb) j++;
+      let bobot = 0, num = 0, den = 0;
+      for (let k = i; k <= j; k++) {
+        const w = sm[k] - amb; bobot += w; num += w * (lonBarat + k * dx); den += w;
+      }
+      if ((j - i) * dx >= 8) hasil.push({      // ruas tipis di bawah 8 derajat dibuang, itu derau
+        lon_barat: lonBarat + i * dx,
+        lon_timur: lonBarat + j * dx,
+        lon_pusat: num / den,
+        bobot: bobot,
+        lokal: true,
+        /* Amplop yang menyentuh tepi kotak data itu amplop TERPOTONG. Pusatnya
+           pasti bias ke dalam sebab bagian di luar tidak ikut ditimbang, dan
+           pusat sebenarnya bisa jauh di luar domain. Yang begini TIDAK BOLEH
+           diberi garis pusat, sebab garis itu menjanjikan ketelitian palsu. */
+        tepi_barat: i === 0,
+        tepi_timur: j === nx - 1,
+        tepi: i === 0 || j === nx - 1,
+      });
+      i = j + 1;
+    } else i++;
+  }
+  hasil.sort((a, b) => b.bobot - a.bobot);
+  return hasil.length ? hasil : null;
+}
+
+/* RH lapis tengah 500 sampai 800 hPa, dirata ratakan 10 LS sampai 10 LU,
+   satu nilai per bujur, untuk tiap langkah waktu profil. */
+function mjoHitungLokal(pd) {
+  const { nx, ny, bounds, dx, dy, levels, times } = pd.meta;
+  const nlev = levels.length, plane = nx * ny;
+  const lonBarat = bounds[0], latUtara = bounds[3];
+  const lap = [];
+  levels.forEach((p, i) => { if (p >= 500 && p <= 800) lap.push(i); });
+  if (!lap.length) return null;
+  const y0 = Math.max(0, Math.round((latUtara - 10) / dy));
+  const y1 = Math.min(ny - 1, Math.round((latUtara + 10) / dy));
+  const rr = pd.vars.r;
+  const out = [];
+  for (let ti = 0; ti < times.length; ti++) {
+    const prof = new Float32Array(nx);
+    for (let x = 0; x < nx; x++) {
+      let s = 0, c = 0;
+      for (const l of lap) {
+        const b = (ti * nlev + l) * plane;
+        for (let y = y0; y <= y1; y++) { s += rr.arr[b + y * nx + x]; c++; }
+      }
+      prof[x] = (s / c) * rr.scale + rr.offset;
+    }
+    out.push(mjoAmplopDari(prof, lonBarat, dx));
+  }
+  return out;
+}
+
+/* Mode lokal cuma masuk akal kalau kotak datanya LEBAR. Selubung MJO sendiri
+   lebarnya 30 sampai 40 derajat bujur, jadi di domain WRF yang cuma menutupi
+   Indonesia, amplopnya pasti menyentuh kedua tepi dan angkanya tidak berarti
+   apa apa. Lebih baik fiturnya diam dan bilang belum ada datanya. */
+async function mjoSiapkanLokal() {
+  if (mjoLokal) return mjoLokal;
+  if (mjoPunyaAmplop()) return null;          // backend sudah kirim, profil tak perlu disentuh
+  if (!SKEWT_ADA) return null;                // tak ada profile_meta.json
+  try {
+    const pd = await loadProfileData();
+    const lebar = pd.meta.bounds[2] - pd.meta.bounds[0];
+    if (lebar < MJO_LEBAR_MIN) return null;
+    mjoLokal = mjoHitungLokal(pd);
+    return mjoLokal;
+  } catch (e) {
+    return null;
+  }
+}
+
+/* Selalu mengembalikan DAFTAR amplop, walau isinya satu. Backend boleh
+   mengirim satu objek per waktu atau daftar, dua duanya diterima. */
+function mjoAmplopAktif() {
+  const vt = frames && frames[current] && frames[current].valid_time;
+  if (mjoPunyaAmplop()) {
+    const hit = mjo.amplop.find((x) => x.waktu === vt) || mjo.amplop[0];
+    if (!hit) return null;
+    const d = Array.isArray(hit.zona) ? hit.zona : [hit];
+    return d.filter((x) => isFinite(x.lon_barat) && isFinite(x.lon_timur));
+  }
+  if (mjoLokal && profileData) return mjoLokal[profileTimeIndex(profileData)] || null;
+  return null;
+}
+
+function refreshMjo() {
+  if (!mjoGroup) return;
+  mjoGroup.clearLayers();
+  if (!mjoOn) return;
+  const daftar = mjoAmplopAktif();
+  if (!daftar || !daftar.length) return;
+  daftar.forEach((a, idx) => {
+    /* Yang kedua dan seterusnya digambar lebih pudar. Dia zona lembap yang sah,
+       tapi yang terkuat tetap yang paling pantas dilihat duluan. */
+    const redup = idx === 0 ? 1 : 0.6;
+    /* TEPINYA SENGAJA TIDAK TEGAS. Selubung MJO tidak punya batas, dan garis
+       tajam menjanjikan ketelitian yang tidak ada. Tiga kotak bertumpuk yang
+       makin ke dalam makin pekat itu cara termurah membaca "kira kira di sini"
+       tanpa gradien sungguhan di Leaflet. */
+    /* Angkanya DIUKUR, bukan dikira kira. Percobaan pertama memakai 0,05 sampai
+       0,09 dan hasilnya tidak terlihat sama sekali di atas heatmap. Dibaca
+       langsung dari kanvas pane-nya, alfanya cuma 8 sampai 23 dari 255, dan
+       di atas latar biru tua yang ramai itu sama saja dengan tidak ada. */
+    [[7, 0.09], [3.5, 0.13], [0, 0.17]].forEach(([pad, op]) => {
+      L.rectangle([[-MJO_LINTANG, a.lon_barat - pad], [MJO_LINTANG, a.lon_timur + pad]], {
+        pane: "mjo", stroke: false, fillColor: MJO_COLOR,
+        fillOpacity: op * redup, interactive: false,
+      }).addTo(mjoGroup);
+    });
+    /* Garis tepi cuma digambar di tepi yang NYATA. Tepi yang berimpit dengan
+       batas kotak data itu bukan tepi selubungnya, itu cuma tempat data kita
+       habis, dan memberinya garis sama saja mengarang batas yang tidak ada. */
+    [[a.lon_barat, a.tepi_barat], [a.lon_timur, a.tepi_timur]].forEach(([lon, potong]) => {
+      if (potong || !isFinite(lon)) return;
+      L.polyline([[-MJO_LINTANG, lon], [MJO_LINTANG, lon]], {
+        pane: "mjo", color: MJO_COLOR, weight: 1.5, opacity: 0.55 * redup,
+        interactive: false,
+      }).addTo(mjoGroup);
+    });
+    // Garis pusat HANYA untuk amplop yang utuh. Lihat alasan di mjoAmplopDari.
+    if (!a.tepi && isFinite(a.lon_pusat)) {
+      L.polyline([[-MJO_LINTANG, a.lon_pusat], [MJO_LINTANG, a.lon_pusat]], {
+        pane: "mjo", color: MJO_COLOR, weight: 2.5, opacity: 0.85 * redup,
+        dashArray: "8 6", interactive: false, lineCap: "round",
+      }).addTo(mjoGroup);
+    }
+  });
+}
+
+/* OKTAGON RMM. Sumbu datar RMM1, sumbu tegak RMM2, lingkaran satuan di
+   tengah. Titiknya berputar BERLAWANAN arah jarum jam, dan putaran itulah
+   yang mewakili perjalanan MJO ke timur.
+   Sektor fase p membentang dari sudut ((p+3)*45) derajat selebar 45 derajat,
+   jadi fase 5 mulai di 0 derajat. Itu tata letak baku, bukan pilihan kami,
+   supaya diagram ini bisa diadu langsung dengan punya BMKG maupun BoM. */
+const MJO_WILAYAH = {
+  1: "Belahan barat dan Afrika", 2: "Samudra Hindia barat", 3: "Samudra Hindia timur",
+  4: "Benua Maritim barat", 5: "Benua Maritim timur", 6: "Pasifik barat",
+  7: "Pasifik tengah", 8: "Belahan barat",
+};
+/* Fase 8 dan 1 ada di belahan barat bumi, DI LUAR domain bujur yang dikirim
+   backend. Keduanya bersebelahan dan bersama sama membentuk satu juring 90
+   derajat di sisi kiri oktagon, jadi pudarannya satu blok utuh, bukan dua
+   tambalan terpisah. Dipudarkan, BUKAN dihapus. Fasenya tetap ada di alam,
+   yang tidak ada cuma pantauan kita, dan dua hal itu berbeda. */
+const MJO_LUAR_DOMAIN = [8, 1];
+
+// Kalimat sederhana untuk pembaca yang tidak memakai nomor fase.
+const MJO_TAHAP = [
+  { nama: "Mendekat", fase: [2, 3] },
+  { nama: "Di atas kita", fase: [4, 5] },
+  { nama: "Menjauh", fase: [6, 7] },
+  { nama: "Jauh", fase: [8, 1] },
+];
+
+function mjoOktagon(ix, jejak) {
+  const C = 120, R = 90, S = 23.5;          // S dipilih supaya amplitudo 3,5 menyentuh sisi
+  const rad = (d) => (d * Math.PI) / 180;
+  const sudutAwal = (p) => ((p + 3) * 45) % 360;
+  const sudut = (d, r) => [C + r * Math.cos(rad(d)), C - r * Math.sin(rad(d))];
+  const xy = (r1, r2) => [C + r1 * S, C - r2 * S];
+  const n2 = (a) => a.map((v) => v.toFixed(1)).join(",");
+  let o = '<svg class="mjo-okt" viewBox="0 0 240 240" role="img" aria-label="Diagram fase RMM">';
+
+  // Delapan juring. Yang di luar domain diberi isian dan ditandai.
+  for (let p = 1; p <= 8; p++) {
+    const a = sudutAwal(p), b = a + 45;
+    const luar = MJO_LUAR_DOMAIN.includes(p);
+    o += '<path class="okt-juring' + (luar ? " okt-luar" : "") + '" d="M' + n2([C, C])
+       + "L" + n2(sudut(a, R)) + "L" + n2(sudut(b, R)) + 'Z"/>';
+    const [lx, ly] = sudut(a + 22.5, R * 0.78);
+    o += '<text class="okt-no' + (luar ? " okt-no-luar" : "") + '" x="' + lx.toFixed(1)
+       + '" y="' + (ly + 3.5).toFixed(1) + '">' + p + "</text>";
+  }
+  o += '<circle class="okt-satuan" cx="' + C + '" cy="' + C + '" r="' + S + '"/>';
+
+  // Ekor 40 hari, lalu titik hari ini.
+  const jj = (jejak || []).filter((d) => isFinite(d.rmm1) && isFinite(d.rmm2));
+  if (jj.length > 1) {
+    o += '<polyline class="okt-ekor" points="'
+       + jj.map((d) => n2(xy(d.rmm1, d.rmm2))).join(" ") + '"/>';
+  }
+  if (isFinite(ix.rmm1) && isFinite(ix.rmm2)) {
+    const [px, py] = xy(Number(ix.rmm1), Number(ix.rmm2));
+    o += '<circle class="okt-kini" cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="4.5"/>';
+  }
+  // Nama wilayah di empat sisi, mengikuti tata letak baku.
+  o += '<text class="okt-sisi" x="120" y="14" text-anchor="middle">PASIFIK BARAT</text>'
+     + '<text class="okt-sisi" x="120" y="232" text-anchor="middle">SAMUDRA HINDIA</text>'
+     + '<text class="okt-sisi okt-sisi-tegak" x="14" y="120" text-anchor="middle" transform="rotate(-90 14 120)">BELAHAN BARAT</text>'
+     + '<text class="okt-sisi okt-sisi-tegak" x="228" y="120" text-anchor="middle" transform="rotate(90 228 120)">BENUA MARITIM</text>';
+  return o + "</svg>";
+}
+
+function mjoIsiNote() {
+  const atas = document.querySelector("#mjo-note .cyc-note-txt");
+  const kotak = $("mjo-fase");
+  const sisip = $("mjo-sumber");
+  const daftar = mjoAmplopAktif();
+  const a = daftar && daftar.length ? daftar[0] : null;
+  if (atas) {
+    atas.textContent = mjoPunyaIndeks()
+      ? "MJO, indeks RMM " + (mjo.indeks.tanggal || "")
+      : (a ? "MJO, perkiraan zona lembap dari model" : "MJO, data belum tersedia");
+  }
+  if (sisip) {
+    /* Kalimat sumber ditulis APA ADANYA, termasuk waktu dia tidak punya apa
+       apa. Fitur yang diam tanpa keterangan membuat orang mengira aplikasinya
+       rusak, padahal yang terjadi cuma berkasnya belum dikirim. */
+    if (mjoPunyaIndeks()) {
+      sisip.textContent = "Indeks RMM dari " + (mjo.sumber || "server") + ".";
+    } else if (a && a.lokal) {
+      const n = daftar.length;
+      const tepi = daftar.filter((x) => x.tepi).length;
+      sisip.textContent = "Dihitung di peramban dari kelembapan model, 500 sampai 800 hPa. "
+        + "Ini PERKIRAAN letak zona lembap, BUKAN indeks RMM. Cara ini tidak bisa "
+        + "memisahkan MJO dari El Nino, monsun, atau gelombang Kelvin, sebab ketiganya "
+        + "hidup di kotak bujur yang sama. "
+        + (n > 1 ? "Ada " + n + " zona, yang paling pekat yang paling kuat. " : "")
+        + (tepi ? "Zona yang menyentuh tepi kotak data dibiarkan tanpa garis pusat, "
+                + "sebab dia terpotong dan pusat sebenarnya bisa jauh di luar domain." : "");
+    } else {
+      sisip.textContent = "Berkas mjo.json belum ada di folder model ini, dan profil "
+        + "kelembapannya tidak cukup lebar untuk dihitung sendiri.";
+    }
+  }
+  if (kotak) {
+    kotak.innerHTML = "";
+    if (!mjoPunyaIndeks()) { kotak.hidden = true; return; }
+    kotak.hidden = false;
+    const ix = mjo.indeks;
+    const f = Number(ix.fase), amp = Number(ix.amplitudo);
+    const lemah = !(amp >= 1);
+    kotak.insertAdjacentHTML("beforeend", mjoOktagon(ix, mjo.jejak));
+    const angka = amp.toFixed(2).replace(".", ",");   // UI app ini berbahasa Indonesia
+    const tahap = MJO_TAHAP.find((t) => t.fase.includes(f));
+    const baris = [];
+    /* Amplitudo di bawah 1 itu titik di DALAM lingkaran satuan, dan di situ
+       nomor fasenya memang tidak berarti. Disebutkan, bukan disembunyikan,
+       sebab "MJO lemah" itu kabar yang berguna. */
+    baris.push(lemah
+      ? "<b>MJO lemah.</b> Fase " + f + ", amplitudo " + angka
+        + ", di bawah 1 jadi fasenya belum berarti."
+      : "<b>" + (tahap ? tahap.nama : "Fase " + f) + ".</b> Fase " + f + ", "
+        + (MJO_WILAYAH[f] || "") + ", amplitudo " + angka + ".");
+    if (!lemah && MJO_LUAR_DOMAIN.includes(f)) {
+      baris.push("Fase ini di luar bujur yang dipantau, jadi angkanya paling lemah dasarnya.");
+    }
+    /* Angka kecocokan dari backend ditampilkan APA ADANYA. EOF-nya dilatih
+       cuma di bujur yang kita sajikan, bukan seluruh bumi, jadi angka ini
+       yang memberi tahu pembaca seberapa jauh dia boleh percaya. Kalau
+       backend tidak mengirimnya, tidak ada yang dikarang di sini. */
+    const v = mjo.validasi;
+    if (v && isFinite(v.fase_sama_persen)) {
+      baris.push("Fasenya sama dengan RMM resmi pada "
+        + String(v.fase_sama_persen).replace(".", ",") + " persen hari uji.");
+    }
+    const kaki = document.createElement("div");
+    kaki.className = "mjo-kaki";
+    kaki.innerHTML = baris.join(" ");
+    kotak.appendChild(kaki);
+  }
+}
+
+function toggleMjo() {
+  mjoOn = !mjoOn;
+  $("mjo-toggle") && $("mjo-toggle").classList.toggle("active", mjoOn);
+  const note = $("mjo-note");
+  if (mjoOn) {
+    if (!mjoGroup) mjoGroup = L.layerGroup([], { pane: "mjo" });
+    mjoGroup.addTo(map);
+    if (note) note.classList.add("show");
+    /* Mode lokal menarik profile.bin.gz yang 20 MB. Kalau dia belum ada di
+       memori, bilang dulu sedang dihitung. Panel yang diam beberapa detik
+       tanpa kabar terbaca sebagai rusak. */
+    if (!mjoSibuk) {
+      mjoSibuk = true;
+      const sisip = $("mjo-sumber");
+      if (sisip && !mjoPunyaAmplop() && !profileData) sisip.textContent = "Sedang menghitung dari profil model.";
+      loadMjo()
+        .then(() => mjoSiapkanLokal())
+        .then(() => { mjoSibuk = false; if (mjoOn) { mjoIsiNote(); refreshMjo(); } })
+        .catch(() => { mjoSibuk = false; if (mjoOn) mjoIsiNote(); });
+    }
+  } else {
+    if (mjoGroup) { mjoGroup.clearLayers(); map.removeLayer(mjoGroup); }
+    if (note) note.classList.remove("show", "open");
+  }
+  updateHash();
+}
+
 // ================= ISOBAR (garis tekanan) =================
 // Otomatis muncul HANYA di layer Tekanan (tanpa tombol): garis kontur PRMSL
 // tiap 4 hPa + penanda pusat tekanan Tinggi (H) / Rendah (L). Melengkapi heatmap
@@ -3416,6 +3827,7 @@ async function init() {
     $("city-toggle")?.addEventListener("click", toggleCityIcons);
     $("cyclone-toggle")?.addEventListener("click", toggleCyclones);
     $("itcz-toggle")?.addEventListener("click", toggleItcz);
+    $("mjo-toggle")?.addEventListener("click", toggleMjo);
     $("alarm-toggle")?.addEventListener("click", () => {
       alarmOn = !alarmOn;
       $("alarm-toggle").classList.toggle("active", alarmOn);
@@ -3542,6 +3954,7 @@ async function init() {
     // Dropdown legenda+threshold di banner indikasi siklon.
     $("cyc-note-toggle")?.addEventListener("click", () => $("cyc-note").classList.toggle("open"));
     $("itcz-note-toggle")?.addEventListener("click", () => $("itcz-note").classList.toggle("open"));
+    $("mjo-note-toggle")?.addEventListener("click", () => $("mjo-note").classList.toggle("open"));
 
     // Pencarian kota/kabupaten
     const sbox = $("search-box"), sin = $("search-input");
@@ -3609,7 +4022,7 @@ const LB_SEKSI = [
   // Nama seksi ini dipilih sendiri: isinya penanda yang digambar DI ATAS peta
   // (ikon kondisi kota, ikon siklon, garis ITCZ), bukan parameter dan bukan
   // fenomena. "Penanda" paling pas dan tetap awam.
-  { judul: "Penanda", sel: "#city-toggle, #cyclone-toggle, #itcz-toggle" },
+  { judul: "Penanda", sel: "#city-toggle, #cyclone-toggle, #itcz-toggle, #mjo-toggle" },
   { judul: "Fenomena", jenis: "fenomena" },
 ];
 
