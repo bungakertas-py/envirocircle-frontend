@@ -720,6 +720,13 @@ html, body {
 }
 .fresh-badge[data-segar="ya"]    .fresh-dot { background: #3ddc84; }
 .fresh-badge[data-segar="tidak"] .fresh-dot { background: #ff4d43; }
+/* KUNING, situs sedang berdiri di atas cadangan GitHub Actions. Dipasang
+   5 Oktober 2026. Kekhususannya di atas dua aturan di atasnya, jadi urutan
+   tidak menentukan.
+   Yang BASI tetap MERAH walau dari cadangan. Kuning berarti "jaring pengaman
+   bekerja", bukan "semua beres", dan cadangan yang ikut basi bukan jaring
+   pengaman lagi. */
+.fresh-badge[data-sumber="cadangan"][data-segar="ya"] .fresh-dot { background: #ffc23d; }
 .fresh-chev { display: none; font-size: 15px; line-height: 1; }   /* kontrol tutup, HP saja */
 .toast {
   position: absolute; left: 50%; bottom: 96px; transform: translate(-50%, 12px);

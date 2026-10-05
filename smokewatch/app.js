@@ -75,6 +75,27 @@ let DATA_BASE = MODEL.base;
 /* Sumber yang akhirnya menang, dipakai badge di pojok slider. Ditaruh di sini
    supaya nilainya sudah ada sebelum katalog diambil, bukan menunggu DOM. */
 let SUMBER_DEKAT = true;
+let SUMBER_CADANGAN = false;
+
+/* CADANGAN GITHUB ACTIONS. Dipasang 5 Oktober 2026 atas permintaan pemilik,
+   sebab kiriman server cirrus beberapa kali berhenti berhari hari tanpa kabar.
+
+   Ini MENGHIDUPKAN LAGI cadangan yang sengaja dibuang 10 September di 3e2bd95,
+   tapi dengan satu aturan yang dulu tidak ada, lihat ambilKatalog().
+
+   Cuma untuk MODEL GLOBAL. CAMS dimasak ulang tiap hari oleh
+   GitHub Actions di repo lama, jadi kalau cirrus diam situs masih punya
+   kualitas udara. WRF TIDAK PUNYA CADANGAN dan memang tidak bisa punya,
+   dia dijalankan di server itu sendiri dan tidak ada tempat lain yang
+   menghitungnya. Kalau kiriman WRF berhenti, model itu masuk mode kosong,
+   dan itu disengaja supaya berhentinya kelihatan.
+
+   Sumbernya beda ASAL, bukan sekadar beda folder. Itu justru pemisahan yang
+   paling tegas, tidak mungkin tertukar dengan kiriman cirrus di hostingan.
+   CORS-nya terbuka, GitHub Pages menjawab `access-control-allow-origin: *`,
+   sudah diuji. */
+const DATA_CADANGAN = "https://bungakertas-py.github.io/smokewatch/backend/data/output/";
+const MODEL_GLOBAL = "cams";
 
 /* Kapan catalog.json MENDARAT di folder kita, dibaca dari header Last-Modified
    jawaban server. Diisi ambilKatalog(), dipakai segar24Jam(). SENGAJA bukan
@@ -82,24 +103,61 @@ let SUMBER_DEKAT = true;
    ditanya titik segar cuma kapan berkasnya sampai di path kita. */
 let katalogMendarat = null;
 
+async function cobaKatalog(base) {
+  try { return await fetch(base + "catalog.json", { cache: "no-store" }); }
+  catch (e) { return null; }        // jaringan mati
+}
+/* Umur dibaca dari header Last-Modified, yaitu KAPAN BERKASNYA MENDARAT di
+   sumber itu, bukan kapan modelnya di-run. Patokan yang sama dengan titik
+   segar, lihat segar24Jam(). */
+function umurKatalog(res) {
+  const lm = res && res.ok && res.headers.get("last-modified");
+  const ms = lm ? Date.parse(lm) : NaN;
+  return isFinite(ms) ? Date.now() - ms : Infinity;
+}
+
+/* PATOKANNYA UMUR, BUKAN CUMA ADA ATAU TIDAK.
+   Cadangan yang dulu cuma menolong kalau catalog.json 404. Itu tidak cukup.
+   Keadaan yang sebenarnya terjadi bukan berkasnya hilang, melainkan cirrus
+   tetap menjawab 200 sambil menyajikan katalog tiga hari lalu, dan aturan
+   lama tidak akan pernah mundur dari situ.
+
+   Jadi sekarang begini urutannya.
+   1. Galat yang BUKAN 404 tidak pernah ditutupi cadangan. 500 atau JSON rusak
+      itu kerusakan sungguhan, dan menyembunyikannya membuat ia tidak pernah
+      ketahuan. Aturan lama, dipertahankan.
+   2. Kalau yang dekat sehat DAN mendarat dalam 24 jam terakhir, selesai.
+      Cadangan tidak disentuh sama sekali, nol permintaan jaringan tambahan.
+   3. Baru kalau yang dekat hilang atau basi, cadangan ditanya.
+   4. Cadangan dipakai HANYA kalau dia benar benar lebih segar. Pindah ke
+      sumber yang sama basinya atau lebih basi cuma menukar satu masalah
+      dengan masalah lain, sambil menyembunyikan bahwa cirrus yang bermasalah. */
 async function ambilKatalog() {
-  const urut = [MODEL.base];
-  for (const base of urut) {
-    let res;
-    try {
-      res = await fetch(base + "catalog.json");
-    } catch (e) {
-      continue;                     // jaringan mati, coba sumber berikutnya
-    }
-    if (res.ok) { pakaiSumber(base); katalogMendarat = res.headers.get("last-modified"); return res; }
-    if (res.status !== 404) { pakaiSumber(base); return res; }
+  const bolehCadangan = !!DATA_CADANGAN && MODEL_ID === MODEL_GLOBAL;
+  const pakai = (base, res) => {
+    pakaiSumber(base);
+    katalogMendarat = res.headers.get("last-modified");
+    return res;
+  };
+  const dekat = await cobaKatalog(MODEL.base);
+  if (dekat && !dekat.ok && dekat.status !== 404) { pakaiSumber(MODEL.base); return dekat; }
+
+  const dekatBaik = !!(dekat && dekat.ok);
+  const umurDekat = dekatBaik ? umurKatalog(dekat) : Infinity;
+  if (!bolehCadangan || (dekatBaik && umurDekat <= SEGAR_MAKS_MS)) {
+    return dekatBaik ? pakai(MODEL.base, dekat) : null;
   }
-  return null;                      // semua 404 -> cangkang
+
+  const jauh = await cobaKatalog(DATA_CADANGAN);
+  if (jauh && jauh.ok && umurKatalog(jauh) < umurDekat) return pakai(DATA_CADANGAN, jauh);
+  if (dekatBaik) return pakai(MODEL.base, dekat);
+  return null;
 }
 
 function pakaiSumber(base) {
   DATA_BASE = base;
   const dekat = base === MODEL.base;
+  SUMBER_CADANGAN = !dekat;
   document.documentElement.dataset.sumber = dekat ? "dekat" : "jauh";
   SUMBER_DEKAT = dekat;
   tandaiSumber();
@@ -2470,11 +2528,21 @@ function reopenPoint() {
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 // Tanda ASAL DATA di badge "Last update". Sejak cadangan GitHub Pages dibuang
 // 10 Sep 2026 sumbernya cuma satu, server cirrus ITERA lewat hostingan ini.
+/* Chip sumber dan warna titiknya. Kuning berarti situs sedang berdiri di atas
+   cadangan, dan itu keadaan yang WAJIB kelihatan. Hijau akan berbohong, sebab
+   datanya memang segar tapi bukan dari tempat yang seharusnya. Merah juga
+   berbohong ke arah sebaliknya, sebab tidak ada yang rusak di layar. */
 function tandaiSumber() {
   const el = $("fresh-src-text"); if (!el) return;
-  el.textContent = "cirrus";
+  el.textContent = SUMBER_CADANGAN ? "GitAction" : "cirrus";
   const wadah = $("fresh-src");
-  if (wadah) wadah.title = "Data dari server cirrus, lewat hostingan ini sendiri";
+  if (wadah) {
+    wadah.title = SUMBER_CADANGAN
+      ? "Kiriman server cirrus belum masuk lebih dari 24 jam, jadi situs memakai cadangan yang dimasak GitHub Actions"
+      : "Data dari server cirrus, lewat hostingan ini sendiri";
+  }
+  const badge = $("data-fresh");
+  if (badge) badge.dataset.sumber = SUMBER_CADANGAN ? "cadangan" : "cirrus";
 }
 
 // Dot HIJAU kalau data MENDARAT di path kita dalam 24 JAM terakhir, MERAH
