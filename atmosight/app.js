@@ -158,7 +158,38 @@ const PUNYA_EKSTRA = MODEL.ekstra;
 let SKEWT_ADA = PUNYA_EKSTRA;
 
 // Definisi legend per layer: [label, warna, teksPutih?]
+/* Palet anomali MJO, 18 pita. Huruf putih atau tinta ditentukan ANGKA
+   KONTRAS, bukan selera. Diukur, tiga biru tergelap dan empat merah tergelap
+   memang lebih terbaca berhuruf putih, sisanya berhuruf tinta. */
+const MJO_PALET = ["#1364d2", "#1d6eeb", "#2782f0", "#3c96f5", "#50a5f5", "#78b9fa",
+  "#94d0f9", "#b4f0fa", "#e1ffff", "#fffaaa", "#ffe878", "#ffc03c", "#ffa000",
+  "#ff6000", "#ff3200", "#e11300", "#c00000", "#a50100"];
+const MJO_PALET_PUTIH = [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1];
+/* 18 sel, 17 batas. Label tiap sel adalah batas ATASNYA, aturan yang sama
+   dengan seluruh legenda lain di berkas ini. Sel pertama berarti "sama atau
+   kurang dari", sel terakhir berarti "lebih dari". */
+function legendaAnom(satuan, langkah) {
+  const sel = [];
+  for (let i = 0; i < 17; i++) {
+    sel.push([String((i - 8) * langkah), MJO_PALET[i], MJO_PALET_PUTIH[i]]);
+  }
+  sel.push([8 * langkah + "+", MJO_PALET[17], MJO_PALET_PUTIH[17]]);
+  return { head: satuan + ", anomali", cells: sel };
+}
+
 const LEGENDS = {
+  /* ANOMALI MJO. Paletnya dicuplik LANGSUNG dari bilah warna contoh GrADS
+     yang dikirim pemilik, bukan ditiru dengan mata. 18 pita dan 17 batas,
+     biru untuk negatif dan merah untuk positif, dan pergantiannya TEPAT DI
+     NOL, bukan di tengah rentang data.
+     LANGKAHNYA BEDA PER PARAMETER. Angin memakai -16 sampai 16 persis seperti
+     contohnya, sebab satuannya m/detik. OLR TIDAK BISA ikut angka itu, sebab
+     anomali OLR MJO lazim mencapai 40 sampai 50 W/m2 sehingga seluruh petanya
+     akan mentok di dua warna ujung dan strukturnya hilang. Warnanya sama
+     persis, yang diskalakan cuma angkanya. */
+  olr_anom: legendaAnom("W/m2", 5),       // -40 sampai +40
+  u850_anom: legendaAnom("m/detik", 2),   // -16 sampai +16, persis contohnya
+  u200_anom: legendaAnom("m/detik", 2),
   wind_surface: {
     head: "KNOTS",
     cells: [["5", "#2b83ba", 1], ["10", "#5aa8cf", 0], ["15", "#abdda4", 0], ["20", "#66bd63", 0],
@@ -3067,7 +3098,15 @@ function refreshMjo() {
        0,09 dan hasilnya tidak terlihat sama sekali di atas heatmap. Dibaca
        langsung dari kanvas pane-nya, alfanya cuma 8 sampai 23 dari 255, dan
        di atas latar biru tua yang ramai itu sama saja dengan tidak ada. */
-    [[7, 0.09], [3.5, 0.13], [0, 0.17]].forEach(([pad, op]) => {
+    /* ISIANNYA DIBUANG kalau layer peta sedang menampilkan anomali MJO.
+       Ujung negatif palet OLR itu ungu, sama hue dengan pita ini, jadi
+       keduanya menyala bersama membuat pitanya lenyap ke dalam datanya
+       sekaligus mengotori warna datanya. Diuji, memang tidak terbaca.
+       Yang tersisa garis tepi dan garis pusat, dan justru itu yang berguna
+       di atas peta anomali, sebab petanya sendiri sudah menunjukkan
+       selubungnya dan yang masih ditanya cuma batas bujurnya. */
+    const diAtasAnomali = MJO_ANOM.some((a) => a.kunci === activeLayer);
+    (diAtasAnomali ? [] : [[7, 0.09], [3.5, 0.13], [0, 0.17]]).forEach(([pad, op]) => {
       L.rectangle([[-MJO_LINTANG, a.lon_barat - pad], [MJO_LINTANG, a.lon_timur + pad]], {
         pane: "mjo", stroke: false, fillColor: MJO_COLOR,
         fillOpacity: op * redup, interactive: false,
@@ -3079,7 +3118,9 @@ function refreshMjo() {
     [[a.lon_barat, a.tepi_barat], [a.lon_timur, a.tepi_timur]].forEach(([lon, potong]) => {
       if (potong || !isFinite(lon)) return;
       L.polyline([[-MJO_LINTANG, lon], [MJO_LINTANG, lon]], {
-        pane: "mjo", color: MJO_COLOR, weight: 1.5, opacity: 0.55 * redup,
+        pane: "mjo", color: MJO_COLOR,
+        weight: diAtasAnomali ? 2.2 : 1.5,
+        opacity: (diAtasAnomali ? 0.85 : 0.55) * redup,
         interactive: false,
       }).addTo(mjoGroup);
     });
@@ -3111,6 +3152,37 @@ const MJO_WILAYAH = {
    yang tidak ada cuma pantauan kita, dan dua hal itu berbeda. */
 const MJO_LUAR_DOMAIN = [8, 1];
 
+/* Tiga layer anomali yang jadi kontur peta. Mereka DISENGAJA tidak masuk
+   daftar parameter di sidebar, sebab mereka milik fitur MJO, bukan cuaca
+   sehari hari. Daftar parameter ditulis tangan di index.html jadi mereka
+   memang tidak akan muncul di sana dengan sendirinya.
+   Tombolnya memakai kelas .layer-btn dan atribut data-layer yang sama dengan
+   tombol parameter, jadi seluruh mesin yang sudah ada ikut terpakai, mulai
+   dari pemasangan pendengar klik, penyelarasan kelas active, sampai legenda.
+   Tidak ada jalur kedua yang harus dirawat. */
+const MJO_ANOM = [
+  { kunci: "olr_anom", nama: "OLR", tip: "Anomali radiasi gelombang panjang ke angkasa. Negatif berarti awan konveksi dalam, itu inti MJO" },
+  { kunci: "u850_anom", nama: "U850", tip: "Anomali angin zonal 850 hPa. Positif berarti baratan" },
+  { kunci: "u200_anom", nama: "U200", tip: "Anomali angin zonal 200 hPa. Positif berarti baratan" },
+];
+
+/* Baris tombol anomali disembunyikan seluruhnya kalau backend belum mengirim
+   satu pun layernya. Tombol mati yang tetap terlihat mengundang orang
+   mengkliknya lalu kecewa, aturan yang sama dipakai untuk Skew-T. */
+function mjoAnomUI() {
+  const baris = $("mjo-anom");
+  if (!baris) return;
+  let ada = 0;
+  MJO_ANOM.forEach((a) => {
+    const b = baris.querySelector('[data-layer="' + a.kunci + '"]');
+    if (!b) return;
+    const punya = !!(catalog && catalog.layers && catalog.layers[a.kunci]);
+    b.hidden = !punya;
+    if (punya) ada++;
+  });
+  baris.hidden = !ada;
+}
+
 // Kalimat sederhana untuk pembaca yang tidak memakai nomor fase.
 const MJO_TAHAP = [
   { nama: "Mendekat", fase: [2, 3] },
@@ -3119,46 +3191,90 @@ const MJO_TAHAP = [
   { nama: "Jauh", fase: [8, 1] },
 ];
 
+/* Tata letaknya MENIRU diagram resmi BoM, diminta pemilik, supaya orang yang
+   sudah biasa membaca punya BoM atau BMKG tidak perlu belajar lagi. Kotak
+   bersumbu -4 sampai 4, empat garis putus menyilang di tengah, lingkaran
+   satuan, nomor fase besar di pojok tiap juring, dan nama wilayah di empat
+   sisi. Yang diganti cuma paletnya, jadi palet kita. */
 function mjoOktagon(ix, jejak) {
-  const C = 120, R = 90, S = 23.5;          // S dipilih supaya amplitudo 3,5 menyentuh sisi
+  const X0 = 56, Y0 = 24, SISI = 264;            // kotak gambar
+  const CX = X0 + SISI / 2, CY = Y0 + SISI / 2;  // 188, 156
+  const S = SISI / 8;                            // 33 piksel per satuan, skala -4..4
   const rad = (d) => (d * Math.PI) / 180;
-  const sudutAwal = (p) => ((p + 3) * 45) % 360;
-  const sudut = (d, r) => [C + r * Math.cos(rad(d)), C - r * Math.sin(rad(d))];
-  const xy = (r1, r2) => [C + r1 * S, C - r2 * S];
+  const px = (r1, r2) => [CX + r1 * S, CY - r2 * S];
   const n2 = (a) => a.map((v) => v.toFixed(1)).join(",");
-  let o = '<svg class="mjo-okt" viewBox="0 0 240 240" role="img" aria-label="Diagram fase RMM">';
+  const kunci = (v) => Math.max(-4, Math.min(4, v));
+  let o = '<svg class="mjo-okt" viewBox="0 0 340 352" role="img" '
+        + 'aria-label="Ruang fase RMM1 lawan RMM2">';
 
-  // Delapan juring. Yang di luar domain diberi isian dan ditandai.
-  for (let p = 1; p <= 8; p++) {
-    const a = sudutAwal(p), b = a + 45;
-    const luar = MJO_LUAR_DOMAIN.includes(p);
-    o += '<path class="okt-juring' + (luar ? " okt-luar" : "") + '" d="M' + n2([C, C])
-       + "L" + n2(sudut(a, R)) + "L" + n2(sudut(b, R)) + 'Z"/>';
-    const [lx, ly] = sudut(a + 22.5, R * 0.78);
-    o += '<text class="okt-no' + (luar ? " okt-no-luar" : "") + '" x="' + lx.toFixed(1)
-       + '" y="' + (ly + 3.5).toFixed(1) + '">' + p + "</text>";
+  /* Juring fase 8 dan 1 bersama sama membentuk segitiga dari pusat ke dua
+     pojok kiri, sebab batasnya tepat diagonal 135 dan 225 derajat. Jadi
+     cukup satu segitiga, bukan dua tambalan yang harus dijahit. */
+  o += '<path class="okt-luar" d="M' + n2([CX, CY]) + "L" + n2([X0, Y0])
+     + "L" + n2([X0, Y0 + SISI]) + 'Z"/>';
+
+  // Empat garis putus, mendatar, tegak, dan dua diagonal, dari tepi ke tepi.
+  o += '<path class="okt-bagi" d="M' + n2([X0, CY]) + "H" + (X0 + SISI).toFixed(1)
+     + "M" + n2([CX, Y0]) + "V" + (Y0 + SISI).toFixed(1)
+     + "M" + n2([X0, Y0]) + "L" + n2([X0 + SISI, Y0 + SISI])
+     + "M" + n2([X0, Y0 + SISI]) + "L" + n2([X0 + SISI, Y0]) + '"/>';
+  o += '<circle class="okt-satuan" cx="' + CX + '" cy="' + CY + '" r="' + S + '"/>';
+  o += '<rect class="okt-bingkai" x="' + X0 + '" y="' + Y0 + '" width="' + SISI
+     + '" height="' + SISI + '"/>';
+
+  // Skala. Angka ganjil dilewati supaya tidak berdesakan di lebar panel.
+  for (let v = -4; v <= 4; v++) {
+    const [tx] = px(v, 0), [, ty] = px(0, v);
+    o += '<path class="okt-tik" d="M' + tx.toFixed(1) + "," + (Y0 + SISI) + "v4"
+       + "M" + X0 + "," + ty.toFixed(1) + 'h-4"/>';
+    if (v % 2 === 0) {
+      o += '<text class="okt-skala" x="' + tx.toFixed(1) + '" y="' + (Y0 + SISI + 14)
+         + '" text-anchor="middle">' + v + "</text>"
+         + '<text class="okt-skala" x="' + (X0 - 7) + '" y="' + (ty + 3.5).toFixed(1)
+         + '" text-anchor="end">' + v + "</text>";
+    }
   }
-  o += '<circle class="okt-satuan" cx="' + C + '" cy="' + C + '" r="' + S + '"/>';
 
-  // Ekor 40 hari, lalu titik hari ini.
+  // Nomor fase, di tengah tiap juring dekat tepi luar.
+  for (let f = 1; f <= 8; f++) {
+    const a = ((f + 3) * 45) % 360 + 22.5, r = 3.4;
+    const [nx, ny] = px(r * Math.cos(rad(a)), r * Math.sin(rad(a)));
+    o += '<text class="okt-no' + (MJO_LUAR_DOMAIN.includes(f) ? " okt-no-luar" : "")
+       + '" x="' + nx.toFixed(1) + '" y="' + (ny + 6).toFixed(1) + '">' + f + "</text>";
+  }
+
+  // Nama wilayah, DI DALAM kotak seperti aslinya.
+  o += '<text class="okt-sisi" x="' + CX + '" y="' + (Y0 + 15) + '" text-anchor="middle">PASIFIK BARAT</text>'
+     + '<text class="okt-sisi" x="' + CX + '" y="' + (Y0 + SISI - 8) + '" text-anchor="middle">SAMUDRA HINDIA</text>'
+     + '<text class="okt-sisi" x="' + (X0 + 12) + '" y="' + CY + '" text-anchor="middle" transform="rotate(-90 ' + (X0 + 12) + ' ' + CY + ')">BELAHAN BARAT</text>'
+     + '<text class="okt-sisi" x="' + (X0 + SISI - 12) + '" y="' + CY + '" text-anchor="middle" transform="rotate(90 ' + (X0 + SISI - 12) + ' ' + CY + ')">BENUA MARITIM</text>';
+
+  /* Ekor. Nilai DIKUNCI ke kotak -4..4, bukan dibiarkan keluar. Amplitudo di
+     atas 4 memang jarang tapi bukan mustahil, dan garis yang menjulur keluar
+     bingkai terbaca sebagai gambar rusak. */
   const jj = (jejak || []).filter((d) => isFinite(d.rmm1) && isFinite(d.rmm2));
   if (jj.length > 1) {
     o += '<polyline class="okt-ekor" points="'
-       + jj.map((d) => n2(xy(d.rmm1, d.rmm2))).join(" ") + '"/>';
+       + jj.map((d) => n2(px(kunci(+d.rmm1), kunci(+d.rmm2)))).join(" ") + '"/>';
+    const [ax, ay] = px(kunci(+jj[0].rmm1), kunci(+jj[0].rmm2));
+    o += '<circle class="okt-awal" cx="' + ax.toFixed(1) + '" cy="' + ay.toFixed(1) + '" r="2.6"/>'
+       + '<text class="okt-tanda" x="' + (ax + 6).toFixed(1) + '" y="' + (ay + 3).toFixed(1) + '">AWAL</text>';
   }
   if (isFinite(ix.rmm1) && isFinite(ix.rmm2)) {
-    const [px, py] = xy(Number(ix.rmm1), Number(ix.rmm2));
-    o += '<circle class="okt-kini" cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="4.5"/>';
+    const [kx, ky] = px(kunci(+ix.rmm1), kunci(+ix.rmm2));
+    o += '<circle class="okt-kini" cx="' + kx.toFixed(1) + '" cy="' + ky.toFixed(1) + '" r="4.5"/>';
   }
-  // Nama wilayah di empat sisi, mengikuti tata letak baku.
-  o += '<text class="okt-sisi" x="120" y="14" text-anchor="middle">PASIFIK BARAT</text>'
-     + '<text class="okt-sisi" x="120" y="232" text-anchor="middle">SAMUDRA HINDIA</text>'
-     + '<text class="okt-sisi okt-sisi-tegak" x="14" y="120" text-anchor="middle" transform="rotate(-90 14 120)">BELAHAN BARAT</text>'
-     + '<text class="okt-sisi okt-sisi-tegak" x="228" y="120" text-anchor="middle" transform="rotate(90 228 120)">BENUA MARITIM</text>';
+
+  // Judul sumbu.
+  o += '<text class="okt-sumbu" x="' + CX + '" y="346" text-anchor="middle">RMM1</text>'
+     + '<text class="okt-sumbu" x="16" y="' + CY + '" text-anchor="middle" transform="rotate(-90 16 ' + CY + ')">RMM2</text>';
   return o + "</svg>";
 }
 
 function mjoIsiNote() {
+  mjoAnomUI();
+  const tbHov = $("hov-buka");
+  if (tbHov) tbHov.hidden = !hovPunya();
   const atas = document.querySelector("#mjo-note .cyc-note-txt");
   const kotak = $("mjo-fase");
   const sisip = $("mjo-sumber");
@@ -3228,6 +3344,20 @@ function mjoIsiNote() {
   }
 }
 
+/* Diagramnya 329 px tinggi dan panelnya dipatok 560, jadi berapa pun dia
+   ditaruh dia tidak akan muat utuh bersama baris fitur di atasnya. Daripada
+   mengecilkan diagramnya sampai labelnya berdesakan, panelnya yang digulir
+   sendiri begitu MJO dinyalakan. Digulir langsung tanpa animasi, dan dihitung
+   dari selisih rect supaya tidak bergantung offsetParent. */
+function mjoGulirKeDiagram() {
+  const kotak = $("mjo-fase");
+  if (!kotak || kotak.hidden) return;
+  const panel = kotak.closest(".sisi-body");
+  if (!panel || panel.scrollHeight <= panel.clientHeight) return;
+  const r = kotak.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+  panel.scrollTop += r.top - pr.top - 8;
+}
+
 function toggleMjo() {
   mjoOn = !mjoOn;
   $("mjo-toggle") && $("mjo-toggle").classList.toggle("active", mjoOn);
@@ -3245,7 +3375,7 @@ function toggleMjo() {
       if (sisip && !mjoPunyaAmplop() && !profileData) sisip.textContent = "Sedang menghitung dari profil model.";
       loadMjo()
         .then(() => mjoSiapkanLokal())
-        .then(() => { mjoSibuk = false; if (mjoOn) { mjoIsiNote(); refreshMjo(); } })
+        .then(() => { mjoSibuk = false; if (mjoOn) { mjoIsiNote(); refreshMjo(); mjoGulirKeDiagram(); } })
         .catch(() => { mjoSibuk = false; if (mjoOn) mjoIsiNote(); });
     }
   } else {
@@ -3254,6 +3384,342 @@ function toggleMjo() {
   }
   updateHash();
 }
+
+// ================= HOVMOLLER, SUBFITUR MJO =================
+//
+// Sumbu datar BUJUR, sumbu tegak WAKTU, waktu mengalir ke BAWAH. Dengan tata
+// letak itu, gejala yang merambat ke timur muncul sebagai garis miring dari
+// kiri atas ke kanan bawah, dan kemiringannya itulah kecepatan rambatnya.
+// MJO mestinya sekitar 5 derajat bujur per hari.
+//
+// INI SATU SATUNYA TAMPILAN YANG BISA MEMBUKTIKAN PERAMBATAN. Peta cuma
+// menunjukkan keadaan satu waktu, dan 72 jam prakiraan itu cuma 4 persen dari
+// satu putaran MJO yang 30 sampai 60 hari. Hovmoller butuh PULUHAN HARI KE
+// BELAKANG, dan itu cuma bisa datang dari backend. Frontend tidak menghitung
+// apa apa di sini, dia cuma menggambar.
+let hovParam = "olr_anom";
+
+const hovPunya = () => !!(mjo && !mjo.kosong && mjo.hovmoller
+  && Array.isArray(mjo.hovmoller.lon) && Array.isArray(mjo.hovmoller.waktu));
+
+/* Palet dan batasnya diambil dari LEGENDS layer anomali yang sama, BUKAN
+   palet sendiri. Kalau Hovmoller punya palet sendiri, satu nilai akan
+   berwarna dua macam di dua tempat dan itu menyesatkan. */
+function hovSkala(kunci) {
+  const sel = (LEGENDS[kunci] || {}).cells || [];
+  if (sel.length < 3) return null;
+  const b0 = parseFloat(sel[0][0]);
+  const langkah = parseFloat(sel[1][0]) - b0;
+  const rgb = sel.map(([, hex]) => [parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]);
+  /* Pitanya berjarak sama, jadi indeksnya dihitung, bukan dicari satu per
+     satu. Bedanya nyata, pencarian berurutan dipanggil sejuta kali per
+     gambar. Math.ceil memberi batas ATAS yang tertutup, jadi nilai tepat di
+     batas masuk ke pita bawahnya, sama dengan aturan legenda. */
+  const maks = rgb.length - 1;
+  return { rgb: rgb, indeks: (v) =>
+    Math.max(0, Math.min(maks, Math.ceil((v - b0) / langkah))) };
+}
+
+const HOV_KUNCI = { olr_anom: "olr", u850_anom: "u850", u200_anom: "u200" };
+
+/* GARIS KONTUR, marching squares.
+   Tanpa ini plotnya cuma bidang berwarna, dan yang membuat plot GrADS
+   terlihat seperti GrADS justru garisnya. Garis juga mengerjakan hal yang
+   tidak bisa dikerjakan warna, yaitu memberi tahu pembaca di mana persisnya
+   satu nilai berada, bukan cuma pita mana yang dia tempati.
+
+   Ruasnya DISAMBUNG jadi rantai, bukan digambar satu satu. Bukan kemewahan,
+   garis negatif digambar putus putus dan pola putusnya mulai ulang di tiap
+   subjalur. Ruas pendek yang berdiri sendiri akan jadi deret titik yang
+   jaraknya tidak keruan, bukan garis putus putus. */
+function konturRuas(data, nx, nt, L) {
+  const ruas = [];
+  const ix = (j, i) => data[j][i];
+  for (let j = 0; j < nt - 1; j++) {
+    for (let i = 0; i < nx - 1; i++) {
+      const a = ix(j, i), b = ix(j, i + 1), c = ix(j + 1, i + 1), d = ix(j + 1, i);
+      if (!(isFinite(a) && isFinite(b) && isFinite(c) && isFinite(d))) continue;
+      let k = (a > L ? 8 : 0) | (b > L ? 4 : 0) | (c > L ? 2 : 0) | (d > L ? 1 : 0);
+      if (k === 0 || k === 15) continue;
+      const atas  = () => [i + (L - a) / (b - a), j];
+      const kanan = () => [i + 1, j + (L - b) / (c - b)];
+      const bawah = () => [i + (L - d) / (c - d), j + 1];
+      const kiri  = () => [i, j + (L - a) / (d - a)];
+      /* Dua kasus pelana, 5 dan 10, dua duanya bisa disambung dengan dua cara
+         dan jawabannya tidak ditentukan oleh keempat sudut saja. Dipakai
+         rata rata keempatnya sebagai nilai di tengah sel, cara baku. */
+      if (k === 5 || k === 10) {
+        const tengah = (a + b + c + d) / 4;
+        const naik = tengah > L;
+        if (k === 5) {
+          if (naik) { ruas.push([atas(), kanan()], [kiri(), bawah()]); }
+          else { ruas.push([atas(), kiri()], [kanan(), bawah()]); }
+        } else {
+          if (naik) { ruas.push([atas(), kiri()], [kanan(), bawah()]); }
+          else { ruas.push([atas(), kanan()], [kiri(), bawah()]); }
+        }
+        continue;
+      }
+      if (k === 8 || k === 7) ruas.push([kiri(), atas()]);
+      else if (k === 4 || k === 11) ruas.push([atas(), kanan()]);
+      else if (k === 2 || k === 13) ruas.push([kanan(), bawah()]);
+      else if (k === 1 || k === 14) ruas.push([bawah(), kiri()]);
+      else if (k === 12 || k === 3) ruas.push([kiri(), kanan()]);
+      else if (k === 6 || k === 9) ruas.push([atas(), bawah()]);
+    }
+  }
+  return ruas;
+}
+
+/* Sambung ruas jadi rantai. Titik yang sama dikenali lewat kunci bulat,
+   sebab dua ruas bertetangga menghitung titik temu yang sama dari sel yang
+   berbeda dan hasilnya bisa beda di digit terakhir. */
+function konturRantai(ruas) {
+  const kunci = (p) => p[0].toFixed(4) + "|" + p[1].toFixed(4);
+  const peta = new Map();
+  ruas.forEach((r, n) => {
+    [kunci(r[0]), kunci(r[1])].forEach((k) => {
+      if (!peta.has(k)) peta.set(k, []);
+      peta.get(k).push(n);
+    });
+  });
+  const pakai = new Array(ruas.length).fill(false);
+  const rantai = [];
+  for (let n = 0; n < ruas.length; n++) {
+    if (pakai[n]) continue;
+    pakai[n] = true;
+    const jalur = [ruas[n][0], ruas[n][1]];
+    // Dipanjangkan ke dua arah sampai buntu.
+    for (const arah of [1, 0]) {
+      for (;;) {
+        const ujung = arah ? jalur[jalur.length - 1] : jalur[0];
+        const kand = peta.get(kunci(ujung)) || [];
+        let maju = -1;
+        for (const m of kand) if (!pakai[m]) { maju = m; break; }
+        if (maju < 0) break;
+        pakai[maju] = true;
+        const r = ruas[maju];
+        const lain = kunci(r[0]) === kunci(ujung) ? r[1] : r[0];
+        if (arah) jalur.push(lain); else jalur.unshift(lain);
+      }
+    }
+    if (jalur.length > 1) rantai.push(jalur);
+  }
+  return rantai;
+}
+
+function gambarHovmoller() {
+  const kv = $("hov-kanvas");
+  if (!kv || !hovPunya()) return;
+  const H = mjo.hovmoller;
+  const data = H[HOV_KUNCI[hovParam]];
+  const pesan = $("hov-pesan");
+  if (!Array.isArray(data) || !data.length) {
+    kv.hidden = true;
+    if (pesan) { pesan.hidden = false; pesan.textContent = "Backend belum mengirim deret untuk parameter ini."; }
+    return;
+  }
+  kv.hidden = false; if (pesan) pesan.hidden = true;
+
+  const KIRI = 52, ATAS = 14, KANAN = 14, BAWAH = 34;
+  const nx = H.lon.length, nt = H.waktu.length;
+  const lebarPlot = 620, tinggiPlot = Math.max(260, Math.min(520, nt * 5));
+  const W = KIRI + lebarPlot + KANAN, Hh = ATAS + tinggiPlot + BAWAH;
+  /* Digambar 2x lalu dikecilkan lewat CSS. Tanpa ini, teks sumbu dan garis
+     rambut jadi kabur di layar ber-dpr 2, dan plot ini isinya memang garis
+     tipis semua. */
+  const dpr = 2;
+  kv.width = W * dpr; kv.height = Hh * dpr;
+  kv.style.width = W + "px"; kv.style.height = Hh + "px";
+  const c = kv.getContext("2d");
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, W, Hh);
+
+  const tinggiSel = tinggiPlot / nt;
+  /* DIGAMBAR PER PIKSEL, BUKAN PER SEL DATA. Versi pertama mengecat satu
+     kotak untuk tiap sel 1 derajat kali 1 hari, dan hasilnya kotak kotak
+     kasar yang memang jelek. Sekarang tiap piksel mencicipi medan datanya
+     secara bilinear dulu, baru diwarnai menurut pitanya, jadi batas antar
+     pita menjadi lengkung halus yang mengikuti medannya. Itu yang membuat
+     shaded GrADS terlihat halus, dan caranya memang ini, bukan memburamkan
+     gambar kotak kotak.
+     Nilai antar pita TIDAK digradasikan. Pita diskret itu memang maunya,
+     sebab pembaca harus bisa menghitung berapa pita yang dilewati. */
+  const sk = hovSkala(hovParam);
+  if (sk) {
+    const pw = Math.max(1, Math.round(lebarPlot * dpr));
+    const ph = Math.max(1, Math.round(tinggiPlot * dpr));
+    const img = c.createImageData(pw, ph), buf = img.data;
+    for (let py = 0; py < ph; py++) {
+      const fy = ph < 2 ? 0 : (py / (ph - 1)) * (nt - 1);
+      const y0 = Math.min(nt - 1, Math.floor(fy)), y1 = Math.min(nt - 1, y0 + 1);
+      const ty = fy - y0, r0 = data[y0] || [], r1 = data[y1] || [];
+      for (let pxi = 0; pxi < pw; pxi++) {
+        const fx = pw < 2 ? 0 : (pxi / (pw - 1)) * (nx - 1);
+        const x0 = Math.min(nx - 1, Math.floor(fx)), x1 = Math.min(nx - 1, x0 + 1);
+        const tx = fx - x0;
+        const v = (1 - tx) * (1 - ty) * r0[x0] + tx * (1 - ty) * r0[x1]
+                + (1 - tx) * ty * r1[x0] + tx * ty * r1[x1];
+        const w = sk.rgb[isFinite(v) ? sk.indeks(v) : 8];
+        const o = (py * pw + pxi) * 4;
+        buf[o] = w[0]; buf[o + 1] = w[1]; buf[o + 2] = w[2]; buf[o + 3] = 255;
+      }
+    }
+    /* putImageData MENGABAIKAN transform, jadi letaknya dihitung dalam piksel
+       peranti, bukan piksel CSS. Kalau dipakai KIRI dan ATAS apa adanya,
+       gambarnya melenceng ke kiri atas di layar ber-dpr 2. */
+    c.putImageData(img, Math.round(KIRI * dpr), Math.round(ATAS * dpr));
+  }
+
+  const gaya = getComputedStyle(document.documentElement);
+  const tinta = gaya.getPropertyValue("--ink").trim() || "#074173";
+
+  /* GARIS KONTUR DI ATAS BIDANG WARNA. Batasnya sama persis dengan batas pita
+     warnanya, jadi garis selalu jatuh di pergantian warna dan keduanya tidak
+     pernah bercerita hal yang berbeda.
+     NEGATIF PUTUS PUTUS, positif utuh. Itu bukan hiasan, itu kesepakatan lama
+     di peta meteorologi dan orang seperti Alvin membacanya tanpa melihat
+     legenda. */
+  if (sk) {
+    const selL = (LEGENDS[hovParam] || {}).cells || [];
+    const aras = selL.slice(0, 17).map((x) => parseFloat(x[0]));
+    const gx = (i) => KIRI + (i / (nx - 1)) * lebarPlot;
+    const gy = (j) => ATAS + (j / (nt - 1)) * tinggiPlot;
+    const label = [];
+    c.save();
+    c.lineJoin = "round"; c.lineCap = "round";
+    c.strokeStyle = "rgba(20,28,38,.62)";
+    aras.forEach((L) => {
+      const rantai = konturRantai(konturRuas(data, nx, nt, L));
+      if (!rantai.length) return;
+      c.lineWidth = L === 0 ? 1.1 : 0.7;
+      c.setLineDash(L < 0 ? [4, 3] : []);
+      c.beginPath();
+      rantai.forEach((jalur) => {
+        jalur.forEach(([i, j], n) => {
+          const x = gx(i), y = gy(j);
+          if (n === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        });
+      });
+      c.stroke();
+      /* Angka ditaruh di rantai yang CUKUP PANJANG saja. Rantai pendek itu
+         serpihan di pojok gundukan, dan angka di situ cuma menutupi gambar
+         tanpa memberi tahu apa apa. */
+      rantai.forEach((jalur) => {
+        if (jalur.length < 14) return;
+        const t = Math.floor(jalur.length / 2);
+        const [i, j] = jalur[t];
+        const x = gx(i), y = gy(j);
+        if (x < KIRI + 14 || x > KIRI + lebarPlot - 14) return;
+        if (y < ATAS + 10 || y > ATAS + tinggiPlot - 10) return;
+        if (label.some((p) => Math.abs(p[0] - x) < 42 && Math.abs(p[1] - y) < 16)) return;
+        label.push([x, y, L]);
+      });
+    });
+    c.setLineDash([]);
+    /* Angkanya diberi halo warna kertas, bukan kotak isian. Kotak akan
+       melubangi bidang warnanya, sedangkan halo cuma menipiskan garis yang
+       lewat persis di belakang angkanya. */
+    c.font = "600 9px system-ui, sans-serif";
+    c.textAlign = "center"; c.textBaseline = "middle";
+    c.lineWidth = 2.6; c.strokeStyle = "rgba(255,255,255,.92)";
+    label.forEach(([x, y, L]) => c.strokeText(String(L), x, y));
+    c.fillStyle = "rgba(20,28,38,.88)";
+    label.forEach(([x, y, L]) => c.fillText(String(L), x, y));
+    c.restore();
+  }
+  const pudar = gaya.getPropertyValue("--ink-50").trim() || "rgba(7,65,115,.5)";
+  const xBujur = (lo) => KIRI + ((lo - H.lon[0]) / (H.lon[nx - 1] - H.lon[0])) * lebarPlot;
+
+  /* Pita Indonesia, 95 sampai 141 BT. Inti seluruh tampilan ini sebenarnya
+     satu pertanyaan, kapan garis miring itu melintasi pita ini. */
+  c.save();
+  c.strokeStyle = tinta; c.lineWidth = 1; c.setLineDash([5, 4]); c.globalAlpha = 0.55;
+  [95, 141].forEach((lo) => {
+    const px = xBujur(lo);
+    if (px < KIRI || px > KIRI + lebarPlot) return;
+    c.beginPath(); c.moveTo(px, ATAS); c.lineTo(px, ATAS + tinggiPlot); c.stroke();
+  });
+  c.restore();
+
+  /* Garis batas analisis lawan prakiraan. Di bawahnya bukan lagi pengamatan,
+     dan pembaca berhak tahu persis di mana batas itu. */
+  const iBatas = H.waktu.indexOf(H.batas_analisis);
+  if (iBatas > 0) {
+    const y = ATAS + (iBatas + 1) * tinggiSel;
+    c.save();
+    c.strokeStyle = tinta; c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(KIRI, y); c.lineTo(KIRI + lebarPlot, y); c.stroke();
+    c.fillStyle = tinta; c.font = "9px system-ui, sans-serif"; c.textAlign = "right";
+    c.fillText("prakiraan", KIRI + lebarPlot - 3, y + 10);
+    c.restore();
+  }
+
+  c.strokeStyle = pudar; c.lineWidth = 1;
+  c.strokeRect(KIRI, ATAS, lebarPlot, tinggiPlot);
+  c.fillStyle = pudar; c.font = "9px system-ui, sans-serif";
+
+  c.textAlign = "center";
+  for (let lo = 60; lo <= 180; lo += 20) {
+    const px = xBujur(lo);
+    if (px < KIRI - 1 || px > KIRI + lebarPlot + 1) continue;
+    c.beginPath(); c.moveTo(px, ATAS + tinggiPlot); c.lineTo(px, ATAS + tinggiPlot + 4); c.stroke();
+    c.fillText(lo + "E", px, ATAS + tinggiPlot + 15);
+  }
+  c.fillText("BUJUR TIMUR", KIRI + lebarPlot / 2, Hh - 4);
+
+  c.textAlign = "right";
+  /* Label tanggal dijarangkan supaya tidak saling menimpa. Dihitung dari
+     tinggi sel, bukan dipatok, sebab panjang deretnya ditentukan backend. */
+  const lompat = Math.max(1, Math.ceil(13 / tinggiSel));
+  for (let t = 0; t < nt; t += lompat) {
+    const y = ATAS + (t + 0.5) * tinggiSel;
+    c.fillText(String(H.waktu[t]).slice(5), KIRI - 6, y + 3);
+  }
+}
+
+function isiHovLegenda() {
+  const el = $("hov-legenda");
+  if (!el) return;
+  const def = LEGENDS[hovParam] || { cells: [], head: "" };
+  el.innerHTML = '<span class="hov-lg-kep">' + escHtml(def.head) + "</span>"
+    + def.cells.map(([lab, hex, gelap]) =>
+        '<span class="hov-lg-sel' + (gelap ? " gelap" : "") + '" style="background:'
+        + hex + '">' + escHtml(lab) + "</span>").join("");
+}
+
+function setHovParam(kunci) {
+  hovParam = kunci;
+  document.querySelectorAll("#hov-tab .hov-tab-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.hov === kunci));
+  isiHovLegenda();
+  gambarHovmoller();
+}
+
+function bukaHovmoller() {
+  const ov = $("hov-overlay");
+  if (!ov) return;
+  ov.classList.add("show");
+  const kos = $("hov-kosong");
+  if (!hovPunya()) {
+    /* Tidak ada data bukan alasan membuka kartu kosong tanpa kabar. Orang
+       akan mengira aplikasinya rusak, padahal berkasnya memang belum ada. */
+    if (kos) kos.hidden = false;
+    $("hov-badan") && ($("hov-badan").hidden = true);
+    return;
+  }
+  if (kos) kos.hidden = true;
+  $("hov-badan") && ($("hov-badan").hidden = false);
+  // Pilih parameter pertama yang datanya benar benar ada.
+  if (!Array.isArray(mjo.hovmoller[HOV_KUNCI[hovParam]])) {
+    const ada = MJO_ANOM.find((a) => Array.isArray(mjo.hovmoller[HOV_KUNCI[a.kunci]]));
+    if (ada) hovParam = ada.kunci;
+  }
+  setHovParam(hovParam);
+}
+
+function tutupHovmoller() { $("hov-overlay")?.classList.remove("show"); }
 
 // ================= ISOBAR (garis tekanan) =================
 // Otomatis muncul HANYA di layer Tekanan (tanpa tombol): garis kontur PRMSL
@@ -3867,12 +4333,18 @@ async function init() {
       else openPoint(e.latlng.lat, e.latlng.lng);
     });
     $("skewt-toggle")?.addEventListener("click", () => setSkewtMode(!skewtMode));
+    $("hov-buka")?.addEventListener("click", bukaHovmoller);
+    $("hov-close")?.addEventListener("click", tutupHovmoller);
+    $("hov-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupHovmoller(); });
+    document.querySelectorAll("#hov-tab .hov-tab-btn").forEach((b) =>
+      b.addEventListener("click", () => setHovParam(b.dataset.hov)));
     $("skt-close")?.addEventListener("click", tutupSkewT);
     $("skt-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupSkewT(); });
     /* Escape mematikan modenya kalau kartunya belum terbuka, dan menutup
        kartunya kalau sudah. Dua duanya jalan keluar yang orang harapkan. */
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      if ($("hov-overlay")?.classList.contains("show")) tutupHovmoller();
       if ($("skt-overlay")?.classList.contains("show")) tutupSkewT();
       else if (skewtMode) setSkewtMode(false);
     });

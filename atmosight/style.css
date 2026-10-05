@@ -785,33 +785,124 @@ html, body {
    palet data jadi dia tidak bisa disalahartikan sebagai nilai. */
 .mjo-sw-band { background: rgba(108,75,209,.26); }
 .mjo-sw-line { height: 0; border: none; border-top: 3px dashed #6C4BD1; }
-/* OKTAGON RMM. Juring dibagi garis kertas, bukan garis tinta, sebab delapan
-   garis penuh di kotak 240 px terbaca sebagai sarang laba laba dan menelan
-   titiknya sendiri. Yang harus menonjol cuma dua, titik hari ini dan juring
-   yang padam. */
-.mjo-fase { display: block; }
-.mjo-okt { display: block; width: 100%; max-width: 236px; height: auto; margin: 2px auto 6px; }
-/* Garisnya --ink-20, BUKAN --paper. Percobaan pertama memakai --paper dan
-   hasilnya putih di atas putih, oktagonnya tidak punya bentuk sama sekali,
-   yang terlihat cuma juring padam di kiri. --surface dan --paper di berkas
-   ini dua duanya #ffffff. */
-.okt-juring { fill: none; stroke: var(--ink-20); stroke-width: 0.7; }
-/* Juring di luar bujur pantauan. DIPUDARKAN, bukan dihapus. Fasenya tetap ada
-   di alam, yang tidak ada cuma pantauan kita, dan dua hal itu berbeda. */
+/* RUANG FASE RMM. Tata letaknya meniru diagram resmi BoM, warnanya palet
+   kita. Garis bingkai dan garis bagi sengaja tipis dan pudar, yang harus
+   menonjol cuma tiga, juring padam, ekor, dan titik hari ini. */
+/* Diagram NAIK KE ATAS paragraf penjelas. Diukur waktu dia masih di bawah,
+   puncaknya 446 px dari atas panel yang tingginya 560, jadi yang terlihat
+   tanpa menggulir cuma seiris dan orang menyangka fiturnya tidak jalan.
+   Sempat terjadi. Gambar itu isinya, paragraf itu penjelasnya, jadi urutan
+   ini yang benar. Pakai order sebab .cyc-detail memang flex kolom. */
+.mjo-fase { display: block; order: -1; }
+.mjo-okt { display: block; width: 100%; height: auto; margin: 2px 0 7px; }
+.okt-bingkai { fill: none; stroke: var(--ink-50); stroke-width: 0.8; }
+.okt-bagi { fill: none; stroke: var(--ink-20); stroke-width: 0.8; stroke-dasharray: 4 4; }
+.okt-satuan { fill: none; stroke: var(--ink-50); stroke-width: 0.8; }
+.okt-tik { stroke: var(--ink-50); stroke-width: 0.8; }
+/* Juring di luar bujur pantauan, yaitu fase 8 dan 1. DIPUDARKAN, bukan
+   dihapus. Fasenya tetap ada di alam, yang tidak ada cuma pantauan kita. */
 .okt-luar { fill: var(--ink-5); }
-.okt-no { fill: var(--ink-50); font-family: var(--font-ui); font-size: 11px;
+.okt-no { fill: var(--ink-50); font-family: var(--font-ui); font-size: 15px;
   font-weight: 300; text-anchor: middle; }
 .okt-no-luar { fill: var(--ink-20); }
-.okt-satuan { fill: none; stroke: var(--ink-50); stroke-width: 1;
-  stroke-dasharray: 3 3; }
-.okt-ekor { fill: none; stroke: var(--aksen); stroke-width: 1.6; opacity: .55;
+.okt-sisi, .okt-skala, .okt-sumbu, .okt-tanda {
+  fill: var(--ink-50); font-family: var(--font-ui); font-weight: 300;
+}
+.okt-sisi { font-size: 8px; letter-spacing: .09em; }
+.okt-skala { font-size: 8px; }
+.okt-sumbu { font-size: 9px; letter-spacing: .1em; fill: var(--ink-70); }
+.okt-tanda { font-size: 7px; letter-spacing: .08em; }
+.okt-ekor { fill: none; stroke: var(--aksen); stroke-width: 1.5; opacity: .75;
   stroke-linejoin: round; stroke-linecap: round; }
+.okt-awal { fill: var(--aksen); }
 .okt-kini { fill: #6C4BD1; stroke: var(--paper); stroke-width: 2; }
-.okt-sisi { fill: var(--ink-50); font-family: var(--font-ui); font-size: 8px;
-  font-weight: 300; letter-spacing: .08em; }
 .mjo-kaki { font-family: var(--font-ui); font-size: 10px; color: var(--variant);
   line-height: 1.45; max-width: 240px; }
 .mjo-kaki b { font-weight: 700; color: var(--ink); }
+/* Tiga tombol anomali. Mereka memakai kelas .layer-btn supaya ikut mesin
+   parameter, jadi gayanya harus DITIMPA di sini, kalau tidak mereka mewarisi
+   tata letak baris sidebar yang selebar panel dan berikon. */
+.mjo-anom { display: flex; flex-direction: column; gap: 5px; }
+.mjo-anom-lbl { font-family: var(--font-ui); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-50); }
+.mjo-anom-baris { display: flex; gap: 5px; }
+.mjo-anom-ket { font-family: var(--font-ui); font-size: 9px; font-weight: 300;
+  line-height: 1.45; color: var(--ink-50); max-width: 240px; }
+/* SELEKTORNYA WAJIB BER-ID. Tombol ini berkelas .layer-btn supaya ikut mesin
+   parameter, dan dia duduk di dalam .sisi-body, jadi dia kena aturan
+   `.sisi-body .layer-btn` yang membuatnya baris selebar panel berhuruf 13 px
+   tanpa tepi. Aturan itu ditulis jauh di bawah blok ini, jadi kelas polos
+   dengan kekhususan sama akan KALAH urutan. Sempat terjadi, tombolnya tampil
+   sebagai tiga tulisan besar tanpa bentuk. Id menaikkan kekhususan sehingga
+   urutannya tidak lagi menentukan. */
+#mjo-anom .mjo-anom-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 6px 4px; min-height: 0; width: auto; gap: 0;
+  border: var(--bw) solid var(--ink-20); border-bottom: var(--bw) solid var(--ink-20);
+  background: var(--surface); text-align: center;
+  font-family: var(--font-ui); font-size: 10px; font-weight: 300;
+  letter-spacing: .06em; text-transform: none;
+  color: var(--ink); cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+#mjo-anom .mjo-anom-btn .lb-txt { font-weight: 300; }
+#mjo-anom .mjo-anom-btn:hover { background: var(--lime); color: var(--on-lime); }
+/* Yang terpilih SEWARNA dengan yang disorot, itu memang aturan paletnya.
+   Yang membedakan tepi tinta penuh, bukan warna bidang. */
+#mjo-anom .mjo-anom-btn.active { background: var(--lime); color: var(--on-lime);
+  border-color: var(--ink); }
+#mjo-anom .mjo-anom-btn.disabled { opacity: .35; pointer-events: none; }
+
+/* Tombol subfitur Hovmoller. Dibedakan dari tiga tombol anomali di atasnya
+   dengan ikon dan lebar penuh, sebab dia MEMBUKA KARTU bukan mengganti layer,
+   dan dua jenis tindakan itu tidak boleh terlihat sama. */
+.sisi-body .mjo-hov-btn, .mjo-hov-btn {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 7px 9px; border: var(--bw) solid var(--ink-20); background: var(--surface);
+  font-family: var(--font-ui); font-size: 10px; font-weight: 300;
+  letter-spacing: .04em; color: var(--ink); cursor: pointer;
+}
+.sisi-body .mjo-hov-btn:hover, .mjo-hov-btn:hover { background: var(--lime); color: var(--on-lime); border-color: var(--ink); }
+.mjo-hov-btn .material-symbols-outlined { font-size: 15px; }
+
+/* KARTU HOVMOLLER. Lebarnya ikut isi, sebab lebar plotnya dipatok 620 px di
+   JS dan kartu yang lebih sempit cuma akan memotongnya. */
+.hov-kartu {
+  position: relative; background: var(--paper); color: var(--ink);
+  border: var(--bw) solid var(--ink-20); border-radius: 4px;
+  padding: 18px 20px 16px; max-width: min(760px, 94vw); max-height: 92vh;
+  overflow: auto;
+}
+.hov-kepala { display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; margin-bottom: 12px; padding-right: 30px; flex-wrap: wrap; }
+.hov-label { font-family: var(--font-ui); font-size: 9px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--aksen-tua); display: block; }
+.hov-judul { margin: 2px 0 0; font-size: 19px; font-weight: 200; letter-spacing: .01em; }
+.hov-tab { display: flex; gap: 4px; }
+.hov-tab-btn {
+  padding: 5px 11px; border: var(--bw) solid var(--ink-20); background: var(--surface);
+  font-family: var(--font-ui); font-size: 11px; font-weight: 300; letter-spacing: .04em;
+  color: var(--ink); cursor: pointer;
+}
+.hov-tab-btn:hover { background: var(--lime); color: var(--on-lime); }
+.hov-tab-btn.active { background: var(--lime); color: var(--on-lime); border-color: var(--ink); }
+.hov-badan canvas { display: block; max-width: 100%; }
+.hov-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 0;
+  margin: 10px 0 0; }
+.hov-lg-kep { font-family: var(--font-ui); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-50); margin-right: 8px; }
+.hov-lg-sel { flex: 1; min-width: 26px; padding: 4px 2px; text-align: center;
+  font-family: var(--font-ui); font-size: 9px; color: var(--ink); }
+.hov-lg-sel.gelap { color: #fff; }
+.hov-ket { margin: 9px 0 0; font-family: var(--font-ui); font-size: 10px;
+  font-weight: 300; line-height: 1.5; color: var(--ink-70); max-width: 660px; }
+.hov-pesan { font-family: var(--font-ui); font-size: 11px; font-weight: 300;
+  line-height: 1.55; color: var(--ink-70); max-width: 520px; padding: 6px 0 2px; }
+@media (max-width: 820px) {
+  .hov-kartu { padding: 14px 14px 12px; }
+  .hov-kepala { padding-right: 26px; }
+  .hov-judul { font-size: 16px; }
+}
+
 .mjo-sumber {
   font-family: var(--font-ui); font-size: 9px; line-height: 1.4;
   max-width: 240px; color: var(--variant);

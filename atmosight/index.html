@@ -350,8 +350,30 @@
             <div class="cyc-detail">
             <div class="itcz-lead">Gelombang hujan raksasa yang berjalan ke timur di sepanjang khatulistiwa, dari Afrika timur sampai Pasifik. Satu putarannya 30 sampai 60 hari. Waktu dia lewat Indonesia, hujan bertambah banyak.</div>
             <div id="mjo-fase" class="mjo-fase" hidden></div>
+            <!-- Tiga layer anomali. Kelas .layer-btn dan data-layer SENGAJA
+                 sama dengan tombol parameter di sidebar, supaya mesin yang
+                 sudah ada yang mengurus klik, kelas active, dan legenda.
+                 Disembunyikan sampai backend mengirim layernya. -->
+            <div id="mjo-anom" class="mjo-anom" hidden>
+              <span class="mjo-anom-lbl">Kontur anomali</span>
+              <div class="mjo-anom-baris">
+                <!-- TANPA data-tip. Di kolom kanan, atribut itu BUKAN tooltip
+                     melainkan label yang SELALU tampil di kiri tombol, itu
+                     mekanisme yang memunculkan tulisan LOKASI dan SIKLON.
+                     Dipasangi kalimat panjang, dia tercetak raksasa melintasi
+                     layar. Sempat terjadi. Keterangannya di baris bawah. -->
+                <button class="layer-btn mjo-anom-btn" data-layer="olr_anom" hidden><span class="lb-txt">OLR</span></button>
+                <button class="layer-btn mjo-anom-btn" data-layer="u850_anom" hidden><span class="lb-txt">U850</span></button>
+                <button class="layer-btn mjo-anom-btn" data-layer="u200_anom" hidden><span class="lb-txt">U200</span></button>
+              </div>
+              <span class="mjo-anom-ket">OLR negatif berarti awan konveksi dalam, itu inti MJO. Angin positif berarti baratan.</span>
+            </div>
             <div class="cyc-row"><span class="itcz-sw mjo-sw-band"></span><b>Pita</b><span class="cyc-th">selubung lembap, tepinya kabur</span></div>
             <div class="cyc-row"><span class="itcz-sw mjo-sw-line"></span><b>Garis</b><span class="cyc-th">pusat selubung</span></div>
+            <button type="button" id="hov-buka" class="mjo-hov-btn" hidden>
+              <span class="material-symbols-outlined">grid_on</span>
+              <span>Hovmoller, rambatan ke timur</span>
+            </button>
             <div id="mjo-sumber" class="mjo-sumber"></div>
             </div>
             <button type="button" class="cyc-tab" id="mjo-note-toggle" aria-label="Tampilkan keterangan MJO">
@@ -486,6 +508,36 @@
             <figcaption class="tm-name">Andreas Boni Baik Simamora</figcaption>
           </figure>
         </div>
+      </div>
+    </div>
+
+    <!-- ============ KARTU HOVMOLLER, SUBFITUR MJO ============
+         Sumbu datar bujur, sumbu tegak waktu mengalir ke bawah. Gejala yang
+         merambat ke timur muncul sebagai garis miring kiri-atas ke
+         kanan-bawah. Ini satu satunya tampilan yang bisa membuktikan
+         perambatan, dan datanya WAJIB dari backend sebab butuh puluhan hari
+         ke belakang. Lapisan dan cara menutupnya meniru #skt-overlay. -->
+    <div id="hov-overlay" class="about-overlay">
+      <div id="hov-card" class="hov-kartu" role="dialog" aria-modal="true" aria-label="Diagram Hovmoller">
+        <button id="hov-close" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <div class="hov-kepala">
+          <div>
+            <span class="hov-label">MJO</span>
+            <h3 class="hov-judul">Rambatan ke timur</h3>
+          </div>
+          <div id="hov-tab" class="hov-tab">
+            <button type="button" class="hov-tab-btn active" data-hov="olr_anom">OLR</button>
+            <button type="button" class="hov-tab-btn" data-hov="u850_anom">U850</button>
+            <button type="button" class="hov-tab-btn" data-hov="u200_anom">U200</button>
+          </div>
+        </div>
+        <div id="hov-badan" class="hov-badan">
+          <canvas id="hov-kanvas"></canvas>
+          <div id="hov-pesan" class="hov-pesan" hidden></div>
+          <div id="hov-legenda" class="hov-legenda"></div>
+          <p class="hov-ket">Anomali dirata ratakan 15&deg;LS sampai 15&deg;LU. Waktu mengalir ke bawah, jadi gejala yang merambat ke timur terbaca sebagai garis miring ke kanan bawah. Dua garis putus menandai bujur Indonesia, 95 sampai 141&deg;BT.</p>
+        </div>
+        <div id="hov-kosong" class="hov-pesan" hidden>Deret Hovmoller belum dikirim backend untuk model ini. Diagram ini butuh puluhan hari data ke belakang, dan prakiraan 72 jam saja tidak cukup untuk memperlihatkan rambatan MJO.</div>
       </div>
     </div>
 
