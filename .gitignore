@@ -16,3 +16,8 @@ package-lock.json
 # Berkas buangan. Kebiasaan di pohon ini, apa pun yang diawali garis bawah
 # itu sementara, boleh dihapus kapan saja.
 _*
+
+# Lembar palet warna yang ditaruh di akar waktu memilih warna. Rujukan kerja,
+# bukan bagian situs, dan sudah hampir ikut ter-commit beberapa kali.
+palet_warna.jpeg
+palet_warna_alternatif.jpeg
