@@ -2736,7 +2736,7 @@ body { font-weight: 200; }
    semuanya berangkat dari satu ketinggian yang sama.
    ===================================================================== */
 .alat-baris { align-items: flex-start; }
-.alat-nav { display: flex; align-items: stretch; gap: 22px; margin-right: 10px; }
+.alat-nav { display: flex; align-items: stretch; gap: 18px; margin-right: 10px; }
 .alat-nav a {
   display: block;
   font-family: var(--font-ui); font-size: 13px; font-weight: 200;

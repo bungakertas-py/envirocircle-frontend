@@ -1,8 +1,8 @@
-/* Service worker Atmosight — cache SHELL app (berversi), data cuaca TETAP
+/* Service worker Oceansight — cache SHELL app (berversi), data cuaca TETAP
  * online. Naikkan VERSION tiap rilis frontend agar user dapat versi terbaru
  * (cache lama dihapus saat activate). */
-const VERSION = "v32";
-const CACHE = "kertas-cuaca-" + VERSION;
+const VERSION = "v1";
+const CACHE = "oceansight-" + VERSION;
 
 // Saat REVIEW LOKAL, jangan cache shell sama sekali. Strategi cache-first membuat
 // peramban menyajikan app.js versi kemarin sementara data di /backend/ sudah versi
@@ -16,14 +16,14 @@ const DEV = ["127.0.0.1", "localhost", "0.0.0.0"].includes(location.hostname) ||
 // Shell same-origin (relatif thd scope frontend/). Data model (../backend/…)
 // berada DI LUAR path frontend → sengaja tak di-cache (lihat handler fetch).
 const SHELL = [
-  "./", "./index.html", "./style.css", "./app.js", "./skewt.js", "./sisi.js",
+  "./", "./index.html", "./style.css", "./app.js", "./sisi.js",
   "./favicon.png", "./manifest.webmanifest",
   /* Lambang dipakai bersama landing, jadi dia di ../img/ dan BUKAN di
      folder app. Satu berkas untuk seluruh situs, bukan satu salinan per
      app. Masih satu origin, jadi sah masuk daftar ini. */
   "../img/logo-envirocircle.png", "../img/logo-itera.png",
   "./icon-192.png", "./icon-512.png",
-  "./data/world_countries.geojson", "./data/idn_provinces.geojson", "./data/id_places.json",
+  "./tim-farras.jpg", "./tim-alvin.jpg", "./tim-andre.jpg",
 ];
 
 self.addEventListener("install", (e) => {
@@ -55,7 +55,7 @@ self.addEventListener("activate", (e) => {
    cepat. Jadi yang ditukar strateginya cuma yang memang sering berubah.
 
    Akhiran "/" ikut dihitung kode, sebab dia menyajikan index.html. */
-const KODE = /(?:\/|\/(?:index\.html|app\.js|style\.css|skewt\.js|wilayah\.js))$/;
+const KODE = /(?:\/|\/(?:index\.html|app\.js|style\.css|sisi\.js))$/;
 
 self.addEventListener("fetch", (e) => {
   const req = e.request;

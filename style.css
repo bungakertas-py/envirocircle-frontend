@@ -623,12 +623,22 @@ section { padding: 0; }
    Di 20ch patahnya naik satu kata dan dua barisnya jadi 19 lawan 15. */
 #showcase .sc-title { max-width: 20ch; margin-inline: auto; }
 
-/* Tiga kolom sama lebar, mengisi penuh lebar isi .wrap, jadi tepi kiri kanan
+/* Kolom sama lebar, mengisi penuh lebar isi .wrap, jadi tepi kiri kanan
    kartunya segaris dengan judul bagian di atasnya. Tidak ada yang menjorok
-   dan tidak ada yang terpotong seperti di korsel dulu. */
+   dan tidak ada yang terpotong seperti di korsel dulu.
+
+   EMPAT KARTU sejak Oceansight lahir 6 Okt 2026, dulu tiga. Empat kolom cuma
+   dipakai waktu layarnya memang muat. Patokannya bukan selera, melainkan
+   lebar kartu yang sama dengan yang sudah diukur di bawah, sekitar 250 px
+   adalah batas pratinjau peta masih terbaca. Di 1200 px empat kolom memberi
+   sekitar 275 px per kartu, masih di atas batas itu. Di bawahnya dua kolom
+   dulu, baru satu. */
 .sc-baris {
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 28px; align-items: stretch;
+}
+@media (max-width: 1199px) {
+  .sc-baris { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* KARTU. Bentuknya dari garis rambut dan ruang kosong, siku, tanpa bayangan,
