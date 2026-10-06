@@ -226,6 +226,49 @@ const MJO_PALET_PUTIH = [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1];
 /* 18 sel, 17 batas. Label tiap sel adalah batas ATASNYA, aturan yang sama
    dengan seluruh legenda lain di berkas ini. Sel pertama berarti "sama atau
    kurang dari", sel terakhir berarti "lebih dari". */
+/* Enam pita, lima batas di 3, 6, 9, 12, dan 15. Label tiap sel tetap batas
+   ATASNYA, aturan yang sama dengan seluruh legenda lain di berkas ini, jadi
+   sel pertama berarti "kurang dari 3" dan sel terakhir "lebih dari 15". */
+/* PITA ANOMALI ANGIN, dicuplik dari contoh GrADS yang dikirim pemilik.
+   Enam pita, lima batas di 3, 6, 9, 12, dan 15 m/detik. Label tiap sel adalah
+   batas ATASNYA, aturan yang sama dengan seluruh legenda lain di berkas ini.
+
+   U850 ditampilkan SISI POSITIF saja, U200 sisi NEGATIF saja. Itu bukan
+   pilihan rasa. Tanda tangan MJO itu BAROKLINIK, baratan 850 hPa berpasangan
+   dengan timuran 200 hPa tepat di atas pusat konveksinya. Jadi dua duanya
+   menyorot sisi yang memang menandai MJO, cuma tandanya berlawanan sebab
+   lapisannya berlawanan.
+
+   Pita terlemah BENING di dua duanya, bukan putih. Di bawah 3 m/detik
+   anomalinya terlalu lemah untuk berarti apa apa, dan mengecatnya cuma
+   menutupi peta di bawahnya.
+
+   Ditulis sebagai DAFTAR TEGAS, bukan hitungan indeks. Percobaan pertama
+   memakai 6 + i*3 dan sel terakhirnya jadi "18+" padahal mestinya "15+",
+   sebab sel terakhir memang tidak punya batas atas. */
+const ANOM_BARATAN = [
+  ["3", "transparent", 0],
+  ["6", "#dcdcff", 0],
+  ["9", "#8071e8", 1],
+  ["12", "#f8e275", 0],
+  ["15", "#ffa000", 0],
+  ["15+", "#e11300", 1],
+];
+/* Cerminnya. Urutan sel SELALU dari nilai terkecil ke terbesar, jadi yang
+   paling pekat ada di KIRI dan beningnya di kanan, dekat nol. */
+const ANOM_TIMURAN = [
+  ["-15", "#e11300", 1],
+  ["-12", "#ffa000", 0],
+  ["-9", "#f8e275", 0],
+  ["-6", "#8071e8", 1],
+  ["-3", "#dcdcff", 0],
+  ["0", "transparent", 0],
+];
+function legendaAnomSatuSisi(satuan, baratan) {
+  const sel = (baratan ? ANOM_BARATAN : ANOM_TIMURAN).map((x) => x.slice());
+  return { head: satuan + ", anomali " + (baratan ? "baratan" : "timuran"), cells: sel };
+}
+
 function legendaAnom(satuan, langkah) {
   const sel = [];
   for (let i = 0; i < 17; i++) {
@@ -246,8 +289,16 @@ const LEGENDS = {
      akan mentok di dua warna ujung dan strukturnya hilang. Warnanya sama
      persis, yang diskalakan cuma angkanya. */
   olr_anom: legendaAnom("W/m2", 5),       // -40 sampai +40
-  u850_anom: legendaAnom("m/detik", 2),   // -16 sampai +16, persis contohnya
-  u200_anom: legendaAnom("m/detik", 2),
+  /* ANGIN ANOMALI, HANYA SISI POSITIF, diminta pemilik 6 Oktober.
+     Paletnya dicuplik dari contoh GrADS yang dia kirim, enam pita dengan lima
+     label di BATAS antar pita, bukan di tengahnya.
+     Pita terbawah BENING, bukan putih. Di bawah 3 m/detik anomalinya terlalu
+     lemah untuk berarti apa apa, dan mengecatnya cuma menutupi peta di bawahnya.
+     Soal tanda, U positif itu angin BARATAN, namanya mengikuti asal angin, dan
+     udaranya memang bergerak KE TIMUR. Dua duanya benar, cuma beda sudut
+     pandang. Baratan 850 hPa itu memang tanda fase konveksi MJO. */
+  u850_anom: legendaAnomSatuSisi("m/detik", true),    // baratan, sisi positif
+  u200_anom: legendaAnomSatuSisi("m/detik", false),   // timuran, sisi negatif
   wind_surface: {
     head: "KNOTS",
     cells: [["5", "#2b83ba", 1], ["10", "#5aa8cf", 0], ["15", "#abdda4", 0], ["20", "#66bd63", 0],
@@ -336,6 +387,12 @@ const BORDER_COLOR = {
   // bawaan yaitu PUTIH di tema gelap, sama seperti parameter lain.
   pressure_surface: "#6d7787",   // batas ABU (redup) di layer tekanan → isobar jadi garis utama
   temp_strato: "#000000",        // batas hitam di atas heatmap suhu stratosfer
+  /* Tiga layer anomali MJO, diminta pemilik 6 Oktober. Paletnya terang dan
+     pucat di tengah rentang, dan garis batas PUTIH bawaan lenyap di atas
+     kuning muda dan lavender. Hitam terbaca di seluruh pita paletnya. */
+  olr_anom: "#000000",
+  u850_anom: "#000000",
+  u200_anom: "#000000",
 };
 
 // --- LEVEL KETINGGIAN (dropdown LEVEL) ---
@@ -844,6 +901,15 @@ itczPane.style.pointerEvents = "none";
 const mjoPane = map.createPane("mjo");
 mjoPane.style.zIndex = 448;
 mjoPane.style.pointerEvents = "none";
+
+/* TULISAN zona MJO punya PANE SENDIRI di atas label peta. Pane mjo yang 448
+   ada di bawah pane label yang 650, jadi nama negara dan laut menimpa nomor
+   fase sampai hilang. Sempat terjadi.
+   Yang naik CUMA tulisannya. Bidang zona tetap di pane bawah, sebab dia
+   memang latar dan tidak boleh menutupi nama tempat. */
+const mjoKepalaPane = map.createPane("mjokepala");
+mjoKepalaPane.style.zIndex = 656;
+mjoKepalaPane.style.pointerEvents = "none";
 // Isobar: garis kontur tekanan + penanda H/L (otomatis di layer Tekanan).
 const isobarPane = map.createPane("isobar");
 isobarPane.style.zIndex = 461;
@@ -1193,6 +1259,7 @@ function setActiveLayer(layerKey) {
   renderLegend(layerKey);
   updateParChip();
   applyTheme();
+  setelHalusAnomali();
   if (velocityLayer) { map.removeLayer(velocityLayer); velocityLayer = null; } // recreate warna partikel
   // Recreate imageOverlay heatmap tiap ganti layer: elemen <img> yang sama TAK
   // di-reuse antar-layer. Mencegah "ghost" palet layer sebelumnya menembus area
@@ -3007,7 +3074,15 @@ function toggleItcz() {
 // tenang, goyangannya 0,74 derajat antar langkah, dan pusat amplop yang
 // ditemukannya 85,5 BT cocok dengan keterangan BMKG hari itu bahwa MJO sedang
 // melintasi Samudra Hindia sebelah barat Sumatra.
-const MJO_COLOR = "#6C4BD1";    // ungu nila, sengaja BUKAN magenta ITCZ (#ff2ea6)
+/* HIJAU NEON, diganti dari ungu 6 Oktober atas permintaan pemilik, dan
+   angkanya mendukung. Palet kontur anomali membentang dari biru sampai merah
+   dan TIDAK PUNYA HIJAU sama sekali, jadi hijau satu satunya hue yang tidak
+   bertabrakan dengan datanya sendiri.
+   Diukur jarak RGB ke warna palet TERDEKAT, makin jauh makin tidak mungkin
+   tertukar. Hijau ini 212, sedangkan ungu lama cuma 92, sebab ungu duduk
+   dekat ujung biru paletnya sendiri. Itu sebabnya ungu tenggelam.
+   Magenta tidak dipakai, itu milik ITCZ. */
+const MJO_COLOR = "#39ff14";
 const MJO_LINTANG = 17;         // pita digambar 17 LS sampai 17 LU
 const MJO_HALUS = 15;           // penghalusan, derajat bujur
 const MJO_K_SD = 0.6;           // ambang = rata rata + k x simpangan baku
@@ -3148,10 +3223,161 @@ function mjoAmplopAktif() {
   return null;
 }
 
+/* PENGHALUS KOTAK ANOMALI.
+   Tiga layer anomali dirender backend dari kisi 1 DERAJAT, sedangkan layer
+   lain dari 0,25 derajat. Caranya sama, resolusinya yang 4 kali lebih kasar,
+   jadi selnya 4 kali lebih besar di layar dan terbaca sebagai kotak kotak.
+
+   Yang benar benar membereskannya cuma backend, dengan merender anomali di
+   kisi yang sama dengan layer lain. Sambil menunggu itu, panenya diberi blur
+   seukuran separuh sel, dan hasilnya sudah jauh lebih enak dilihat.
+
+   BLUR DIPASANG DI PANE, bukan di elemen gambarnya. Elemen gambar diganti
+   tiap frame berubah, jadi gaya yang ditempel di situ hilang tiap slider
+   digeser. Pane-nya tetap. Pane ini isinya cuma heatmap, partikel angin ada
+   di lapisan sendiri, jadi tidak ada yang ikut buram.
+
+   Radiusnya IKUT ZOOM. Blur piksel tetap akan terlalu kuat waktu dizoom jauh
+   dan tidak terasa waktu dizoom dekat, sebab yang mau dihaluskan itu sel
+   data, bukan piksel layar. */
+const ANOM_LAYER = ["olr_anom", "u850_anom", "u200_anom"];
+const ANOM_SEL_DERAJAT = 1.0;      // kerapatan kisi anomali dari backend
+function setelHalusAnomali() {
+  const pane = map.getPane("speed");
+  if (!pane) return;
+  if (!ANOM_LAYER.includes(activeLayer)) { pane.style.filter = ""; return; }
+  const b = map.getBounds();
+  const lebarDerajat = Math.max(1e-6, b.getEast() - b.getWest());
+  const pxPerDerajat = map.getSize().x / lebarDerajat;
+  const r = Math.max(0.6, Math.min(16, pxPerDerajat * ANOM_SEL_DERAJAT * 0.45));
+  pane.style.filter = "blur(" + r.toFixed(1) + "px)";
+}
+map.on("zoomend moveend", setelHalusAnomali);
+
+/* ZONA FASE MJO DI PETA.
+   Menggantikan pita amplop lembap yang dulu dipakai waktu indeks belum ada.
+   Sekarang indeksnya ada, jadi yang digambar bukan tebakan letak selubung
+   lagi, melainkan GEOGRAFI FASE yang memang sudah baku.
+
+   Susunannya mengikuti oktagon persis. Empat zona, tiap zona dua fase, jadi
+   delapan fase. Nama zonanya sama dengan empat sisi oktagon, supaya orang
+   yang melihat kartu lalu melihat peta tidak perlu menerjemahkan apa apa.
+
+   TIDAK SEMUA ZONA BISA TERGAMBAR, dan itu disengaja. Domain kita 62 sampai
+   180 BT, sedangkan fase 8 dan 1 ada di belahan barat bumi. Yang di luar
+   dilewati, yang terpotong digambar sampai batas domain saja dan ditandai.
+
+   Batas bujurnya patokan lazim di makalah MJO. Angkanya memang tidak tunggal
+   di literatur, beda penulis beda sedikit, jadi ini dipatok di sini supaya
+   peta dan kartu tidak pernah bercerita beda. */
+/* TIAP ZONA WARNA SENDIRI, diminta pemilik. Ini sebenarnya jalan keluar yang
+   benar, dan dua percobaan sebelumnya gagal karena salah menargetkan.
+   Yang perlu kontras BUKAN zona lawan data di bawahnya, melainkan ZONA LAWAN
+   ZONA. Mata membaca batasnya, bukan warna mutlaknya. Jadi satu warna untuk
+   semua zona memang mustahil terbaca berapa pun alfanya, sedangkan tiga warna
+   berbeda langsung terbaca walau masing masing bercampur dengan datanya.
+   Hue-nya dijauhkan satu sama lain, hijau, ungu, oranye, toska. */
+const MJO_ZONA = [
+  { nama: "Samudra Hindia", warna: "#39ff14", teks: "#15611a",
+    fase: [[2, 50, 72.5], [3, 72.5, 95]] },
+  { nama: "Benua Maritim",  warna: "#b14cff", teks: "#5a1a94",
+    fase: [[4, 95, 120], [5, 120, 145]] },
+  { nama: "Pasifik barat",  warna: "#ff9500", teks: "#8a4a00",
+    fase: [[6, 145, 167.5], [7, 167.5, 190]] },
+  { nama: "Belahan barat",  warna: "#00c8ff", teks: "#00506b",
+    fase: [[8, 190, 300], [1, 300, 410]] },
+];
+const ZONA_LINTANG = 17;
+
+/* Kotak data kita, dipakai memotong zona yang menjulur keluar. Diambil dari
+   katalog kalau ada, bukan dipatok, sebab domain backend pernah berubah. */
+function zonaBatasDomain() {
+  const b = catalog && catalog.region && catalog.region.bounds;
+  return b ? [Number(b[0]), Number(b[2])] : [62, 180];
+}
+
+function gambarZonaMjo() {
+  if (!mjoPunyaIndeks()) return false;
+  const faseKini = Number(mjo.indeks.fase);
+  const amp = Number(mjo.indeks.amplitudo);
+  /* Amplitudo di bawah 1 berarti titiknya di DALAM lingkaran satuan, dan di
+     situ nomor fasenya tidak berarti. Zonanya tetap digambar supaya orang
+     tahu petanya dibagi apa, tapi TIDAK ADA yang berkedip. Berkedip waktu
+     fasenya sendiri tidak berarti itu berbohong. */
+  const lemah = !(amp >= 1);
+  const [dW, dE] = zonaBatasDomain();
+  /* Leaflet pakai renderer KANVAS di app ini, dan kanvas tidak bisa
+     dianimasikan CSS. Kedipnya CSS, jadi pane ini dipaksa SVG. */
+  const svg = L.svg({ pane: "mjo" });
+
+  MJO_ZONA.forEach((z) => {
+    const faseTampak = z.fase
+      .map(([f, a, b]) => [f, Math.max(a, dW), Math.min(b, dE), a < dW, b > dE])
+      .filter(([, a, b]) => b - a > 0.5);
+    if (!faseTampak.length) return;               // zona ini di luar domain
+    const zonaAktif = !lemah && z.fase.some(([f]) => f === faseKini);
+    const zW = Math.min(...faseTampak.map((x) => x[1]));
+    const zE = Math.max(...faseTampak.map((x) => x[2]));
+
+    // Bidang zona, warnanya sendiri. Yang menampung fase sekarang berdenyut.
+    L.rectangle([[-ZONA_LINTANG, zW], [ZONA_LINTANG, zE]], {
+      pane: "mjo", renderer: svg, interactive: false,
+      className: "mjo-zona" + (zonaAktif ? " mjo-zona-aktif" : ""),
+      stroke: false, fillColor: z.warna, fillOpacity: 1,
+    }).addTo(mjoGroup);
+
+    faseTampak.forEach(([f, a, b, potongBarat, potongTimur]) => {
+      const aktif = !lemah && f === faseKini;
+      // Fase yang ditempati, warna zona yang sama tapi lebih pekat.
+      if (aktif) {
+        L.rectangle([[-ZONA_LINTANG, a], [ZONA_LINTANG, b]], {
+          pane: "mjo", renderer: svg, interactive: false,
+          className: "mjo-fase-aktif", stroke: false,
+          fillColor: z.warna, fillOpacity: 1,
+        }).addTo(mjoGroup);
+      }
+      /* Garis pemisah cuma di tepi yang NYATA. Tepi yang berimpit batas
+         domain itu bukan batas fase, itu tempat data kita habis. */
+      [[a, potongBarat], [b, potongTimur]].forEach(([lon, potong]) => {
+        if (potong) return;
+        L.polyline([[-ZONA_LINTANG, lon], [ZONA_LINTANG, lon]], {
+          pane: "mjo", renderer: svg, interactive: false,
+          className: "mjo-garis-fase" + (aktif ? " aktif" : ""),
+          color: z.warna, weight: aktif ? 2.4 : 1.2,
+        }).addTo(mjoGroup);
+      });
+      // Nomor fase. Di pane ATAS label peta, kalau tidak dia tertimpa.
+      L.marker([ZONA_LINTANG - 1.8, (a + b) / 2], {
+        pane: "mjokepala", interactive: false, keyboard: false,
+        icon: L.divIcon({
+          className: "", iconSize: [34, 20], iconAnchor: [17, 10],
+          html: '<span class="mjo-no-fase' + (aktif ? " aktif" : "")
+                + '" style="color:' + z.teks + '">' + f + "</span>",
+        }),
+      }).addTo(mjoGroup);
+    });
+
+    // Nama zona di bawah, satu per zona.
+    L.marker([-ZONA_LINTANG + 2.4, (zW + zE) / 2], {
+      pane: "mjokepala", interactive: false, keyboard: false,
+      icon: L.divIcon({
+        className: "", iconSize: [170, 16], iconAnchor: [85, 8],
+        html: '<span class="mjo-nama-zona' + (zonaAktif ? " aktif" : "")
+              + '" style="color:' + z.teks + '">' + escHtml(z.nama) + "</span>",
+      }),
+    }).addTo(mjoGroup);
+  });
+  return true;
+}
+
 function refreshMjo() {
   if (!mjoGroup) return;
   mjoGroup.clearLayers();
   if (!mjoOn) return;
+  /* Kalau indeksnya ada, yang digambar ZONA FASE. Amplop lembap cuma dipakai
+     waktu backend belum mengirim indeks, dan dia memang cuma tebakan letak
+     selubung dari kelembapan. Dua duanya sekaligus akan saling menutupi. */
+  if (gambarZonaMjo()) return;
   const daftar = mjoAmplopAktif();
   if (!daftar || !daftar.length) return;
   daftar.forEach((a, idx) => {
@@ -3473,8 +3699,23 @@ const hovPunya = () => !!(mjo && !mjo.kosong && mjo.hovmoller
 /* Palet dan batasnya diambil dari LEGENDS layer anomali yang sama, BUKAN
    palet sendiri. Kalau Hovmoller punya palet sendiri, satu nilai akan
    berwarna dua macam di dua tempat dan itu menyesatkan. */
+/* HOVMOLLER MEMAKAI SKALANYA SENDIRI, dan sengaja TIDAK ikut legenda peta.
+   Di peta, angin ditampilkan satu sisi saja, baratan untuk 850 dan timuran
+   untuk 200, sebab di sana yang dicari letak pusat konveksinya.
+   Di Hovmoller yang dicari RAMBATANNYA, dan rambatan itu terbaca dari pita
+   positif dan negatif yang berselang seling miring ke kanan bawah. Satu sisi
+   saja akan menghapus separuh polanya, justru di tampilan yang seluruh
+   gunanya memperlihatkan pola itu.
+   Jadi ketiganya memakai palet dua sisi yang sama dengan OLR. Diminta
+   pemilik, dan memang begitu yang benar. */
+const HOV_SKALA_DEF = {
+  olr_anom: legendaAnom("W/m2", 5),
+  u850_anom: legendaAnom("m/detik", 2),
+  u200_anom: legendaAnom("m/detik", 2),
+};
+
 function hovSkala(kunci) {
-  const sel = (LEGENDS[kunci] || {}).cells || [];
+  const sel = (HOV_SKALA_DEF[kunci] || {}).cells || [];
   if (sel.length < 3) return null;
   const b0 = parseFloat(sel[0][0]);
   const langkah = parseFloat(sel[1][0]) - b0;
@@ -3750,7 +3991,7 @@ function gambarHovmoller() {
 function isiHovLegenda() {
   const el = $("hov-legenda");
   if (!el) return;
-  const def = LEGENDS[hovParam] || { cells: [], head: "" };
+  const def = HOV_SKALA_DEF[hovParam] || { cells: [], head: "" };
   el.innerHTML = '<span class="hov-lg-kep">' + escHtml(def.head) + "</span>"
     + def.cells.map(([lab, hex, gelap]) =>
         '<span class="hov-lg-sel' + (gelap ? " gelap" : "") + '" style="background:'

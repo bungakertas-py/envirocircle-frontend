@@ -790,8 +790,8 @@ html, body {
    Warna itu sengaja jauh dari magenta ITCZ sebab dua fitur ini sering
    dinyalakan bersamaan di peta yang sama, dan ungu tidak dipakai satu pun
    palet data jadi dia tidak bisa disalahartikan sebagai nilai. */
-.mjo-sw-band { background: rgba(108,75,209,.26); }
-.mjo-sw-line { height: 0; border: none; border-top: 3px dashed #6C4BD1; }
+.mjo-sw-band { background: rgba(57,255,20,.34); }
+.mjo-sw-line { height: 0; border: none; border-top: 3px dashed #2faa14; }
 /* RUANG FASE RMM. Tata letaknya meniru diagram resmi BoM, warnanya palet
    kita. Garis bingkai dan garis bagi sengaja tipis dan pudar, yang harus
    menonjol cuma tiga, juring padam, ekor, dan titik hari ini. */
@@ -822,7 +822,11 @@ html, body {
 .okt-ekor { fill: none; stroke: var(--aksen); stroke-width: 1.5; opacity: .75;
   stroke-linejoin: round; stroke-linecap: round; }
 .okt-awal { fill: var(--aksen); }
-.okt-kini { fill: #6C4BD1; stroke: var(--paper); stroke-width: 2; }
+/* Titik hari ini di oktagon SEWARNA dengan zona di peta, supaya "hijau itu
+   tempat MJO sekarang" jadi satu gagasan di kartu dan di peta sekaligus.
+   Dipekatkan sedikit dari neon petanya, sebab di sini dia titik kecil di atas
+   kertas putih, bukan bidang lebar di atas peta. */
+.okt-kini { fill: #2faa14; stroke: var(--paper); stroke-width: 2; }
 .mjo-kaki { font-family: var(--font-ui); font-size: 10px; color: var(--variant);
   line-height: 1.45; max-width: 240px; }
 .mjo-kaki b { font-weight: 700; color: var(--ink); }
@@ -908,6 +912,49 @@ html, body {
   .hov-kartu { padding: 14px 14px 12px; }
   .hov-kepala { padding-right: 26px; }
   .hov-judul { font-size: 16px; }
+}
+
+/* ZONA FASE MJO DI PETA. Empat zona mengikuti empat sisi oktagon, tiap zona
+   dua fase, dan TIAP ZONA WARNANYA SENDIRI.
+
+   Warna per zona itu jalan keluarnya, dan dua percobaan sebelumnya gagal
+   karena salah menargetkan. Yang perlu kontras BUKAN zona lawan data di
+   bawahnya, melainkan ZONA LAWAN ZONA. Mata membaca batasnya, bukan warna
+   mutlaknya. Satu warna untuk semua zona memang mustahil terbaca berapa pun
+   alfanya, sebab dia bercampur dengan data dan tidak punya pembanding.
+
+   Warnanya ditulis inline oleh JS dari daftar MJO_ZONA, jadi di sini cuma
+   alfanya. */
+.mjo-zona { fill-opacity: .26; }
+.mjo-zona-aktif { animation: mjo-denyut-zona 2.6s ease-in-out infinite; }
+.mjo-fase-aktif { fill-opacity: .30; animation: mjo-denyut-fase 2.6s ease-in-out infinite; }
+@keyframes mjo-denyut-zona { 0%, 100% { fill-opacity: .26; } 50% { fill-opacity: .44; } }
+@keyframes mjo-denyut-fase { 0%, 100% { fill-opacity: .22; } 50% { fill-opacity: .46; } }
+.mjo-garis-fase { stroke-opacity: .75; stroke-dasharray: 5 5; }
+.mjo-garis-fase.aktif { stroke-opacity: 1; stroke-dasharray: none; }
+
+/* Tulisan memakai warna TUA dari zonanya, bukan warna neonnya, dan berhalo
+   kertas. Neon di atas halo kertas praktis tidak terbaca. */
+.mjo-no-fase, .mjo-nama-zona {
+  display: block; text-align: center; font-family: var(--font-ui);
+  white-space: nowrap;
+  text-shadow: 0 0 3px var(--paper), 0 0 6px var(--paper), 0 1px 2px var(--paper);
+}
+.mjo-no-fase { font-size: 14px; font-weight: 300; letter-spacing: .04em;
+  line-height: 20px; opacity: .85; }
+.mjo-nama-zona { font-size: 9px; font-weight: 300; letter-spacing: .1em;
+  text-transform: uppercase; opacity: .8; }
+.mjo-no-fase.aktif, .mjo-nama-zona.aktif {
+  font-weight: 700; opacity: 1; animation: mjo-kedip 2.6s ease-in-out infinite;
+}
+@keyframes mjo-kedip { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* Gerakan dikurangi. Yang berdenyut DIBIARKAN TAMPAK, cuma berhenti bergerak,
+   sebab denyut itu satu satunya penanda fase mana yang sedang ditempati. */
+@media (prefers-reduced-motion: reduce) {
+  .mjo-zona-aktif, .mjo-fase-aktif, .mjo-no-fase.aktif, .mjo-nama-zona.aktif { animation: none; }
+  .mjo-zona-aktif { fill-opacity: .38; }
+  .mjo-fase-aktif { fill-opacity: .40; }
 }
 
 .mjo-sumber {
