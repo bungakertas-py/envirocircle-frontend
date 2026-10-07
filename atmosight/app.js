@@ -650,7 +650,10 @@ function terapkanFiturModel() {
   if (tbAu) {
     var wAu = tbAu.closest(".fit-wrap") || tbAu;
     wAu.style.display = "none";
-    berkasAda("ausmi.json").then(function (ada) { if (ada) wAu.style.display = ""; });
+    /* Lewat cariAusmi, BUKAN berkasAda. berkasAda cuma melihat sumber yang
+       sedang dipakai, dan selama ausmi.json belum ada di cirrus tombolnya
+       tidak akan pernah muncul walau cadangan sudah memuatnya. */
+    cariAusmi().then(function (base) { if (base) wAu.style.display = ""; });
   }
   if (PUNYA_EKSTRA) return;
   // Sembunyikan dulu semuanya, baru dimunculkan satu satu yang berkasnya ada.
@@ -5054,16 +5057,51 @@ function setupHP() {
    berwarna lama yang tidak ada yang ingat harus ikut diubah. */
 const AUSMI_WARNA = MON_AMBER[2];
 let ausmiData = null, ausmiMuat = null, ausmiOn = false, ausmiGroup = null;
+let ausmiBase = null, ausmiCari = null;
 
 function ausmiPunya() { return !!(ausmiData && ausmiData.kini); }
+
+/* MUNDUR KE CADANGAN PER BERKAS, dan ini perlu alasan sebab dia menyimpang
+   dari aturan sumber yang berlaku di app ini.
+
+   Aturan biasa memilih sumber SEKALI untuk SELURUH folder model, patokannya
+   umur catalog.json. Selama kiriman cirrus sehat dan belum 24 jam, cadangan
+   tidak pernah ditanya sama sekali. Benar untuk medan peta, sebab mencampur
+   bingkai dari dua masakan berbeda di satu slider itu menyesatkan.
+
+   Tapi untuk berkas yang BELUM PERNAH ADA di cirrus, aturan itu membuat
+   fiturnya gelap selamanya. Dilaporkan pemilik, AUSMI tidak muncul padahal
+   sudah dipasang, sebab catalog.json cirrus masih segar sehingga cadangan
+   yang sudah memuat ausmi.json tidak pernah dilirik.
+
+   Jadi khusus berkas ini, kalau yang dekat menjawab 404, cadangan ditanya.
+   Aman sebab AUSMI itu indeks yang berdiri sendiri, bukan bingkai yang harus
+   sejalan dengan bingkai lain, dan dua duanya dihitung dari analisis GFS yang
+   sama. Yang TIDAK dilakukan, memakai cadangan waktu yang dekat ADA, sekalipun
+   cadangannya lebih segar. Yang dekat tetap menang kalau dia ada.
+
+   Asalnya disebutkan di baner, supaya tidak ada angka yang sumbernya diam
+   diam berbeda dari chip di bilah bawah. */
+function cariAusmi() {
+  if (ausmiCari) return ausmiCari;
+  const coba = (base) => fetch(base + "ausmi.json", { method: "HEAD", cache: "no-store" })
+    .then((r) => (r.ok ? base : null)).catch(() => null);
+  ausmiCari = coba(DATA_BASE).then((b) => {
+    if (b) return b;
+    const boleh = !!DATA_CADANGAN && MODEL_ID === MODEL_GLOBAL && DATA_BASE !== DATA_CADANGAN;
+    return boleh ? coba(DATA_CADANGAN) : null;
+  }).then((b) => (ausmiBase = b));
+  return ausmiCari;
+}
 
 function muatAusmi() {
   if (ausmiData) return Promise.resolve(ausmiData);
   if (!ausmiMuat) {
-    ausmiMuat = fetch(DATA_BASE + "ausmi.json", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => (ausmiData = j))
-      .catch(() => (ausmiData = null));
+    ausmiMuat = cariAusmi().then((base) => {
+      if (!base) return null;
+      return fetch(base + "ausmi.json", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null));
+    }).then((j) => (ausmiData = j)).catch(() => (ausmiData = null));
   }
   return ausmiMuat;
 }
@@ -5144,7 +5182,9 @@ function ausmiIsiNote() {
     /* Bias yang BELUM diukur disebut apa adanya. Kalau tidak, anomali di atas
        terbaca seolah olah sudah bersih padahal nilai hariannya dari GFS dan
        klimatologinya dari reanalisis, dua model yang berbeda. */
-    sisip.textContent = `Klimatologi ${ki.periode || "-"}, ${ki.sumber || "-"}.`
+    const dariCadangan = ausmiBase && ausmiBase === DATA_CADANGAN && DATA_BASE !== DATA_CADANGAN;
+    sisip.textContent = (dariCadangan ? "Indeks ini dari cadangan GitAction, bukan dari cirrus seperti peta di belakangnya. " : "")
+      + `Klimatologi ${ki.periode || "-"}, ${ki.sumber || "-"}.`
       + (ausmiData.bias_terukur == null
           ? " Selisih model lawan reanalisis belum diukur, anomali di atas belum dikoreksi."
           : ` Selisih model lawan reanalisis ${ausmiData.bias_terukur > 0 ? "+" : ""}`
