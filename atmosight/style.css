@@ -3815,3 +3815,73 @@ body { font-weight: 200; }
 @media (max-width: 640px) {
   .zoom-baris { gap: 6px; }
 }
+
+/* =====================================================================
+   AUSMI, 7 Oktober 2026
+   Cangkang banernya menumpang .cyc-note dan .mjo-hov-btn yang sudah ada,
+   jadi di sini cuma yang khas AUSMI saja.
+   ===================================================================== */
+
+/* Peringatan istilah. Sengaja BUKAN merah. Ini bukan galat dan bukan bahaya,
+   ini catatan baca, dan warna alarm di sini akan menyaingi alarm hujan yang
+   memang sungguhan. Garis kiri saja, pola yang sama dengan kutipan. */
+.ausmi-awas {
+  border-left: 2px solid var(--aksen);
+  padding: 2px 0 2px 9px; margin: 8px 0 2px;
+  font-size: 11.5px; font-weight: 200; line-height: 1.45; color: var(--ink-70);
+}
+
+.ausmi-angka { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-top: 10px; }
+.ausmi-besar { font-size: 26px; font-weight: 300; letter-spacing: -.01em; color: var(--ink); }
+.ausmi-sat { font-size: 11px; font-weight: 200; color: var(--ink-50); margin-right: 4px; }
+.ausmi-arah {
+  flex: 1 0 100%; font-size: 11.5px; font-weight: 300;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+/* Dua keadaan ini DIBEDAKAN WARNA, sebab inilah satu satunya hal yang perlu
+   terbaca dari jarak sekilas. Biru untuk baratan mengikuti aksen app, abu
+   untuk timuran sebab itu keadaan diam. */
+.ausmi-arah.is-aktif { color: var(--aksen); }
+.ausmi-arah.is-lemah { color: var(--ink-50); }
+.ausmi-anom { flex: 1 0 100%; font-size: 11px; font-weight: 200; color: var(--ink-50); }
+
+.ausmi-onset {
+  margin-top: 8px; padding-top: 8px; border-top: 0.7px solid var(--ink-20);
+  font-size: 11.5px; font-weight: 200; color: var(--ink-70);
+}
+.ausmi-onset b { font-weight: 300; color: var(--ink); margin-right: 5px; }
+
+/* Label kotak di peta. Berdiri di atas peta jadi putih berhalo, pola yang
+   sama dengan nama kota. */
+.ausmi-tag { white-space: nowrap; }
+.ausmi-tag-in {
+  display: inline-block; transform: translate(-50%, -130%);
+  font-family: var(--font-ui); font-size: 11px; font-weight: 200;
+  letter-spacing: .06em; color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, .95), 0 0 7px rgba(0, 0, 0, .75);
+}
+.ausmi-tag-in b { font-weight: 400; letter-spacing: .1em; }
+
+/* Kartu grafik. Lebih pendek daripada Hovmoller, isinya satu grafik saja. */
+.ausmi-kartu { max-width: 860px; }
+.ausmi-kini { text-align: right; font-size: 11px; font-weight: 200; color: var(--ink-50); }
+.ausmi-kini b { display: block; font-size: 22px; font-weight: 300; color: var(--ink); }
+.ausmi-kini span { display: block; }
+.ausmi-plot { width: 100%; }
+.au-svg { width: 100%; height: auto; display: block; }
+.au-bantu { stroke: var(--ink-20); stroke-width: 0.7; }
+/* Garis nol DIPERTEBAL. Tanda indeks inilah yang punya arti, di atas nol
+   baratan di bawah nol timuran, jadi batas itu bukan garis bantu biasa. */
+.au-nol { stroke: var(--ink-50); stroke-width: 1.1; }
+.au-axl { font-family: var(--font-ui); font-size: 9px; font-weight: 200; fill: var(--ink-50); }
+.au-klim { fill: none; stroke: var(--ink-50); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.au-mentah { fill: none; stroke: var(--ink-20); stroke-width: 1; }
+.au-halus { fill: none; stroke: var(--aksen); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.au-kini { fill: var(--aksen); stroke: #fff; stroke-width: 1.2; }
+.au-onset { stroke: var(--aksen); stroke-width: 1; stroke-dasharray: 3 3; }
+.au-onset-lbl { font-family: var(--font-ui); font-size: 9px; font-weight: 300; letter-spacing: .08em; fill: var(--aksen); }
+
+@media (max-width: 640px) {
+  .ausmi-kartu { max-width: calc(100vw - 24px); }
+  .ausmi-besar { font-size: 22px; }
+}

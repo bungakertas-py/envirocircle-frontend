@@ -385,6 +385,39 @@
             </button>
             </div>
           </div>
+          <!-- AUSMI, 7 Oktober 2026. Saudara MJO, sama sama indeks dari
+               u850, bedanya AUSMI satu KOTAK tetap sedangkan MJO satu pita
+               bujur yang bergerak. Tombolnya menggambar kotaknya di peta,
+               supaya angkanya kelihatan datang dari mana. Disembunyikan
+               sampai modelnya punya ausmi.json, lihat terapkanFiturModel. -->
+          <div class="fit-wrap">
+            <button id="ausmi-toggle" class="icon-btn" aria-label="Kotak indeks AUSMI, monsun Australia" data-tip="AUSMI"><span class="material-symbols-outlined">swap_horiz</span></button>
+            <div id="ausmi-note" class="cyc-note ausmi-note">
+            <div class="cyc-note-top">
+            <span class="material-symbols-outlined">swap_horiz</span>
+            <span class="cyc-note-txt">AUSMI</span>
+            </div>
+            <div class="cyc-detail">
+            <div class="itcz-lead">Indeks monsun Australia. Angin timur barat di ketinggian 850 hPa dirata ratakan di satu kotak tetap di utara Australia. Baratan berarti monsunnya aktif dan Indonesia masuk musim hujan, timuran berarti sebaliknya.</div>
+            <!-- JEBAKAN ISTILAH, ditulis di layar bukan cuma di kode. Banner
+                 Monsun di sebelah memakai istilah Indonesia, tempat "Monsun
+                 Australia" justru berarti musim KEMARAU. AUSMI memakai
+                 istilah internasional dan artinya hampir berlawanan. Tanpa
+                 kalimat ini dua banner itu terbaca saling bertentangan. -->
+            <div class="ausmi-awas">Jangan tertukar dengan banner Monsun. Di sana "Monsun Australia" berarti angin timuran, musim kemarau. Di sini AUSMI aktif berarti baratan, musim hujan.</div>
+            <div id="ausmi-angka" class="ausmi-angka" hidden></div>
+            <div id="ausmi-onset" class="ausmi-onset" hidden></div>
+            <button type="button" id="ausmi-buka" class="mjo-hov-btn" hidden>
+              <span class="material-symbols-outlined">show_chart</span>
+              <span>Grafik musiman dan onset</span>
+            </button>
+            <div id="ausmi-sumber" class="mjo-sumber"></div>
+            </div>
+            <button type="button" class="cyc-tab" id="ausmi-note-toggle" aria-label="Tampilkan keterangan AUSMI">
+            <span class="material-symbols-outlined cyc-caret">expand_more</span>
+            </button>
+            </div>
+          </div>
           <!-- Alarm hujan, 4 Oktober 2026. MENYALA sejak awal, beda dengan
                fitur lain di baris ini yang mati sampai dinyalakan. Dia alarm,
                jadi dia harus sudah bekerja sebelum orang mencarinya. -->
@@ -542,6 +575,27 @@
           <p class="hov-ket">Anomali dirata ratakan 15&deg;LS sampai 15&deg;LU. Waktu mengalir ke bawah, jadi gejala yang merambat ke timur terbaca sebagai garis miring ke kanan bawah. Dua garis putus menandai bujur Indonesia, 95 sampai 141&deg;BT.</p>
         </div>
         <div id="hov-kosong" class="hov-pesan" hidden>Deret Hovmoller belum dikirim backend untuk model ini. Diagram ini butuh puluhan hari data ke belakang, dan prakiraan 72 jam saja tidak cukup untuk memperlihatkan rambatan MJO.</div>
+      </div>
+    </div>
+
+    <!-- ============ KARTU GRAFIK AUSMI ============
+         Cangkangnya meniru kartu Hovmoller, klik di luar dan Escape, supaya
+         perilaku semua kartu melayang di app ini seragam. -->
+    <div id="ausmi-overlay" class="about-overlay">
+      <div id="ausmi-card" class="hov-kartu ausmi-kartu" role="dialog" aria-modal="true" aria-label="Grafik AUSMI">
+        <button id="ausmi-close" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <div class="hov-kepala">
+          <div>
+            <span class="hov-label">AUSMI</span>
+            <h3 class="hov-judul">Monsun Australia</h3>
+          </div>
+          <div id="ausmi-kini" class="ausmi-kini"></div>
+        </div>
+        <div class="hov-badan">
+          <div id="ausmi-plot" class="ausmi-plot"></div>
+          <div id="ausmi-kosong" class="hov-pesan" hidden></div>
+          <p class="hov-ket">Garis tebal nilai harian yang sudah dihaluskan lima hari, garis tipis nilai mentahnya, garis putus klimatologi 1991 sampai 2020. Di atas nol berarti baratan, monsun aktif.</p>
+        </div>
       </div>
     </div>
 

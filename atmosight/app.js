@@ -639,6 +639,19 @@ function terapkanFiturModel() {
       } catch (e) { /* tetap tersembunyi */ }
     })();
   }
+  /* AUSMI disetel di sini juga, sebelum cabang PUNYA_EKSTRA, dengan sebab
+     yang sama seperti MJO dan Skew-T di atas. Bedanya dia TIDAK punya jalur
+     cadangan dari profil. MJO masih bisa menghitung amplop lembap sendiri
+     kalau indeksnya belum dikirim, AUSMI tidak, sebab tanpa klimatologi
+     angkanya tidak bisa disebut di atas atau di bawah normal dan tanpa
+     riwayat tidak ada yang bisa digambar. Jadi tombolnya ada kalau
+     berkasnya ada, titik. */
+  var tbAu = $("ausmi-toggle");
+  if (tbAu) {
+    var wAu = tbAu.closest(".fit-wrap") || tbAu;
+    wAu.style.display = "none";
+    berkasAda("ausmi.json").then(function (ada) { if (ada) wAu.style.display = ""; });
+  }
   if (PUNYA_EKSTRA) return;
   // Sembunyikan dulu semuanya, baru dimunculkan satu satu yang berkasnya ada.
   // Urutannya begini supaya tombol tidak sempat terlihat lalu hilang lagi.
@@ -2392,6 +2405,7 @@ function updateHash() {
   if (cyclonesOn) p.set("c", "1");
   if (itczOn) p.set("z", "1");
   if (mjoOn) p.set("j", "1");
+  if (ausmiOn) p.set("a", "1");
   if (monsoonOn) p.set("m", "1");
   history.replaceState(null, "", location.pathname + location.search + "#" + p.toString());
 }
@@ -2423,6 +2437,7 @@ function restoreFromHash() {
   if (p.get("c") === "1" && !cyclonesOn) toggleCyclones();
   if (p.get("z") === "1" && !itczOn) toggleItcz();
   if (p.get("j") === "1" && !mjoOn) toggleMjo();
+  if (p.get("a") === "1" && !ausmiOn) toggleAusmi();
   if (p.get("m") === "1" && !monsoonOn) toggleMonsoon();
   const pt = p.get("p");
   if (pt) {
@@ -4643,6 +4658,11 @@ async function init() {
     });
     $("skewt-toggle")?.addEventListener("click", () => setSkewtMode(!skewtMode));
     $("hov-buka")?.addEventListener("click", bukaHovmoller);
+    $("ausmi-toggle")?.addEventListener("click", toggleAusmi);
+    $("ausmi-note-toggle")?.addEventListener("click", () => $("ausmi-note").classList.toggle("open"));
+    $("ausmi-buka")?.addEventListener("click", bukaAusmi);
+    $("ausmi-close")?.addEventListener("click", tutupAusmi);
+    $("ausmi-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupAusmi(); });
     $("hov-close")?.addEventListener("click", tutupHovmoller);
     $("hov-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupHovmoller(); });
     document.querySelectorAll("#hov-tab .hov-tab-btn").forEach((b) =>
@@ -4654,6 +4674,7 @@ async function init() {
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if ($("hov-overlay")?.classList.contains("show")) tutupHovmoller();
+      if ($("ausmi-overlay")?.classList.contains("show")) tutupAusmi();
       if ($("skt-overlay")?.classList.contains("show")) tutupSkewT();
       else if (skewtMode) setSkewtMode(false);
     });
@@ -5003,3 +5024,260 @@ function setupHP() {
     { attributes: true, subtree: true, attributeFilter: ["class", "style"] });
   susunKeterangan();
 }
+
+/* =====================================================================
+   AUSMI, INDEKS MONSUN AUSTRALIA, 7 Oktober 2026
+   Diminta pemilik lewat Alvin, saudara MJO.
+
+   AUSMI itu u850 dirata ratakan di kotak 5 sampai 15 LS, 110 sampai 130 BT.
+   Kajikawa, Wang, Yang 2010. Baratan berarti monsun aktif, timuran berarti
+   lemah. Semuanya dihitung backend, berkasnya ausmi.json, frontend di sini
+   cuma menayangkan.
+
+   JEBAKAN ISTILAH, dan ini sudah ditulis juga di layar. Banner Monsun di
+   sebelah memakai istilah Indonesia, tempat "Monsun Australia" berarti angin
+   timuran alias musim KEMARAU. AUSMI memakai istilah internasional, dan
+   AUSMI aktif berarti baratan alias musim HUJAN. Dua banner bertetangga yang
+   artinya hampir berlawanan, jadi keduanya WAJIB tetap berketerangan.
+
+   Tombolnya menggambar KOTAKNYA di peta. Angka indeks tanpa tempat itu cuma
+   angka, dan kotaknya kecil serta tetap, jadi menggambarnya murah dan
+   langsung menjawab "ini dihitung dari mana".
+   ===================================================================== */
+/* Warnanya DIAMBIL DARI MON_AMBER, skala yang sudah dipakai partikel
+   velocity waktu monsun Australia sedang dominan, dan nilai tengahnya
+   #ffb020 itu juga yang jadi titik penanda AUS. Diminta pemilik.
+
+   Sengaja menunjuk konstanta itu, bukan menyalin hex-nya ke sini. Kotak
+   AUSMI dan partikel monsun menggambarkan gejala yang SAMA, jadi kalau
+   suatu hari paletnya digeser, menyalin berarti meninggalkan satu kotak
+   berwarna lama yang tidak ada yang ingat harus ikut diubah. */
+const AUSMI_WARNA = MON_AMBER[2];
+let ausmiData = null, ausmiMuat = null, ausmiOn = false, ausmiGroup = null;
+
+function ausmiPunya() { return !!(ausmiData && ausmiData.kini); }
+
+function muatAusmi() {
+  if (ausmiData) return Promise.resolve(ausmiData);
+  if (!ausmiMuat) {
+    ausmiMuat = fetch(DATA_BASE + "ausmi.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => (ausmiData = j))
+      .catch(() => (ausmiData = null));
+  }
+  return ausmiMuat;
+}
+
+function ausmiGambarKotak() {
+  if (!ausmiGroup) ausmiGroup = L.layerGroup([], { pane: "mjo" });
+  ausmiGroup.clearLayers();
+  if (!ausmiPunya()) return;
+  const k = ausmiData.kotak;
+  if (!k) return;
+  const sudut = [[k.latS, k.lonW], [k.latN, k.lonE]];
+  L.rectangle(sudut, {
+    pane: "mjo", color: AUSMI_WARNA, weight: 1.6, opacity: 0.95,
+    // Putus putus, sengaja. Kotak ini WILAYAH HITUNG, bukan gejala cuaca,
+    // sedangkan garis utuh di peta ini sudah berarti sesuatu yang fisik
+    // seperti ITCZ dan lintasan siklon.
+    dashArray: "6 5",
+    // Alfa dinaikkan 0,10 ke 0,18, diminta pemilik. Masih cukup bening untuk
+    // membaca medan angin di bawahnya, yang memang harus tetap terbaca sebab
+    // itulah yang diringkas angka AUSMI.
+    fillColor: AUSMI_WARNA, fillOpacity: 0.18, interactive: false,
+  }).addTo(ausmiGroup);
+  /* Label di pane kepala, bukan pane mjo. Pane mjo itu 448 dan ada di bawah
+     label peta yang 650, jadi nama laut akan menimpa angkanya. Pelajaran
+     yang sama sudah kena waktu menomori zona MJO. */
+  const kini = ausmiData.kini;
+  const tanda = kini.nilai > 0 ? "+" : "";
+  /* Label ditaruh di tepi BAWAH kotak. Tepi atasnya di 5 LS jatuh di Laut
+     Jawa yang penuh nama kota, dan tulisannya langsung bertabrakan dengan
+     Makassar dan Semarang. Tepi bawahnya di 15 LS laut lepas, kosong. */
+  L.marker([k.latS, (k.lonW + k.lonE) / 2], {
+    pane: "mjokepala", interactive: false,
+    icon: L.divIcon({
+      className: "ausmi-tag",
+      html: `<span class="ausmi-tag-in"><b>AUSMI</b> ${tanda}${kini.nilai.toFixed(1)} m/s`
+          + ` &middot; ${kini.arah}</span>`,
+      iconSize: null,
+    }),
+  }).addTo(ausmiGroup);
+}
+
+function ausmiIsiNote() {
+  const angka = $("ausmi-angka");
+  const onset = $("ausmi-onset");
+  const sisip = $("ausmi-sumber");
+  const tombol = $("ausmi-buka");
+  if (!ausmiPunya()) {
+    if (angka) angka.hidden = true;
+    if (onset) onset.hidden = true;
+    if (tombol) tombol.hidden = true;
+    if (sisip) sisip.textContent = "Indeks AUSMI belum dikirim untuk model ini.";
+    return;
+  }
+  const k = ausmiData.kini;
+  const tanda = k.nilai > 0 ? "+" : "";
+  const aTanda = k.anomali > 0 ? "+" : "";
+  if (angka) {
+    angka.hidden = false;
+    angka.innerHTML =
+      `<span class="ausmi-besar">${tanda}${k.nilai.toFixed(1)}</span>`
+    + `<span class="ausmi-sat">m/s</span>`
+    + `<span class="ausmi-arah ${k.aktif ? "is-aktif" : "is-lemah"}">`
+    + `${k.aktif ? "baratan, monsun aktif" : "timuran, monsun lemah"}</span>`
+    + `<span class="ausmi-anom">${aTanda}${k.anomali.toFixed(1)} dari normal`
+    + (k.sigma == null ? "" : ` &middot; ${k.sigma > 0 ? "+" : ""}${k.sigma.toFixed(1)} sigma`)
+    + `</span>`;
+  }
+  if (onset) {
+    const o = ausmiData.onset || {};
+    onset.hidden = false;
+    onset.innerHTML = o.tanggal
+      ? `<b>Onset ${o.musim}</b> ${tglPendek(o.tanggal)}`
+      : `<b>Onset ${o.musim || ""}</b> ${o.catatan || "belum"}`;
+  }
+  if (tombol) tombol.hidden = !(ausmiData.deret && ausmiData.deret.hari && ausmiData.deret.hari.length > 2);
+  if (sisip) {
+    const ki = ausmiData.klim_info || {};
+    /* Bias yang BELUM diukur disebut apa adanya. Kalau tidak, anomali di atas
+       terbaca seolah olah sudah bersih padahal nilai hariannya dari GFS dan
+       klimatologinya dari reanalisis, dua model yang berbeda. */
+    sisip.textContent = `Klimatologi ${ki.periode || "-"}, ${ki.sumber || "-"}.`
+      + (ausmiData.bias_terukur == null
+          ? " Selisih model lawan reanalisis belum diukur, anomali di atas belum dikoreksi."
+          : ` Selisih model lawan reanalisis ${ausmiData.bias_terukur > 0 ? "+" : ""}`
+            + `${Number(ausmiData.bias_terukur).toFixed(2)} m/s, sudah dikoreksi.`);
+  }
+}
+
+function tglPendek(iso) {
+  const B = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const d = new Date(iso + "T00:00:00Z");
+  return `${d.getUTCDate()} ${B[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+function toggleAusmi() {
+  ausmiOn = !ausmiOn;
+  $("ausmi-toggle")?.classList.toggle("active", ausmiOn);
+  const note = $("ausmi-note");
+  if (ausmiOn) {
+    muatAusmi().then(() => {
+      ausmiIsiNote();
+      ausmiGambarKotak();
+      if (ausmiGroup) ausmiGroup.addTo(map);
+    });
+    if (note) note.classList.add("show");
+  } else {
+    if (ausmiGroup) map.removeLayer(ausmiGroup);
+    if (note) note.classList.remove("show");
+  }
+  updateHash();
+}
+
+/* ---- Grafik musiman. SVG ditulis tangan, bukan lewat chartSVG.
+   chartSVG dibuat untuk deret tunggal di panel titik, sedangkan di sini ada
+   TIGA deret sekaligus, mentah, halus, dan klimatologi, plus garis nol yang
+   harus tepat sebab tanda indeks inilah yang punya arti. Memaksanya masuk ke
+   sana berarti menambah cabang di fungsi yang dipakai belasan grafik lain. */
+function gambarAusmi() {
+  const wadah = $("ausmi-plot");
+  const kosong = $("ausmi-kosong");
+  if (!wadah) return;
+  const d = ausmiPunya() ? ausmiData.deret : null;
+  if (!d || !d.hari || d.hari.length < 3) {
+    wadah.innerHTML = "";
+    if (kosong) {
+      kosong.hidden = false;
+      kosong.textContent = "Deret AUSMI belum cukup panjang untuk digambar. "
+        + "Riwayatnya ditumpuk sehari satu baris, jadi grafik ini terisi sendiri seiring waktu.";
+    }
+    return;
+  }
+  if (kosong) kosong.hidden = true;
+
+  /* Dipotong setahun terakhir. Lebih panjang dari itu garisnya jadi rapat
+     tak terbaca, dan yang dicari orang di sini keadaan musim ini. */
+  const N = Math.min(d.hari.length, 366);
+  const hari = d.hari.slice(-N);
+  const mentah = d.nilai.slice(-N);
+  const halus = (d.halus || d.nilai).slice(-N);
+  const klim = (d.klim || []).slice(-N);
+
+  const W = 760, H = 300, padL = 44, padR = 14, padT = 14, padB = 30;
+  const pw = W - padL - padR, ph = H - padT - padB;
+  const semua = mentah.concat(klim.length ? klim : []);
+  let lo = Math.min(...semua), hi = Math.max(...semua);
+  const sela = (hi - lo) * 0.12 || 1;
+  lo -= sela; hi += sela;
+  const X = (i) => padL + pw * (N <= 1 ? 0.5 : i / (N - 1));
+  const Y = (v) => padT + ph * (1 - (v - lo) / (hi - lo));
+
+  const jalur = (arr) => arr.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+
+  // Garis nol. Inilah batas baratan lawan timuran, jadi dia dipertebal
+  // dibanding garis bantu lain.
+  const y0 = (lo < 0 && hi > 0) ? Y(0) : null;
+  let bantu = "";
+  const langkah = (hi - lo) > 16 ? 5 : 2;
+  for (let v = Math.ceil(lo / langkah) * langkah; v <= hi; v += langkah) {
+    if (y0 != null && Math.abs(v) < 1e-9) continue;
+    bantu += `<line x1="${padL}" y1="${Y(v).toFixed(1)}" x2="${padL + pw}" y2="${Y(v).toFixed(1)}" class="au-bantu"/>`
+           + `<text x="${padL - 6}" y="${(Y(v) + 3.5).toFixed(1)}" class="au-axl" text-anchor="end">${v > 0 ? "+" : ""}${v}</text>`;
+  }
+
+  // Label bulan di sumbu datar, satu per pergantian bulan.
+  const B = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  let sumbu = "";
+  for (let i = 1; i < N; i++) {
+    if (hari[i].slice(5, 7) === hari[i - 1].slice(5, 7)) continue;
+    const x = X(i);
+    sumbu += `<line x1="${x.toFixed(1)}" y1="${padT + ph}" x2="${x.toFixed(1)}" y2="${padT + ph + 4}" class="au-bantu"/>`
+           + `<text x="${x.toFixed(1)}" y="${H - 8}" class="au-axl" text-anchor="middle">${B[+hari[i].slice(5, 7) - 1]}</text>`;
+  }
+
+  /* Penanda onset untuk TIAP musim yang jatuh di dalam potongan, bukan cuma
+     musim berjalan. Di bulan bulan sebelum onset, musim berjalan belum punya
+     tanggal sama sekali, dan justru saat itulah orang bertanya tahun lalu
+     kapan. Menandai yang lalu saja sudah menjawabnya. */
+  let tandaOnset = "";
+  const daftarOnset = ausmiData.onset_semua
+    || (ausmiData.onset ? [ausmiData.onset] : []);
+  daftarOnset.forEach((o) => {
+    if (!o || !o.tanggal) return;
+    const oi = hari.indexOf(o.tanggal);
+    if (oi < 0) return;
+    const x = X(oi);
+    tandaOnset += `<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${padT + ph}" class="au-onset"/>`
+                + `<text x="${(x + 4).toFixed(1)}" y="${padT + 11}" class="au-onset-lbl">onset ${o.musim}</text>`;
+  });
+
+  wadah.innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" class="au-svg" role="img" aria-label="Deret AUSMI setahun terakhir">`
+    + bantu
+    + (y0 != null ? `<line x1="${padL}" y1="${y0.toFixed(1)}" x2="${padL + pw}" y2="${y0.toFixed(1)}" class="au-nol"/>`
+                  + `<text x="${padL - 6}" y="${(y0 + 3.5).toFixed(1)}" class="au-axl" text-anchor="end">0</text>` : "")
+    + sumbu
+    + (klim.length ? `<polyline points="${jalur(klim)}" class="au-klim"/>` : "")
+    + `<polyline points="${jalur(mentah)}" class="au-mentah"/>`
+    + `<polyline points="${jalur(halus)}" class="au-halus"/>`
+    + tandaOnset
+    + `<circle cx="${X(N - 1).toFixed(1)}" cy="${Y(mentah[N - 1]).toFixed(1)}" r="3.2" class="au-kini"/>`
+    + `</svg>`;
+
+  const kini = $("ausmi-kini");
+  if (kini) {
+    const k = ausmiData.kini;
+    kini.innerHTML = `<b>${k.nilai > 0 ? "+" : ""}${k.nilai.toFixed(1)}</b> m/s`
+      + `<span>${tglPendek(k.tanggal)}</span>`;
+  }
+}
+
+function bukaAusmi() {
+  muatAusmi().then(() => {
+    gambarAusmi();
+    $("ausmi-overlay")?.classList.add("show");
+  });
+}
+function tutupAusmi() { $("ausmi-overlay")?.classList.remove("show"); }
