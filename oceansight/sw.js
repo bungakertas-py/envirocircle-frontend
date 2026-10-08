@@ -1,7 +1,7 @@
 /* Service worker Oceansight — cache SHELL app (berversi), data cuaca TETAP
  * online. Naikkan VERSION tiap rilis frontend agar user dapat versi terbaru
  * (cache lama dihapus saat activate). */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "oceansight-" + VERSION;
 
 // Saat REVIEW LOKAL, jangan cache shell sama sekali. Strategi cache-first membuat
@@ -24,6 +24,9 @@ const SHELL = [
   "../img/logo-envirocircle.png", "../img/logo-itera.png",
   "./icon-192.png", "./icon-512.png",
   "./tim-farras.jpg", "./tim-alvin.jpg", "./tim-andre.jpg",
+  // Batas administrasi. Aset diam, isinya nyaris tak pernah berubah, dan
+  // 1,9 MB berdua. Justru yang paling pantas disimpan.
+  "./data/world_countries.geojson", "./data/idn_provinces.geojson",
 ];
 
 self.addEventListener("install", (e) => {

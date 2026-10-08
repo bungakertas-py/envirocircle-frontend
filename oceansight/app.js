@@ -73,6 +73,10 @@ const map = L.map("map", {
 map.createPane("basemap"); map.getPane("basemap").style.zIndex = 380;
 map.createPane("labels"); map.getPane("labels").style.zIndex = 650; map.getPane("labels").style.pointerEvents = "none";   // nama kota DI ATAS data, biar kebaca
 map.createPane("sst"); map.getPane("sst").style.zIndex = 390;   // DI BAWAH overlayPane(400): partikel velocity (leaflet-velocity taruh di overlayPane) muncul di ATAS data
+/* Batas administrasi. 450 itu DI ATAS data (sst 390, overlayPane 400 untuk
+   partikel arus) tapi DI BAWAH kotak indeks (460) dan nama tempat (650).
+   Urutan yang sama dengan Atmosight. */
+map.createPane("admin"); map.getPane("admin").style.zIndex = 450; map.getPane("admin").style.pointerEvents = "none";
 map.createPane("boxes"); map.getPane("boxes").style.zIndex = 460; map.getPane("boxes").style.pointerEvents = "none";
 map.createPane("zones"); map.getPane("zones").style.zIndex = 462;   // zona indeks yang bisa diklik (pointerEvents default: auto)
 
@@ -136,8 +140,89 @@ function applyBasemap() {
   bmNow = key;
   BASE_TILE[key].addTo(map);
   map.getPane("basemap").style.filter = BASEMAPS[key].filter;
+  // Batasnya ikut berganti warna bersama alasnya, kalau tidak dia lenyap.
+  gayaAdmin();
 }
 map.getPane("basemap").style.filter = BASEMAPS.batu.filter;
+
+/* ====================================================================
+   BATAS ADMINISTRASI, negara dan provinsi
+   Dua GeoJSON statis yang sama persis dengan Atmosight dan Smokewatch,
+   disalin dari sana. Negara Natural Earth 50m, provinsi 38 provinsi dari
+   ardian28 yang SHP aslinya BIG.
+
+   Indonesia DISARING KELUAR dari layer negara, sebab garis pantainya sudah
+   digambar layer provinsi. Kalau tidak, pantainya tergambar dua kali dengan
+   kerapatan berbeda dan terlihat kotor.
+
+   JEBAKAN ANTIMERIDIAN, dan ini tidak ada di dua app lain.
+   Domain Oceansight membentang 30 sampai 290 BT, jadi dia MELEWATI 180.
+   GeoJSON koordinatnya -180 sampai 180, jadi benua Amerika yang di layar
+   mestinya muncul di 190 sampai 290 BT sebetulnya tergambar di -170 sampai
+   -70, yaitu satu lebar dunia di sebelah barat, di luar layar. Akibatnya
+   seperempat timur peta kosong tanpa garis pantai sama sekali.
+
+   Obatnya satu layer TAMBAHAN yang koordinatnya digeser +360 lewat
+   coordsToLatLng. Yang digeser cuma fitur yang memang punya bujur negatif,
+   68 dari 240, jadi 172 sisanya tidak digambar dua kali percuma. Provinsi
+   Indonesia tidak perlu salinan, dia di 95 sampai 141 BT dan geserannya
+   akan mendarat di 455 BT, jauh di luar domain.
+   ==================================================================== */
+const ADMIN_BASE = "data/";
+let worldLayer = null, worldLayerGeser = null, provLayer = null;
+
+function _adaBujurNegatif(geom) {
+  let ketemu = false;
+  (function jalan(c) {
+    if (ketemu) return;
+    if (typeof c[0] === "number") { if (c[0] < -30) ketemu = true; return; }
+    for (const x of c) { jalan(x); if (ketemu) return; }
+  })(geom.coordinates);
+  return ketemu;
+}
+
+/* Warna batas ikut TERANG GELAPNYA ALAS, bukan selera. Layer anom memakai
+   alas gelap sehingga daratnya hampir hitam dan garis tinta lenyap di
+   atasnya. Layer lain memakai alas terang sehingga garis putih yang lenyap. */
+function gayaAdmin() {
+  const gelap = activeLayer === "anom";
+  const color = gelap ? "#ffffff" : "#1c1b1b";
+  const opacity = gelap ? 0.85 : 0.7;
+  for (const L2 of [worldLayer, worldLayerGeser, provLayer]) {
+    if (L2) L2.setStyle({ color, opacity });
+  }
+}
+
+async function loadAdmin() {
+  const gayaNegara = { color: "#1c1b1b", weight: 1.0, opacity: 0.7, fill: false,
+                       lineJoin: "round", lineCap: "round", interactive: false };
+  const gayaProv = { color: "#1c1b1b", weight: 1.0, opacity: 0.7, fill: false,
+                     dashArray: "3 2", lineJoin: "round", interactive: false };
+  // Renderer kanvas khusus pane ini. Fitur di luar bingkai tidak digambar,
+  // dan itu yang membuat pan di domain selebar ini tetap mulus.
+  const renderer = L.canvas({ pane: "admin", padding: 0.5 });
+  const bukanIndonesia = (f) => !f.properties || f.properties.name !== "Indonesia";
+  try {
+    const [dunia, prov] = await Promise.all([
+      fetch(ADMIN_BASE + "world_countries.geojson").then((r) => (r.ok ? r.json() : null)),
+      fetch(ADMIN_BASE + "idn_provinces.geojson").then((r) => (r.ok ? r.json() : null)),
+    ]);
+    if (dunia) {
+      worldLayer = L.geoJSON(dunia, { pane: "admin", renderer, style: gayaNegara,
+                                      filter: bukanIndonesia }).addTo(map);
+      worldLayerGeser = L.geoJSON(dunia, {
+        pane: "admin", renderer, style: gayaNegara,
+        filter: (f) => bukanIndonesia(f) && _adaBujurNegatif(f.geometry),
+        coordsToLatLng: (c) => L.latLng(c[1], c[0] + 360),
+      }).addTo(map);
+    }
+    if (prov) provLayer = L.geoJSON(prov, { pane: "admin", renderer, style: gayaProv }).addTo(map);
+    gayaAdmin();
+  } catch (e) {
+    console.warn("Batas administrasi gagal dimuat:", e);
+  }
+}
+loadAdmin();
 
 function frameRegion() {
   if (!dataBounds || zonesOn || activeLayer === "index") return;   // mode Zona/Indeks: jangan reset view (zoomZone yg atur)
