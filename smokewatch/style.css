@@ -2275,8 +2275,14 @@ body { font-weight: 200; }
 .alat {
   position: absolute; top: 0; right: 0; z-index: 45;
   display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
-  pointer-events: auto;
+  /* MATI di wadahnya, HIDUP di anaknya. Kotak .alat jauh lebih besar
+     daripada isinya, dan sejak Kartu Udara masuk dia memanjang sampai
+     650 px ke bawah dan 671 px ke kiri. Dengan pointer-events auto di
+     wadahnya, seluruh bidang kosong itu menelan klik ke peta. Pola ini
+     sama dengan .rel yang sudah memakainya lebih dulu. */
+  pointer-events: none;
 }
+.alat > * { pointer-events: auto; }
 .alat-baris { display: flex; align-items: stretch; gap: 8px; }
 
 /* Kotak cari LANGSUNG bisa diketik, tidak perlu ditekan dulu. Tombol lupanya

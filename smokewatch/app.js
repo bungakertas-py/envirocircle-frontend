@@ -2471,8 +2471,23 @@ async function openPoint(lat, lon, label, isMe) {
     // peta terkunci maxBounds (autoPan mentok). Buka KE BAWAH (kelas pt-pop-below,
     // offset diukur dari tinggi popup lewat _popupKeBawah). Paro bawah tetap ke atas.
     popupBawah = map.latLngToContainerPoint([lat, lon]).y < map.getSize().y * 0.5;
+    /* BANTALAN GESER OTOMATIS, dan angkanya tidak boleh kecil.
+       Tombol X gelembung ada di sudut KANAN ATAS-nya, dan di sudut kanan
+       atas layar itulah menu Home, Go to Atmosight, Go to Oceansight duduk.
+       Dengan bantalan 16 px, gelembung yang terbuka ke atas naik sampai
+       y=31 dan tombol X-nya tepat berada DI BAWAH tautan menu, jadi
+       diklik berkali kali pun tidak menutup. Dilaporkan pemilik.
+
+       Kartu Udara yang memperburuknya, sebab memilih lokasi memusatkan
+       peta ke titik itu sehingga gelembungnya hampir selalu terbuka ke
+       atas dari tengah layar. Kartunya sendiri juga memakan sisi kanan
+       waktu terbuka, jadi bantalan kanan ikut membesar supaya gelembungnya
+       tidak menyelinap ke bawah kartu. */
+    const kartuBuka = !!$("sisi-kartu")?.classList.contains("terbuka");
     pointPopup = L.popup({ className: popupBawah ? "pt-pop pt-pop-below" : "pt-pop",
-        maxWidth: 330, autoPan: true, autoPanPadding: [16, 16], closeOnClick: false })
+        maxWidth: 330, autoPan: true, closeOnClick: false,
+        autoPanPaddingTopLeft: [16, 110],
+        autoPanPaddingBottomRight: [kartuBuka ? 432 : 60, 150] })
       .setLatLng([lat, lon])
       .setContent(`<div class="pp-title">${judul}</div><div class="pp-body">Memuat…</div>`)
       .openOn(map);
