@@ -4018,7 +4018,75 @@ body { font-weight: 200; }
 }
 .ku-kosong p { margin: 0; font-size: 11.5px; font-weight: 200; line-height: 1.45; }
 .ku-kosong .material-symbols-outlined { font-size: 24px; }
-.ku-kosong .ku-btn { margin-top: 2px; }
+.ku-kosong /* ---- Pemilih lokasi, di bawah kartu ----
+   Satu pemilih untuk dua sisi kartu, bukan satu di tiap sisi. Dia duduk di
+   luar .ku-dalam jadi dia tidak ikut terbalik dan tidak perlu digambar dua
+   kali. Diminta pemilik, "kontainernya dibawah kartunya". */
+.ku-cari { margin-top: 8px; }
+.ku-aksi { display: flex; gap: 6px; }
+.ku-aksi .ku-cari-buka { flex: 1; min-width: 0; }
+/* Tombol unduh. Sepetak dengan tinggi pemilih lokasi di sebelahnya, jadi
+   dua duanya satu baris rata. Mati sampai kartunya benar benar punya isi,
+   sebab mengunduh kartu kosong itu tidak ada gunanya. */
+.ku-unduh {
+  flex: none; width: 36px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; background: var(--paper); color: var(--ink-70);
+  border: 0.7px solid var(--ink-20); border-radius: 6px;
+  transition: color .18s ease, border-color .18s ease;
+}
+.ku-unduh:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-50); }
+.ku-unduh:disabled { opacity: .4; cursor: default; }
+.ku-unduh .material-symbols-outlined { font-size: 18px; }
+.ku-cari-buka {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  padding: 8px 11px; cursor: pointer; text-align: left;
+  background: var(--paper); color: var(--ink-70);
+  border: 0.7px solid var(--ink-20); border-radius: 6px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 300; letter-spacing: .04em;
+  transition: color .18s ease, border-color .18s ease;
+}
+.ku-cari-buka:hover { color: var(--ink); border-color: var(--ink-50); }
+.ku-cari-buka > span:nth-child(2) { flex: 1; }
+.ku-cari-buka .material-symbols-outlined { font-size: 17px; }
+.ku-cari-chev { transition: transform .2s ease; }
+.ku-cari-buka.terbuka .ku-cari-chev { transform: rotate(180deg); }
+
+.ku-cari-isi {
+  display: flex; flex-direction: column; gap: 7px;
+  margin-top: 7px; padding: 10px;
+  background: var(--paper); border: 0.7px solid var(--ink-20); border-radius: 6px;
+}
+.ku-cari-isi[hidden] { display: none; }
+.ku-cari-gps { justify-content: center; }
+/* Garis pemisah bertulis tidak dipakai, dua cara memilih ini setara dan
+   tidak perlu dijelaskan mana yang utama. */
+.ku-cari-kotak {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 9px; border: 0.7px solid var(--ink-20); border-radius: 999px;
+}
+.ku-cari-kotak .material-symbols-outlined { font-size: 16px; color: var(--ink-50); }
+.ku-cari-kotak input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 300; color: var(--ink);
+}
+.ku-cari-kotak input::placeholder { color: var(--ink-50); }
+
+.ku-cari-hasil { display: flex; flex-direction: column; max-height: 186px; overflow-y: auto; }
+.ku-cari-hasil:empty { display: none; }
+.ku-cari-item {
+  padding: 7px 9px; cursor: pointer; text-align: left;
+  background: transparent; color: var(--ink); border: 0;
+  border-bottom: 0.7px solid var(--ink-20);
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 300;
+}
+.ku-cari-item:last-child { border-bottom: 0; }
+.ku-cari-item:hover { background: var(--lime); color: var(--on-lime); }
+.ku-cari-kosong {
+  margin: 0; padding: 7px 9px;
+  font-size: 11px; font-weight: 200; color: var(--ink-50);
+}
+
+.ku-btn { margin-top: 2px; }
 
 /* ---- Tombol balik, sudut terkelupas ----
    Diminta pemilik, "tombol flipnya ditaro di pojok kanan atas kartu dengan

@@ -708,6 +708,9 @@ let kuOn = false, kuSisi = "ispu", kuToken = 0;
 let kuGeo = null;            // { lat, lon, alamat }
 let kuGeoMinta = false;      // sedang menunggu jawaban peramban
 let kuGeoGagal = "";         // sebab gagal, untuk ditampilkan di kartu
+/* Isi kedua sisi disimpan apa adanya, sebab mengunduh PNG berarti
+   MENGGAMBAR ULANG kartunya di canvas, bukan memotret DOM. */
+let kuKartu = null;          // { ispu: {d, o}, aqi: {d, o} }
 let velocityLayer = null;
 /* Penanda urutan permintaan medan angin. Sejak partikel angin TIDAK LAGI
    ditunggu sebelum peta tampil, dua permintaan bisa berjalan bersamaan waktu
@@ -3807,8 +3810,25 @@ async function init() {
     /* Tombol balik dan tombol minta lokasi lahir ulang tiap kartu digambar,
        jadi penyimaknya ditaruh di wadahnya sekali saja. */
     $("kartu-udara")?.addEventListener("click", (e) => {
-      if (e.target.closest("[data-ku-flip]")) kuBalik();
-      else if (e.target.closest("[data-ku-lacak]")) kuLacak();
+      if (e.target.closest("[data-ku-flip]")) return kuBalik();
+      if (e.target.closest("[data-ku-lacak]")) return kuLacak();
+      if (e.target.closest("#ku-unduh")) return kuUnduh();
+      const buka = e.target.closest("#ku-cari-buka");
+      if (buka) return kuCariBuka($("ku-cari-isi")?.hidden !== false);
+      const it = e.target.closest(".ku-cari-item");
+      if (it) {
+        const inp = $("ku-cari-input"); if (inp) inp.value = "";
+        kuCariHasil("");
+        kuPakaiTitik(parseFloat(it.dataset.lat), parseFloat(it.dataset.lon), it.textContent, false);
+      }
+    });
+    $("ku-cari-input")?.addEventListener("input", (e) => kuCariHasil(e.target.value));
+    $("ku-cari-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.target.value = ""; kuCariHasil(""); return; }
+      if (e.key !== "Enter") return;
+      const f = $("ku-cari-hasil")?.querySelector(".ku-cari-item");
+      if (f) { e.target.value = ""; kuCariHasil("");
+               kuPakaiTitik(parseFloat(f.dataset.lat), parseFloat(f.dataset.lon), f.textContent, false); }
     });
 
     // Point detail: klik peta → panel titik
@@ -4382,14 +4402,7 @@ function kuLacak() {
         kuGeoGagal = "Lokasi kamu di luar cakupan peta, Asia dan Pasifik.";
         kuIsi(true); return;
       }
-      kuGeo = { lat, lon, alamat: null };
-      map.setView([lat, lon], 8, { animate: true });
-      openPoint(lat, lon, null, true);      // penanda "kamu di sini" di peta
-      kuIsi(true);                          // tampilkan dulu, alamat menyusul
-      try {
-        const a = await reverseGeocodeLengkap(lat, lon);
-        if (kuGeo && kuGeo.lat === lat && a) { kuGeo.alamat = a; kuIsi(false); }
-      } catch (e) { /* alamat opsional, koordinat tetap dipakai */ }
+      kuPakaiTitik(lat, lon, null, true);
     },
     (err) => {
       kuGeoMinta = false;
@@ -4429,6 +4442,259 @@ async function reverseGeocodeLengkap(lat, lon) {
   return teks || null;
 }
 
+/* ==================================================================
+   UNDUH KARTU JADI PNG
+
+   Kartunya DIGAMBAR ULANG di canvas, bukan dipotret dari DOM. Memotret DOM
+   butuh html2canvas atau trik foreignObject, dan dua duanya punya masalah
+   yang sama di sini, HURUFNYA. Geologica dimuat dari Google Fonts, dan di
+   dalam foreignObject dia tidak ikut kecuali seluruh berkas fontnya
+   ditanam sebagai base64. Canvas sebaliknya memakai font dokumen apa
+   adanya, jadi hasilnya persis dan tanpa pustaka luar satu pun.
+
+   Harganya, tata letak di sini SALINAN dari yang di style.css, bukan
+   turunannya. Kalau kartunya ditata ulang, blok ini harus ikut diubah.
+   Itu disengaja, dan kusebut di sini supaya tidak jadi kejutan.
+   ================================================================== */
+
+/* Pembaca potongan <b> dan <sub> jadi deretan ruas. Dipakai untuk naskah
+   catatan skala yang bertanda tebal, dan untuk pencemar kritis yang
+   ditulis PM<sub>2.5</sub>. */
+function _kuRuas(html) {
+  const ruas = [];
+  let tebal = 0, sub = 0, i = 0;
+  const re = /<\/?(b|sub)>/gi;
+  let m;
+  while ((m = re.exec(html))) {
+    if (m.index > i) ruas.push({ t: html.slice(i, m.index), tebal: tebal > 0, sub: sub > 0 });
+    const tutup = m[0][1] === "/";
+    if (m[1].toLowerCase() === "b") tebal += tutup ? -1 : 1; else sub += tutup ? -1 : 1;
+    i = re.lastIndex;
+  }
+  if (i < html.length) ruas.push({ t: html.slice(i), tebal: tebal > 0, sub: sub > 0 });
+  return ruas;
+}
+
+/* Melipat deretan ruas jadi baris, lalu menggambarnya. Mengembalikan
+   tinggi yang terpakai, jadi pemanggilnya bisa menumpuk ke bawah.
+   `ukur` true berarti cuma menghitung, tidak menggambar. */
+function _kuTulis(ctx, ruas, x, y, lebar, opsi) {
+  const { ukur, tinggiBaris, tengah, bobot, bobotTebal, px, warna, warnaTebal } = opsi;
+  const font = (r) => `${r.tebal ? bobotTebal : bobot} ${r.sub ? px * 0.76 : px}px "Geologica", system-ui, sans-serif`;
+  // Dipecah per kata, tapi ruasnya dibawa serta supaya tebal tipisnya ikut.
+  const kata = [];
+  for (const r of ruas) {
+    const bagian = r.t.split(/(\s+)/);
+    for (const b of bagian) if (b !== "") kata.push({ t: b, tebal: r.tebal, sub: r.sub, spasi: /^\s+$/.test(b) });
+  }
+  const baris = [[]];
+  let w = 0;
+  for (const k of kata) {
+    ctx.font = font(k);
+    const kw = ctx.measureText(k.t).width;
+    if (!k.spasi && w + kw > lebar && baris[baris.length - 1].length) { baris.push([]); w = 0; }
+    if (k.spasi && !baris[baris.length - 1].length) continue;
+    baris[baris.length - 1].push({ ...k, w: kw });
+    w += kw;
+  }
+  if (!ukur) {
+    let yy = y;
+    for (const b of baris) {
+      const lb = b.reduce((s, k) => s + k.w, 0);
+      let xx = tengah ? x + (lebar - lb) / 2 : x;
+      for (const k of b) {
+        ctx.font = font(k);
+        ctx.fillStyle = k.tebal ? (warnaTebal || warna) : warna;
+        ctx.fillText(k.t, xx, yy + (k.sub ? px * 0.16 : 0));
+        xx += k.w;
+      }
+      yy += tinggiBaris;
+    }
+  }
+  return baris.length * tinggiBaris;
+}
+
+/* SVG avatar jadi Image. Lebar tinggi disuntik sebab Firefox menolak
+   menggambar SVG yang cuma berbekal viewBox. */
+function _kuGambarAvatar(nama, w, h) {
+  return new Promise((resolve) => {
+    const s = _KU_SVG[nama];
+    if (!s) return resolve(null);
+    const ber = s.replace("<svg ", `<svg width="${w}" height="${h}" `);
+    const url = URL.createObjectURL(new Blob([ber], { type: "image/svg+xml" }));
+    const img = new Image();
+    img.onload = () => { resolve(img); URL.revokeObjectURL(url); };
+    img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
+    img.src = url;
+  });
+}
+
+async function kuUnduh() {
+  if (!kuKartu) return;
+  const sisi = kuKartu[kuSisi] || kuKartu.ispu || kuKartu.aqi;
+  if (!sisi) return;
+  const { d, o } = sisi;
+  const btn = $("ku-unduh");
+  if (btn) btn.disabled = true;
+  try {
+    // Font harus benar benar siap, kalau tidak canvas memakai cadangan sistem.
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const gs = getComputedStyle(document.documentElement);
+    const C = (n, c) => (gs.getPropertyValue(n) || c).trim();
+    const INK = C("--ink", "#074173"), INK70 = C("--ink-70", "rgba(7,65,115,.7)"),
+          INK50 = C("--ink-50", "rgba(7,65,115,.5)"), INK20 = C("--ink-20", "rgba(7,65,115,.2)"),
+          KERTAS = C("--paper", "#ffffff"), AKSEN = C("--aksen", "#1679AB");
+    const tinta = _kuWarnaAman(d.warna);
+
+    const S = 2, W = 376, P = 14, MAKS = 1600;
+    const cv = document.createElement("canvas");
+    cv.width = W * S; cv.height = MAKS * S;
+    const ctx = cv.getContext("2d");
+    ctx.scale(S, S);
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = KERTAS; ctx.fillRect(0, 0, W, MAKS);
+
+    // ---- kepala ----
+    const HK = 34;
+    ctx.fillStyle = d.warna; ctx.fillRect(0, 0, W, HK);
+    ctx.fillStyle = d.putih ? "#ffffff" : INK;
+    ctx.font = '300 8.5px "Geologica", system-ui, sans-serif';
+    ctx.fillText("ENVIROCIRCLE · SMOKEWATCH", P, HK / 2 + 3);
+    ctx.font = '400 12px "Geologica", system-ui, sans-serif';
+    ctx.textAlign = "right";
+    ctx.fillText(o.label.toUpperCase(), W - P, HK / 2 + 4);
+    ctx.textAlign = "left";
+
+    // ---- potret dan kolom kanan ----
+    let y = HK + P;
+    const FW = 98, FH = 124, KX = P + FW + 12, KW = W - KX - P;
+    const img = await _kuGambarAvatar(o.avatar, FW, FH);
+    // Gambar DULU baru tepinya. SVG-nya membawa bidang putih selembar
+    // halaman di jalur pertama, jadi kalau tepinya digambar lebih dulu dia
+    // ketimpa putih dan hilang. Sudah kejadian.
+    if (img) ctx.drawImage(img, P, y, FW, FH);
+    ctx.strokeStyle = INK20; ctx.lineWidth = 0.7;
+    ctx.strokeRect(P + 0.35, y + 0.35, FW - 0.7, FH - 0.7);
+
+    let ky = y + 9;
+    ctx.fillStyle = INK50;
+    ctx.font = '300 9px "Geologica", system-ui, sans-serif';
+    ctx.fillText("LOKASI", KX, ky);
+    ky += 13;
+    ky += _kuTulis(ctx, [{ t: o.lokasi, tebal: false, sub: false }], KX, ky, KW,
+      { px: 11, bobot: 300, bobotTebal: 300, tinggiBaris: 14, warna: INK });
+
+    ky += 30;
+    ctx.fillStyle = tinta; ctx.textAlign = "center";
+    ctx.font = '500 46px "Geologica", system-ui, sans-serif';
+    ctx.fillText(String(d.nilai), KX + KW / 2, ky);
+    ky += 15;
+    ctx.font = '500 11px "Geologica", system-ui, sans-serif';
+    ctx.fillText(d.nama, KX + KW / 2, ky);
+    ctx.textAlign = "left";
+
+    // dua pasak, rata kaki potret
+    const PY = Math.max(ky + 24, y + FH - 14);
+    const pasak = [["Parameter Kritis", d.kritis || "tidak tersedia"],
+                   ["Berlaku Untuk", _kuJam(d.waktu)]];
+    pasak.forEach(([judul, nilai], i) => {
+      const cx = KX + (KW / 2) * i, cw = KW / 2;
+      ctx.fillStyle = INK; ctx.textAlign = "center";
+      ctx.font = '500 9.5px "Geologica", system-ui, sans-serif';
+      ctx.fillText(judul, cx + cw / 2, PY);
+      ctx.textAlign = "left";
+      _kuTulis(ctx, _kuRuas(nilai), cx, PY + 12, cw,
+        { px: 9.5, bobot: 500, bobotTebal: 500, tinggiBaris: 12, tengah: true, warna: tinta });
+    });
+
+    y = Math.max(PY + 16, y + FH) + P;
+
+    const garis = (yy) => {
+      ctx.strokeStyle = INK20; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.moveTo(0, yy + 0.35); ctx.lineTo(W, yy + 0.35); ctx.stroke();
+    };
+    garis(y); y += 10;
+
+    // ---- saran ----
+    y += _kuTulis(ctx, [{ t: o.saran, tebal: false, sub: false }], P, y + 9, W - P * 2,
+      { px: 11.5, bobot: 200, bobotTebal: 200, tinggiBaris: 17, warna: INK70 }) + 4;
+
+    // ---- catatan skala, bergaris kiri ----
+    if (o.catatanSkala) {
+      const cx = P + 11, cw = W - cx - P;
+      const h = _kuTulis(ctx, _kuRuas(o.catatanSkala), cx, y + 9, cw,
+        { px: 10.5, bobot: 200, bobotTebal: 400, tinggiBaris: 15, warna: INK70, warnaTebal: INK });
+      ctx.fillStyle = AKSEN; ctx.fillRect(P, y, 2, h);
+      y += h + 10;
+    }
+
+    garis(y); y += 9;
+    ctx.fillStyle = INK50;
+    y += _kuTulis(ctx, [{ t: `Keluaran model ${MODEL_ID === "wrfchem" ? "WRF-Chem" : "CAMS"}, bukan hasil pengukuran alat di lapangan.`, tebal: false, sub: false }],
+      P, y + 8, W - P * 2, { px: 9.5, bobot: 200, bobotTebal: 200, tinggiBaris: 13, warna: INK50 }) + 9;
+
+    // ---- dipotong setinggi isinya, lalu tepi kartu digambar ----
+    const out = document.createElement("canvas");
+    out.width = W * S; out.height = Math.round(y) * S;
+    const o2 = out.getContext("2d");
+    o2.drawImage(cv, 0, 0);
+    o2.scale(S, S);
+    o2.strokeStyle = INK20; o2.lineWidth = 0.7;
+    o2.strokeRect(0.35, 0.35, W - 0.7, Math.round(y) - 0.7);
+
+    const bersih = (o.lokasi || "lokasi").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+    const a = document.createElement("a");
+    a.download = `kartu-udara-${kuSisi}-${bersih}.png`;
+    a.href = out.toDataURL("image/png");
+    a.click();
+    return a.href;   // data URL-nya dikembalikan, berguna untuk menguji
+  } finally {
+    if (btn) btn.disabled = !kuKartu;
+  }
+}
+
+/* Satu pintu masuk untuk SEMUA cara memilih lokasi, GPS maupun nama kota.
+   Namanya langsung dipakai supaya kartunya tidak kosong selagi menunggu,
+   lalu disempurnakan jadi alamat lengkap kalau pencarian baliknya berhasil. */
+function kuPakaiTitik(lat, lon, nama, akuDisini) {
+  kuGeo = { lat, lon, alamat: nama || null };
+  kuGeoGagal = "";
+  map.setView([lat, lon], 8, { animate: true });
+  openPoint(lat, lon, nama || null, !!akuDisini);
+  kuCariBuka(false);
+  kuIsi(true);
+  reverseGeocodeLengkap(lat, lon)
+    .then((a) => { if (kuGeo && kuGeo.lat === lat && a) { kuGeo.alamat = a; kuIsi(false); } })
+    .catch(() => { /* alamat opsional, nama kota atau koordinat tetap dipakai */ });
+}
+
+/* ---- Pemilih lokasi di bawah kartu ----
+   Daftar kotanya PINJAM dari pencarian di bilah atas, `loadPlaces()` dan
+   `places`, berikut cara menyaringnya. Tidak ada daftar kedua. */
+function kuCariBuka(buka) {
+  const isi = $("ku-cari-isi"), tbl = $("ku-cari-buka");
+  if (!isi || !tbl) return;
+  isi.hidden = !buka;
+  tbl.setAttribute("aria-expanded", buka ? "true" : "false");
+  tbl.classList.toggle("terbuka", buka);
+  if (buka) { loadPlaces().then(() => kuCariHasil($("ku-cari-input")?.value || "")); }
+}
+
+function kuCariHasil(q) {
+  const box = $("ku-cari-hasil"); if (!box) return;
+  q = q.trim().toLowerCase();
+  if (!q || !places) { box.innerHTML = ""; return; }
+  const awalan = [], tengah = [];
+  for (const p of places) {
+    if (p.b.startsWith(q) || p.f.startsWith(q)) awalan.push(p);
+    else if (p.b.includes(q) || p.f.includes(q)) tengah.push(p);
+  }
+  const res = awalan.concat(tengah).slice(0, 8);
+  box.innerHTML = res.length
+    ? res.map((p) => `<button type="button" class="ku-cari-item" data-lat="${p.lat}" data-lon="${p.lon}">${p.n}</button>`).join("")
+    : `<p class="ku-cari-kosong">Tak ada hasil</p>`;
+}
+
 /* `animasi` sengaja TIDAK selalu menyala. kuIsi dipanggil ulang tiap slider
    waktu digeser, dan menggambar ulang sketsanya tiap tik itu melelahkan
    dilihat. Jadi animasinya cuma waktu kartunya dibuka atau lokasinya
@@ -4441,11 +4707,12 @@ async function kuIsi(animasi) {
     const isi = kuGeoMinta
       ? `<p>Menunggu izin lokasi…</p>`
       : `<span class="material-symbols-outlined">my_location</span>
-         ${kuGeoGagal ? `<p>${kuGeoGagal}</p>` : `<p>Kartu ini dibuat untuk tempat kamu berdiri.</p>`}
-         <button type="button" class="ku-btn" data-ku-lacak="1">
-           <span class="material-symbols-outlined">near_me</span>Pakai lokasi saya
-         </button>`;
+         ${kuGeoGagal ? `<p>${kuGeoGagal}</p>`
+                      : `<p>Kartu ini dibuat untuk tempat kamu berdiri, atau untuk kota yang kamu cari.</p>`}`;
     depan.innerHTML = belakang.innerHTML = `<div class="ku-kosong">${isi}</div>`;
+    /* Belum ada lokasi berarti pemilihnya memang yang dibutuhkan, jadi
+       dibuka sendiri, bukan disembunyikan di balik satu tekan lagi. */
+    if (!kuGeoMinta) kuCariBuka(true);
     return;
   }
 
@@ -4462,7 +4729,7 @@ async function kuIsi(animasi) {
   try { dA = await _kuBaca("aqi", lat, lon); } catch (e) { /* lanjut */ }
   if (token !== kuToken) return;
   const gagal = `<div class="ku-kosong"><p>Indeks tidak tersedia di titik ini.</p></div>`;
-  depan.innerHTML = dI ? _kuSisiHTML(dI, {
+  const oI = !dI ? null : {
     label: "ISPU", lokasi, animasi, avatar: KU_AVATAR_ISPU[dI.idx], saran: KU_SARAN_ISPU[dI.idx],
     lawanLabel: "AQI", lawanWarna: (dA ? dA.warna : "#2b83ba"), lawanPutih: !!(dA && dA.putih),
     // Naskah dari pemilik, lewat temannya. Bagian yang dulu dikurung kurawal
@@ -4471,8 +4738,8 @@ async function kuIsi(animasi) {
       + "resmi oleh Pemerintah Indonesia</b> melalui <b>Permen LHK No. 14 Tahun 2020</b>. "
       + "Indeksnya terdiri dari lima kelas dan dihitung dari <b>parameter pencemar "
       + "yang paling dominan</b> di antara pencemar lainnya.",
-  }) : gagal;
-  belakang.innerHTML = dA ? _kuSisiHTML(dA, {
+  };
+  const oA = !dA ? null : {
     label: "AQI (US EPA)", lokasi, animasi, avatar: KU_AVATAR_AQI[dA.idx], saran: KU_SARAN_AQI[dA.idx],
     lawanLabel: "ISPU", lawanWarna: (dI ? dI.warna : "#2b83ba"), lawanPutih: !!(dI && dI.putih),
     // Naskah dari pemilik, lewat temannya. Tetap memikul tugas peringatan,
@@ -4480,7 +4747,11 @@ async function kuIsi(animasi) {
     catatanSkala: "AQI merupakan indeks kualitas udara <b>acuan standar "
       + "internasional</b> yang memiliki standar dan metode perhitungan yang berbeda "
       + "dengan <b>ISPU yang merupakan indeks acuan Indonesia</b>.",
-  }) : gagal;
+  };
+  depan.innerHTML    = dI ? _kuSisiHTML(dI, oI) : gagal;
+  belakang.innerHTML = dA ? _kuSisiHTML(dA, oA) : gagal;
+  kuKartu = (dI || dA) ? { ispu: dI && { d: dI, o: oI }, aqi: dA && { d: dA, o: oA } } : null;
+  const unduh = $("ku-unduh"); if (unduh) unduh.disabled = !kuKartu;
 }
 
 function kuBalik() {

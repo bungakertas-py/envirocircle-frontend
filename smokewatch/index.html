@@ -405,6 +405,34 @@
                 <section class="ku-sisi ku-depan" id="ku-depan" aria-label="Kartu udara ISPU"></section>
                 <section class="ku-sisi ku-belakang" id="ku-belakang" aria-label="Kartu udara AQI"></section>
               </div>
+              <!-- Pemilih lokasi. SENGAJA di luar .ku-dalam, jadi dia di
+                   bawah kartu dan melayani sisi ISPU maupun sisi AQI
+                   sekaligus. Kalau ditaruh di dalam kartunya dia harus
+                   digambar dua kali dan ikut terbalik waktu kartu dibalik. -->
+              <div class="ku-cari" id="ku-cari">
+                <div class="ku-aksi">
+                  <button type="button" class="ku-cari-buka" id="ku-cari-buka" aria-expanded="false">
+                    <span class="material-symbols-outlined">edit_location_alt</span>
+                    <span>Pilih lokasi lain</span>
+                    <span class="material-symbols-outlined ku-cari-chev">expand_more</span>
+                  </button>
+                  <button type="button" class="ku-unduh" id="ku-unduh" disabled
+                          aria-label="Unduh kartu ini jadi PNG" title="Unduh PNG">
+                    <span class="material-symbols-outlined">download</span>
+                  </button>
+                </div>
+                <div class="ku-cari-isi" id="ku-cari-isi" hidden>
+                  <button type="button" class="ku-btn ku-cari-gps" data-ku-lacak="1">
+                    <span class="material-symbols-outlined">near_me</span>Pakai lokasi saya
+                  </button>
+                  <div class="ku-cari-kotak">
+                    <span class="material-symbols-outlined">search</span>
+                    <input id="ku-cari-input" type="text" autocomplete="off"
+                           placeholder="Cari kota atau kabupaten" aria-label="Cari kota atau kabupaten" />
+                  </div>
+                  <div class="ku-cari-hasil" id="ku-cari-hasil"></div>
+                </div>
+              </div>
             </div>
           </div>
         </aside>
