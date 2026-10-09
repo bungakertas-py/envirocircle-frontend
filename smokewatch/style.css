@@ -3370,7 +3370,7 @@ body { font-weight: 200; }
      sedangkan kartu ini tidak punya wakil di sana. Tanpa ini kartunya
      hilang sama sekali di HP. */
   .alat { display: flex; background: transparent; }
-  .alat > *:not(#sisi-kartu) { display: none; }
+  .alat > *:not(#sisi-kartu):not(.ku-off) { display: none; }
   #sisi-kartu .sisi-body { width: calc(100vw - 52px); }
   /* Di bawah scrim tinggal identitas, jadi tidak perlu sepanjang desktop. */
   .scrim {
@@ -3878,12 +3878,18 @@ body { font-weight: 200; }
    `.sisi-lbl` yang memutar labelnya 90 derajat. Tidak ada satu pun aturan
    letak baru di sini. */
 /* Lebarnya disamakan dengan Fitur di atasnya, 376 px, supaya dua kartu
-   yang bertumpuk itu satu bidang waktu dua duanya terbuka. Tinggi dan
-   penggulungnya sengaja TIDAK ditulis, biar ikut aturan
-   `.alat .sisi--kanan .sisi-body` yang sudah mengurus itu untuk Fitur. */
+   yang bertumpuk itu satu bidang waktu dua duanya terbuka.
+
+   Tingginya DIBATASI SAMPAI ATAS LEGENDA, bukan sampai tepi bawah layar.
+   Diminta pemilik, kartunya dulu mentok ke margin bawah dan itu tidak enak
+   dipandang, apalagi waktu Fitur dibuka sebab kartunya ikut terdorong turun.
+   Angkanya tidak bisa ditulis mati sebab titik awal kartunya berpindah
+   pindah, jadi diukur waktu jalan oleh kuUkurTinggi di app.js. */
 #sisi-kartu .sisi-body {
   width: 376px; padding: 0;
   border: 0; background: transparent;
+  max-height: var(--ku-tinggi, 480px);
+  overflow-y: auto; overflow-x: hidden;
 }
 .ku { width: 100%; pointer-events: auto; font-family: var(--font-ui); }
 
@@ -4018,10 +4024,39 @@ body { font-weight: 200; }
 }
 .ku-kosong p { margin: 0; font-size: 11.5px; font-weight: 200; line-height: 1.45; }
 .ku-kosong .material-symbols-outlined { font-size: 24px; }
-.ku-kosong /* ---- Pemilih lokasi, di bawah kartu ----
+
+/* ---- Pemilih lokasi, di bawah kartu ----
    Satu pemilih untuk dua sisi kartu, bukan satu di tiap sisi. Dia duduk di
    luar .ku-dalam jadi dia tidak ikut terbalik dan tidak perlu digambar dua
    kali. Diminta pemilik, "kontainernya dibawah kartunya". */
+/* Tombol mati. DI DALAM batang biru, menempel di dasar tulang punggung.
+   Caranya posisi serap di dalam asidenya, bukan sarang, sebab tulang
+   punggung itu sendiri sudah sebuah <button>.
+
+   Muncul CUMA sesudah pengguna memilih lokasi, bukan sekadar waktu panel
+   terbuka. Diminta pemilik, "munculnya kalau lokasi udah dipilih user". */
+#sisi-kartu { position: relative; }
+.ku-off {
+  display: none; position: absolute; left: 0; bottom: 0; z-index: 2;
+  flex-direction: column; align-items: center; gap: 1px;
+  width: 40px; padding: 9px 0 10px; cursor: pointer;
+  background: var(--ink); color: var(--paper);
+  border: 0; border-top: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 0 0 0 4px;
+  transition: background .2s ease;
+}
+#sisi-kartu.ada-lokasi .ku-off { display: flex; }
+/* Tulang punggung memberi ruang di kakinya supaya label tegaknya tidak
+   tertimpa tombol itu. */
+#sisi-kartu.ada-lokasi .sisi-spine { padding-bottom: 62px; }
+.ku-off:hover { background: #8a2b20; }
+/* Ukuran lambangnya mengikuti lambang tulang punggung, .sisi-ico 20px. */
+.ku-off .material-symbols-outlined { font-size: 20px; }
+.ku-off-lbl {
+  font-family: var(--font-ui); font-size: 8.5px; font-weight: 300;
+  letter-spacing: .14em; text-transform: uppercase;
+}
+
 .ku-cari { margin-top: 8px; }
 .ku-aksi { display: flex; gap: 6px; }
 .ku-aksi .ku-cari-buka { flex: 1; min-width: 0; }
@@ -4071,8 +4106,47 @@ body { font-weight: 200; }
 }
 .ku-cari-kotak input::placeholder { color: var(--ink-50); }
 
-.ku-cari-hasil { display: flex; flex-direction: column; max-height: 186px; overflow-y: auto; }
+/* Daftar hasil bisa digulir, dan itu harus KELIHATAN. Tanpa tanda, daftar
+   yang terpotong rapi di tepi bawah terbaca seperti daftar yang memang cuma
+   sekian. Dua tanda sekaligus, kabut di tepi bawah yang memperlihatkan baris
+   berikutnya separuh, dan panah kecil yang turun naik pelan. Dua duanya
+   menyala CUMA waktu memang masih ada yang di bawah, lihat .bisa-gulir yang
+   dipasang app.js. */
+.ku-cari-gulir { position: relative; }
+.ku-cari-hasil { display: flex; flex-direction: column; max-height: 152px; overflow-y: auto; }
 .ku-cari-hasil:empty { display: none; }
+.ku-cari-gulir.bisa-gulir::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 30px;
+  background: linear-gradient(to top, var(--paper) 18%, transparent);
+  pointer-events: none;
+}
+/* Tanda gulir, PIL MELAYANG di pojok kanan bawah daftar, dekat rel
+   penggulungnya. Hilang sendiri begitu daftarnya digulir sampai dasar.
+   Versi sebelumnya panah kecil menumpang di tepi dan pemilik tidak
+   melihatnya sama sekali, jadi sekarang dia bidang pekat bertulisan. */
+.ku-cari-hint {
+  position: absolute; right: 7px; bottom: 7px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 1px;
+  padding: 3px 9px 3px 5px; border-radius: 999px;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--font-ui); font-size: 9px; font-weight: 300;
+  letter-spacing: .1em; text-transform: uppercase;
+  pointer-events: none; white-space: nowrap;
+  opacity: 0; transform: translateY(5px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.ku-cari-gulir.bisa-gulir .ku-cari-hint { opacity: 1; transform: translateY(0); }
+.ku-cari-hint .material-symbols-outlined {
+  font-size: 14px;
+  animation: ku-turun 1.5s ease-in-out infinite;
+}
+@keyframes ku-turun {
+  0%, 100% { transform: translateY(0); opacity: .65; }
+  50%      { transform: translateY(2px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ku-cari-hint .material-symbols-outlined { animation: none; }
+}
 .ku-cari-item {
   padding: 7px 9px; cursor: pointer; text-align: left;
   background: transparent; color: var(--ink); border: 0;
@@ -4085,8 +4159,6 @@ body { font-weight: 200; }
   margin: 0; padding: 7px 9px;
   font-size: 11px; font-weight: 200; color: var(--ink-50);
 }
-
-.ku-btn { margin-top: 2px; }
 
 /* ---- Tombol balik, sudut terkelupas ----
    Diminta pemilik, "tombol flipnya ditaro di pojok kanan atas kartu dengan

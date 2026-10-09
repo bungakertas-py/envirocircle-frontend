@@ -3786,6 +3786,9 @@ async function init() {
        diminta pemilik, "misal saya pencet atau buka ni kartunya nanti bakal
        minta akses GPS user". */
     document.addEventListener("sisi-ubah", (e) => {
+      /* Fitur yang terbuka mendorong Kartu Udara turun, jadi batas
+         bawahnya harus dihitung ulang apa pun kartu tepi yang berubah. */
+      requestAnimationFrame(kuUkurTinggi);
       if (e.detail.id !== "sisi-kartu") return;
       kuOn = e.detail.buka;
       if (!kuOn) return;
@@ -3822,6 +3825,10 @@ async function init() {
         kuPakaiTitik(parseFloat(it.dataset.lat), parseFloat(it.dataset.lon), it.textContent, false);
       }
     });
+    $("ku-off")?.addEventListener("click", kuMati);
+    $("ku-cari-hasil")?.addEventListener("scroll", kuTandaGulir, { passive: true });
+    kuUkurTinggi();
+    window.addEventListener("resize", kuUkurTinggi);
     $("ku-cari-input")?.addEventListener("input", (e) => kuCariHasil(e.target.value));
     $("ku-cari-input")?.addEventListener("keydown", (e) => {
       if (e.key === "Escape") { e.target.value = ""; kuCariHasil(""); return; }
@@ -4479,7 +4486,7 @@ function _kuRuas(html) {
    tinggi yang terpakai, jadi pemanggilnya bisa menumpuk ke bawah.
    `ukur` true berarti cuma menghitung, tidak menggambar. */
 function _kuTulis(ctx, ruas, x, y, lebar, opsi) {
-  const { ukur, tinggiBaris, tengah, bobot, bobotTebal, px, warna, warnaTebal } = opsi;
+  const { ukur, tinggiBaris, tengah, bobot, bobotTebal, px, warna, warnaTebal, maksBaris } = opsi;
   const font = (r) => `${r.tebal ? bobotTebal : bobot} ${r.sub ? px * 0.76 : px}px "Geologica", system-ui, sans-serif`;
   // Dipecah per kata, tapi ruasnya dibawa serta supaya tebal tipisnya ikut.
   const kata = [];
@@ -4496,6 +4503,13 @@ function _kuTulis(ctx, ruas, x, y, lebar, opsi) {
     if (k.spasi && !baris[baris.length - 1].length) continue;
     baris[baris.length - 1].push({ ...k, w: kw });
     w += kw;
+  }
+  /* Bingkai 16:9 tingginya mati, jadi alamat yang kepanjangan harus
+     dipotong, bukan mendorong isi di bawahnya keluar bingkai. */
+  if (maksBaris && baris.length > maksBaris) {
+    baris.length = maksBaris;
+    const akhir = baris[maksBaris - 1];
+    if (akhir.length) { const k = akhir[akhir.length - 1]; k.t = k.t.replace(/[.,]?$/, "…"); }
   }
   if (!ukur) {
     let yy = y;
@@ -4529,6 +4543,13 @@ function _kuGambarAvatar(nama, w, h) {
   });
 }
 
+/* Kartu unduhan DIBUAT MENDATAR 16:9, bukan sekadar kartu layar yang
+   diberi bantal kiri kanan. Diminta pemilik. Ukurannya 1920x1080, jadi dia
+   langsung pas dipakai di slide, unggahan, maupun layar presentasi.
+
+   Susunannya potret di kiri, isi di kanan, urutan bacanya sama persis
+   dengan kartu di layar. Yang TIDAK ikut cuma sudut terkelupasnya, sebab
+   dia tombol bukan isi. */
 async function kuUnduh() {
   if (!kuKartu) return;
   const sisi = kuKartu[kuSisi] || kuKartu.ispu || kuKartu.aqi;
@@ -4546,106 +4567,97 @@ async function kuUnduh() {
           KERTAS = C("--paper", "#ffffff"), AKSEN = C("--aksen", "#1679AB");
     const tinta = _kuWarnaAman(d.warna);
 
-    const S = 2, W = 376, P = 14, MAKS = 1600;
+    const S = 2, W = 960, H = 540;          // 16:9, dikali 2 jadi 1920x1080
     const cv = document.createElement("canvas");
-    cv.width = W * S; cv.height = MAKS * S;
+    cv.width = W * S; cv.height = H * S;
     const ctx = cv.getContext("2d");
     ctx.scale(S, S);
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = KERTAS; ctx.fillRect(0, 0, W, MAKS);
+    ctx.fillStyle = KERTAS; ctx.fillRect(0, 0, W, H);
 
     // ---- kepala ----
-    const HK = 34;
+    const HK = 58, M = 40;
     ctx.fillStyle = d.warna; ctx.fillRect(0, 0, W, HK);
     ctx.fillStyle = d.putih ? "#ffffff" : INK;
-    ctx.font = '300 8.5px "Geologica", system-ui, sans-serif';
-    ctx.fillText("ENVIROCIRCLE · SMOKEWATCH", P, HK / 2 + 3);
-    ctx.font = '400 12px "Geologica", system-ui, sans-serif';
+    ctx.font = '300 13px "Geologica", system-ui, sans-serif';
+    ctx.fillText("ENVIROCIRCLE · SMOKEWATCH", M, HK / 2 + 5);
+    ctx.font = '400 19px "Geologica", system-ui, sans-serif';
     ctx.textAlign = "right";
-    ctx.fillText(o.label.toUpperCase(), W - P, HK / 2 + 4);
+    ctx.fillText(o.label.toUpperCase(), W - M, HK / 2 + 7);
     ctx.textAlign = "left";
 
-    // ---- potret dan kolom kanan ----
-    let y = HK + P;
-    const FW = 98, FH = 124, KX = P + FW + 12, KW = W - KX - P;
+    // ---- potret, kolom kiri ----
+    const FY = HK + 36, FW = 248, FH = 314;
     const img = await _kuGambarAvatar(o.avatar, FW, FH);
-    // Gambar DULU baru tepinya. SVG-nya membawa bidang putih selembar
-    // halaman di jalur pertama, jadi kalau tepinya digambar lebih dulu dia
-    // ketimpa putih dan hilang. Sudah kejadian.
-    if (img) ctx.drawImage(img, P, y, FW, FH);
-    ctx.strokeStyle = INK20; ctx.lineWidth = 0.7;
-    ctx.strokeRect(P + 0.35, y + 0.35, FW - 0.7, FH - 0.7);
+    if (img) ctx.drawImage(img, M, FY, FW, FH);
+    ctx.strokeStyle = INK20; ctx.lineWidth = 1;
+    ctx.strokeRect(M + 0.5, FY + 0.5, FW - 1, FH - 1);
 
-    let ky = y + 9;
+    // ---- kolom kanan ----
+    const X = M + FW + 36, CW = W - X - M;
+    let y = FY + 10;
     ctx.fillStyle = INK50;
-    ctx.font = '300 9px "Geologica", system-ui, sans-serif';
-    ctx.fillText("LOKASI", KX, ky);
-    ky += 13;
-    ky += _kuTulis(ctx, [{ t: o.lokasi, tebal: false, sub: false }], KX, ky, KW,
-      { px: 11, bobot: 300, bobotTebal: 300, tinggiBaris: 14, warna: INK });
+    ctx.font = '300 11px "Geologica", system-ui, sans-serif';
+    ctx.fillText("LOKASI", X, y);
+    y += 22;
+    y += _kuTulis(ctx, [{ t: o.lokasi, tebal: false, sub: false }], X, y, CW,
+      { px: 15, bobot: 300, bobotTebal: 300, tinggiBaris: 21, warna: INK, maksBaris: 2 });
 
-    ky += 30;
+    /* Pasak DIPATOK ke kaki potret, sama seperti margin-top:auto di kartu
+       layar. Angka indeks lalu didudukkan di tengah tengah ruang sisa,
+       bukan digeser sekian piksel dari alamat, supaya alamat satu baris
+       maupun dua baris sama sama seimbang. */
+    const PASAK_Y = FY + FH - 20;
+    const ATAS = y + 6, BAWAH = PASAK_Y - 26;
+    const BLOK = 78 + 8 + 20;              // tinggi angka, sela, nama kelas
+    let ny = ATAS + Math.max(0, (BAWAH - ATAS - BLOK) / 2) + 78;
+
     ctx.fillStyle = tinta; ctx.textAlign = "center";
-    ctx.font = '500 46px "Geologica", system-ui, sans-serif';
-    ctx.fillText(String(d.nilai), KX + KW / 2, ky);
-    ky += 15;
-    ctx.font = '500 11px "Geologica", system-ui, sans-serif';
-    ctx.fillText(d.nama, KX + KW / 2, ky);
+    ctx.font = '500 104px "Geologica", system-ui, sans-serif';
+    ctx.fillText(String(d.nilai), X + CW / 2, ny);
+    ny += 30;
+    ctx.font = '500 20px "Geologica", system-ui, sans-serif';
+    ctx.fillText(d.nama, X + CW / 2, ny);
     ctx.textAlign = "left";
 
-    // dua pasak, rata kaki potret
-    const PY = Math.max(ky + 24, y + FH - 14);
-    const pasak = [["Parameter Kritis", d.kritis || "tidak tersedia"],
-                   ["Berlaku Untuk", _kuJam(d.waktu)]];
-    pasak.forEach(([judul, nilai], i) => {
-      const cx = KX + (KW / 2) * i, cw = KW / 2;
+    [["Parameter Kritis", d.kritis || "tidak tersedia"],
+     ["Berlaku Untuk", _kuJam(d.waktu)]].forEach(([judul, nilai], i) => {
+      const cx = X + (CW / 2) * i, cw = CW / 2;
       ctx.fillStyle = INK; ctx.textAlign = "center";
-      ctx.font = '500 9.5px "Geologica", system-ui, sans-serif';
-      ctx.fillText(judul, cx + cw / 2, PY);
+      ctx.font = '500 13px "Geologica", system-ui, sans-serif';
+      ctx.fillText(judul, cx + cw / 2, PASAK_Y);
       ctx.textAlign = "left";
-      _kuTulis(ctx, _kuRuas(nilai), cx, PY + 12, cw,
-        { px: 9.5, bobot: 500, bobotTebal: 500, tinggiBaris: 12, tengah: true, warna: tinta });
+      _kuTulis(ctx, _kuRuas(nilai), cx, PASAK_Y + 20, cw,
+        { px: 14, bobot: 500, bobotTebal: 500, tinggiBaris: 18, tengah: true, warna: tinta });
     });
+    y = PASAK_Y + 24;
 
-    y = Math.max(PY + 16, y + FH) + P;
-
-    const garis = (yy) => {
-      ctx.strokeStyle = INK20; ctx.lineWidth = 0.7;
-      ctx.beginPath(); ctx.moveTo(0, yy + 0.35); ctx.lineTo(W, yy + 0.35); ctx.stroke();
-    };
-    garis(y); y += 10;
-
-    // ---- saran ----
-    y += _kuTulis(ctx, [{ t: o.saran, tebal: false, sub: false }], P, y + 9, W - P * 2,
-      { px: 11.5, bobot: 200, bobotTebal: 200, tinggiBaris: 17, warna: INK70 }) + 4;
-
-    // ---- catatan skala, bergaris kiri ----
+    // ---- saran dan catatan, selebar kartu di bawah potret ----
+    y = Math.max(y, FY + FH + 4);
+    ctx.strokeStyle = INK20; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(M, y + 0.5); ctx.lineTo(W - M, y + 0.5); ctx.stroke();
+    y += 24;
+    const LW = W - M * 2;
+    y += _kuTulis(ctx, [{ t: o.saran, tebal: false, sub: false }], M, y, LW,
+      { px: 14.5, bobot: 200, bobotTebal: 200, tinggiBaris: 21, warna: INK70 }) + 8;
     if (o.catatanSkala) {
-      const cx = P + 11, cw = W - cx - P;
-      const h = _kuTulis(ctx, _kuRuas(o.catatanSkala), cx, y + 9, cw,
-        { px: 10.5, bobot: 200, bobotTebal: 400, tinggiBaris: 15, warna: INK70, warnaTebal: INK });
-      ctx.fillStyle = AKSEN; ctx.fillRect(P, y, 2, h);
-      y += h + 10;
+      const bx = M + 13;
+      const h = _kuTulis(ctx, _kuRuas(o.catatanSkala), bx, y, W - bx - M,
+        { px: 12.5, bobot: 200, bobotTebal: 400, tinggiBaris: 18, warna: INK70, warnaTebal: INK });
+      ctx.fillStyle = AKSEN; ctx.fillRect(M, y - 13, 2, h);
+      y += h;
     }
 
-    garis(y); y += 9;
+    // ---- kaki, dipatok ke dasar bingkai bukan ke isi ----
     ctx.fillStyle = INK50;
-    y += _kuTulis(ctx, [{ t: `Keluaran model ${MODEL_ID === "wrfchem" ? "WRF-Chem" : "CAMS"}, bukan hasil pengukuran alat di lapangan.`, tebal: false, sub: false }],
-      P, y + 8, W - P * 2, { px: 9.5, bobot: 200, bobotTebal: 200, tinggiBaris: 13, warna: INK50 }) + 9;
-
-    // ---- dipotong setinggi isinya, lalu tepi kartu digambar ----
-    const out = document.createElement("canvas");
-    out.width = W * S; out.height = Math.round(y) * S;
-    const o2 = out.getContext("2d");
-    o2.drawImage(cv, 0, 0);
-    o2.scale(S, S);
-    o2.strokeStyle = INK20; o2.lineWidth = 0.7;
-    o2.strokeRect(0.35, 0.35, W - 0.7, Math.round(y) - 0.7);
+    ctx.font = '200 11.5px "Geologica", system-ui, sans-serif';
+    ctx.fillText(`Keluaran model ${MODEL_ID === "wrfchem" ? "WRF-Chem" : "CAMS"}, bukan hasil pengukuran alat di lapangan.`,
+                 M, H - 22);
 
     const bersih = (o.lokasi || "lokasi").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
     const a = document.createElement("a");
     a.download = `kartu-udara-${kuSisi}-${bersih}.png`;
-    a.href = out.toDataURL("image/png");
+    a.href = cv.toDataURL("image/png");
     a.click();
     return a.href;   // data URL-nya dikembalikan, berguna untuk menguji
   } finally {
@@ -4659,6 +4671,7 @@ async function kuUnduh() {
 function kuPakaiTitik(lat, lon, nama, akuDisini) {
   kuGeo = { lat, lon, alamat: nama || null };
   kuGeoGagal = "";
+  kuTandaLokasi();
   map.setView([lat, lon], 8, { animate: true });
   openPoint(lat, lon, nama || null, !!akuDisini);
   kuCariBuka(false);
@@ -4666,6 +4679,24 @@ function kuPakaiTitik(lat, lon, nama, akuDisini) {
   reverseGeocodeLengkap(lat, lon)
     .then((a) => { if (kuGeo && kuGeo.lat === lat && a) { kuGeo.alamat = a; kuIsi(false); } })
     .catch(() => { /* alamat opsional, nama kota atau koordinat tetap dipakai */ });
+}
+
+/* Mematikan Kartu Udara. Bukan sekadar menutup panel, tapi MENGOSONGKAN
+   isinya sekaligus menutup gelembung titik di peta. Yang terakhir itu yang
+   sebenarnya diminta, pemilik melaporkan gelembung grafik di titik tidak
+   bisa ditutup. closePoint sudah mengurus gelembung, penanda, sidebar, dan
+   hash sekaligus, jadi tidak ada yang perlu dibereskan dua kali di sini. */
+function kuMati() {
+  kuGeo = null; kuKartu = null; kuGeoGagal = ""; kuGeoMinta = false;
+  kuTandaLokasi();
+  kuToken++;                       // batalkan pembacaan yang masih berjalan
+  closePoint();
+  kuCariBuka(false);
+  kuIsi(false);
+  const unduh = $("ku-unduh"); if (unduh) unduh.disabled = true;
+  /* Panelnya ditutup lewat tulang punggungnya, bukan dengan mencabut kelas
+     sendiri, supaya sisi.js tetap satu satunya yang mengurus buka tutup. */
+  if ($("sisi-kartu")?.classList.contains("terbuka")) $("spine-kartu")?.click();
 }
 
 /* ---- Pemilih lokasi di bawah kartu ----
@@ -4677,7 +4708,49 @@ function kuCariBuka(buka) {
   isi.hidden = !buka;
   tbl.setAttribute("aria-expanded", buka ? "true" : "false");
   tbl.classList.toggle("terbuka", buka);
-  if (buka) { loadPlaces().then(() => kuCariHasil($("ku-cari-input")?.value || "")); }
+  if (!buka) return;
+  /* Badan panel digulir ke dasar DUA KALI, dan itu perlu. Sekali begitu
+     pemilihnya muncul, sekali lagi sesudah daftar kotanya terisi, sebab
+     daftar itu datang belakangan dan menambah tinggi lagi. Tanpa ini
+     pemilihnya terbuka DI LUAR layar waktu kartunya lebih tinggi daripada
+     ruang yang tersedia, dan orang mengira tombolnya tidak berfungsi. */
+  requestAnimationFrame(kuGulirKeDasar);
+  loadPlaces().then(() => {
+    kuCariHasil($("ku-cari-input")?.value || "");
+    requestAnimationFrame(kuGulirKeDasar);
+  });
+}
+
+/* Batas bawah kartunya ATAS LEGENDA, bukan tepi layar. Tidak bisa ditulis
+   mati di CSS sebab titik awal kartunya berpindah, dia duduk di bawah Fitur
+   dan Fitur yang terbuka mendorongnya turun. Jadi diukur, dan diukur ulang
+   tiap layar berganti ukuran maupun tiap kartu tepi dibuka atau ditutup. */
+function kuUkurTinggi() {
+  const panel = $("sisi-kartu"), badan = panel && panel.querySelector(".sisi-body");
+  if (!badan) return;
+  const legenda = document.querySelector(".legend-col") || document.querySelector(".ui-bottom");
+  const batas = legenda ? legenda.getBoundingClientRect().top : window.innerHeight;
+  // Sisakan ruang untuk tombol OFF di bawah badannya, plus sedikit napas.
+  const ruang = Math.round(batas - panel.getBoundingClientRect().top - 62);
+  badan.style.setProperty("--ku-tinggi", Math.max(180, ruang) + "px");
+  kuTandaGulir();
+}
+
+function kuGulirKeDasar() {
+  const badan = $("sisi-kartu")?.querySelector(".sisi-body");
+  /* Langsung, bukan mulus. Mulus itu animasi, dan animasi di sini berarti
+     pemilihnya baru terlihat setengah detik sesudah ditekan. */
+  if (badan) badan.scrollTop = badan.scrollHeight;
+}
+
+/* Tanda bahwa daftar kota masih bisa digulir. Dipasang dan dicabut dari
+   sini, bukan dari CSS, sebab CSS tidak bisa tahu isi sebuah kotak lebih
+   panjang daripada kotaknya. */
+function kuTandaGulir() {
+  const el = $("ku-cari-hasil"), bungkus = $("ku-cari-gulir");
+  if (!el || !bungkus) return;
+  const bisa = el.scrollHeight - el.scrollTop - el.clientHeight > 4;
+  bungkus.classList.toggle("bisa-gulir", bisa);
 }
 
 function kuCariHasil(q) {
@@ -4693,6 +4766,8 @@ function kuCariHasil(q) {
   box.innerHTML = res.length
     ? res.map((p) => `<button type="button" class="ku-cari-item" data-lat="${p.lat}" data-lon="${p.lon}">${p.n}</button>`).join("")
     : `<p class="ku-cari-kosong">Tak ada hasil</p>`;
+  box.scrollTop = 0;
+  kuTandaGulir();
 }
 
 /* `animasi` sengaja TIDAK selalu menyala. kuIsi dipanggil ulang tiap slider
@@ -4703,6 +4778,7 @@ async function kuIsi(animasi) {
   const depan = $("ku-depan"), belakang = $("ku-belakang");
   if (!depan || !belakang) return;
 
+  kuTandaLokasi();
   if (!kuGeo) {
     const isi = kuGeoMinta
       ? `<p>Menunggu izin lokasi…</p>`
@@ -4752,6 +4828,11 @@ async function kuIsi(animasi) {
   belakang.innerHTML = dA ? _kuSisiHTML(dA, oA) : gagal;
   kuKartu = (dI || dA) ? { ispu: dI && { d: dI, o: oI }, aqi: dA && { d: dA, o: oA } } : null;
   const unduh = $("ku-unduh"); if (unduh) unduh.disabled = !kuKartu;
+}
+
+/* Tombol OFF cuma ada artinya kalau sudah ada lokasi yang dipilih. */
+function kuTandaLokasi() {
+  $("sisi-kartu")?.classList.toggle("ada-lokasi", !!kuGeo);
 }
 
 function kuBalik() {
