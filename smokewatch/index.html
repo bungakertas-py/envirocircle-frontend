@@ -305,7 +305,9 @@
         <!-- ============ KARTU TEPI KANAN, FITUR ============
              Kembaran kartu kiri, menempel di tepi kanan. Tombolnya SENGAJA
              terpisah dari yang kiri, jadi Parameter dan Fitur tidak pernah
-             saling menutup. -->
+             saling menutup.
+             Sejak 9 Okt Kartu Udara duduk TEPAT DI BAWAHNYA di rak yang
+             sama, pola yang sama dengan Parameter dan Model di kiri. -->
         <aside class="sisi sisi--kanan" id="sisi-fitur">
           <button type="button" class="sisi-spine" id="spine-fitur"
                   aria-controls="sisi-fitur" aria-expanded="false">
@@ -383,6 +385,27 @@
           </div>
           <button id="share-btn" class="icon-btn" aria-label="Bagikan tampilan ini" data-tip="Bagikan"><span class="material-symbols-outlined">share</span></button>
         </div>
+          </div>
+        </aside>
+        <!-- ============ KARTU UDARA ============
+             9 Oktober 2026. Kartu identitas kualitas udara untuk lokasi
+             PENGGUNA, bukan untuk titik yang diklik. Duduk di rel KANAN
+             tepat di bawah Fitur, jadi membuka Fitur menurunkan dia sendiri
+             tanpa satu baris JS tata letak. Badannya melebar ke KIRI.
+             Terbuka sendiri waktu halaman dibuka, itu memang diminta. -->
+        <aside class="sisi sisi--kanan" id="sisi-kartu">
+          <button type="button" class="sisi-spine" id="spine-kartu"
+                  aria-controls="sisi-kartu" aria-expanded="false">
+            <span class="material-symbols-outlined sisi-ico">badge</span>
+            <span class="sisi-lbl">Kartu Udara</span>
+          </button>
+          <div class="sisi-body">
+            <div id="kartu-udara" class="ku">
+              <div class="ku-dalam" id="ku-dalam">
+                <section class="ku-sisi ku-depan" id="ku-depan" aria-label="Kartu udara ISPU"></section>
+                <section class="ku-sisi ku-belakang" id="ku-belakang" aria-label="Kartu udara AQI"></section>
+              </div>
+            </div>
           </div>
         </aside>
         </div>
@@ -536,7 +559,6 @@
          pointer-events di sana dan tidak pernah menghalangi klik ke peta.
          Perilakunya di app.js, cari "petunjuk kursor". -->
     <div id="klik-petunjuk" class="klik-petunjuk" aria-hidden="true">Click Here</div>
-
 
     <!-- Panel detail titik. Layer polutan memakai popup kecil di titik (openPoint),
          tapi layer daya tampung isinya terlalu panjang untuk popup, jadi khusus

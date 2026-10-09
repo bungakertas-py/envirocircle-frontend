@@ -692,6 +692,22 @@ const lightLabels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/ser
 // ---- State -------------------------------------------------------------
 let frames = [];
 let current = 0;
+
+/* Keadaan Kartu Udara. DIDEKLARASIKAN DI SINI, bukan di blok kartunya yang
+   ada di kaki berkas, dan itu bukan soal kerapian.
+
+   showFrame() membaca kuOn, dan showFrame dipanggil waktu init yang terjadi
+   SEBELUM kaki berkas sempat dieksekusi. `let` di kaki berkas masih berada
+   di zona mati sementara pada saat itu, jadi membacanya melempar
+   ReferenceError dan seluruh app berhenti. Sempat terjadi. Apa pun yang
+   dibaca showFrame harus dideklarasikan di atas sini. */
+let kuOn = false, kuSisi = "ispu", kuToken = 0;
+/* Kartu ini mengikuti LOKASI PENGGUNA, bukan titik yang diklik di peta.
+   Diubah 9 Okt atas permintaan pemilik, "saya gamau sistem posisi yg
+   sekarang, tapi posisinya akan otomatis track si user". */
+let kuGeo = null;            // { lat, lon, alamat }
+let kuGeoMinta = false;      // sedang menunggu jawaban peramban
+let kuGeoGagal = "";         // sebab gagal, untuk ditampilkan di kartu
 let velocityLayer = null;
 /* Penanda urutan permintaan medan angin. Sejak partikel angin TIDAK LAGI
    ditunggu sebelum peta tampil, dua permintaan bisa berjalan bersamaan waktu
@@ -1156,6 +1172,11 @@ function pinjamAnginMeteo() {
 async function showFrame(i) {
   current = (i + frames.length) % frames.length;
   const frame = frames[current];
+  // Kartu Udara membaca nilai pada JAM YANG SEDANG DITAMPILKAN, jadi dia
+  // harus ikut tiap slider digeser. Kalau tidak, angkanya diam di jam
+  // pertama sementara petanya sudah berpindah, dan itu salah tanpa kentara.
+  // TANPA animasi, sebab menggambar ulang sketsanya tiap tik itu melelahkan.
+  if (kuOn) kuIsi(false);
 
   // Heatmap (kedua layer punya preview_image): angin = kecepatan, hujan = laju hujan.
   // Daya tampung TIDAK memakai pratinjau server, lihat blok PETA DAYA TAMPUNG.
@@ -2433,6 +2454,7 @@ async function openPoint(lat, lon, label, isMe) {
   popupLabel = label || null;
   sharedPoint = { lat, lon, name: label || null, me: !!isMe };
   updateHash();
+  // Kartu Udara TIDAK lagi ikut titik yang diklik, dia mengikuti GPS.
   const judul = label || fmtCoord(lat, lon);
   const token = ++pointToken;                 // hasil yang telat jangan menimpa titik baru
   let popupBawah = false;
@@ -3755,6 +3777,40 @@ async function init() {
       );
     });
 
+    /* ---- Kartu Udara ----
+       Buka tutupnya diurus sisi.js lewat tulang punggung panel, di sini
+       cuma didengarkan. Membuka panel berarti meminta lokasi, dan itu yang
+       diminta pemilik, "misal saya pencet atau buka ni kartunya nanti bakal
+       minta akses GPS user". */
+    document.addEventListener("sisi-ubah", (e) => {
+      if (e.detail.id !== "sisi-kartu") return;
+      kuOn = e.detail.buka;
+      if (!kuOn) return;
+      if (kuGeo) { kuIsi(true); return; }
+      /* Waktu halaman baru dibuka panel ini membuka DIRINYA SENDIRI, dan
+         kotak izin yang muncul tanpa ada yang disentuh itu mengagetkan.
+         Jadi yang otomatis cuma kalau izinnya memang sudah pernah
+         diberikan. Selebihnya kartunya menampilkan tombol. */
+      kuPunyaIzin().then((boleh) => {
+        if (boleh) kuLacak(); else kuIsi(true);
+      });
+    });
+    /* MENYUSUL. sisi.js membuka panel ini sendiri sesaat sesudah halaman
+       dimuat, sedangkan penyimak di atas baru terpasang di sini, yaitu
+       sesudah katalog selesai diambil. Jadi kejadian bukanya sudah lewat dan
+       kartunya tinggal kotak kosong. Sudah kejadian waktu diuji. */
+    if ($("sisi-kartu")?.classList.contains("terbuka")) {
+      kuOn = true;
+      kuPunyaIzin().then((boleh) => { if (boleh) kuLacak(); else kuIsi(true); });
+    }
+
+    /* Tombol balik dan tombol minta lokasi lahir ulang tiap kartu digambar,
+       jadi penyimaknya ditaruh di wadahnya sekali saja. */
+    $("kartu-udara")?.addEventListener("click", (e) => {
+      if (e.target.closest("[data-ku-flip]")) kuBalik();
+      else if (e.target.closest("[data-ku-lacak]")) kuLacak();
+    });
+
     // Point detail: klik peta → panel titik
     map.on("click", (e) => openPoint(e.latlng.lat, e.latlng.lng));
 
@@ -4060,3 +4116,374 @@ function setupHP() {
 if (document.readyState === "loading")
   document.addEventListener("DOMContentLoaded", setupHP);
 else setupHP();
+
+/* =====================================================================
+   KARTU UDARA, 9 Oktober 2026
+   Diminta pemilik. Ringkasan kualitas udara satu titik berbentuk kartu
+   identitas, dengan ilustrasi orang menggantikan pas foto. Sisi depan ISPU,
+   sisi belakang AQI, dibalik lewat tombol.
+
+   TIGA HAL YANG DISENGAJA, jangan diubah tanpa membaca alasannya.
+
+   1. Kartunya TIDAK meniru KTP. Yang dipinjam cuma tata letaknya, potret di
+      kiri dan kolom di kanan. Tanpa lambang negara, tanpa kolom bergaya NIK,
+      tanpa warna dokumen resmi. Situs ini berdiri di bawah nama ITERA dan
+      Envirocircle, dan kartu yang bisa disalahbaca sebagai dokumen resmi itu
+      masalah, bukan lelucon.
+
+   2. ISPU dan AQI TIDAK SEBANDING. Lima kelas lawan enam, ambang berbeda,
+      dan breakpoint PM2,5-nya pun berbeda. Angka 150 berarti Tidak Sehat di
+      ISPU tapi Unhealthy untuk kelompok sensitif di AQI. Jadi membalik kartu
+      bisa memperlihatkan udara yang SAMA dengan dua vonis yang terlihat
+      berbeda. Sisi belakang WAJIB menyebut bahwa ini penggaris lain untuk
+      udara yang sama, bukan pengukuran kedua.
+
+   3. Ini KELUARAN MODEL, bukan alat ukur di lapangan. Bentuk sekaku kartu
+      identitas justru membuat orang mengira ini hasil pengukuran resmi, jadi
+      kakinya menyebutkan itu.
+   ===================================================================== */
+
+/* ---- Ilustrasi, gaya sketsa teknik ----
+   Potret depan, kepala sampai setengah dada. Garis tipis rata seperti gambar
+   kerja, ditambah garis bantu konstruksi dan arsiran. Semuanya memakai
+   `currentColor`, jadi satu set gambar melayani semua kelas dan warnanya
+   ikut warna kartunya.
+
+   Digerakkan KELAS, bukan angka, supaya satu set melayani ISPU yang lima
+   kelas maupun AQI yang enam. */
+/* ---- Ilustrasi ----
+   GAMBAR PEMILIK SENDIRI, dipotong dari kertas-cuaca/EkspresiISPU.jpeg.
+
+   Menggambar ulang dengan SVG SUDAH DICOBA EMPAT PUTARAN dan ditolak
+   pemilik dua kali. Kesimpulannya jelas, menulis jalur bezier dengan tangan
+   tidak akan menyamai ilustrasi yang digambar orang, dan tiap putaran
+   malah menjauh. Jadi yang dipakai gambarnya sendiri.
+
+   Set AQI tidak dipakai walau ada, sebab sosoknya sama persis dengan set
+   ISPU sementara tulisannya menyatu di dalam gambar. Tingkat keenam untuk
+   AQI Hazardous dibuat dengan menggelapkan bingkai kelima.
+
+   YANG BELUM BISA DIKERJAKAN DARI SINI, dan ini batas sungguhan.
+   Membuang latar berarsir dari raster sudah dicoba dua cara, mencari
+   gumpalan putih terbesar dan membanjiri latar dari tepi, dan dua duanya
+   rusak. Yang pertama cuma menangkap pecahan sebab bagian dalam sosok
+   terpotong garis wajah, yang kedua bocor masuk ke dalam sosok sebab garis
+   tepinya menyatu dengan massa arsiran sesudah dikikis. Mengubah bahu dan
+   rambut lebih mustahil lagi, itu menggambar ulang.
+
+   Keduanya cuma bisa diselesaikan di sisi gambarnya, bukan di sini. */
+/* ---- Ilustrasi kondisi udara ----
+   Gambarnya VEKTOR, diambil dari berkas .ai yang dibeli pemilik lalu dibelah
+   per avatar. Jadi bukan sketsa yang kugambar sendiri, dan itu memang yang
+   diminta, "identik aja".
+
+   Lima keadaan, dan yang berbeda di antaranya CUMA mulut, alis, dan penutup
+   wajah. Wajah, rambut, hoodie, dan lingkarannya sama persis di kelimanya,
+   sebab semuanya jalur yang sama dari gambar asalnya. Hoodie-nya diubah dari
+   hijau asalnya jadi biru Envirocircle, #1679AB dengan dalam tudung #074173.
+
+   Dimuat sebagai berkas, bukan ditempel di dalam berkas ini. Kelimanya
+   bersama cuma 93 KB dan dipakai ulang tiap kartu digambar, sedangkan
+   menempelkannya di sini berarti 93 KB ikut diunduh tiap orang yang membuka
+   app ini walau dia tidak pernah membuka kartunya. */
+const _KU_SVG = {};
+let _kuSvgJanji = null;
+const KU_KEADAAN = ["senyum", "netral", "khawatir", "masker", "respirator"];
+
+function _kuMuatSvg() {
+  if (_kuSvgJanji) return _kuSvgJanji;
+  _kuSvgJanji = Promise.all(KU_KEADAAN.map((n) =>
+    fetch(`kartu/${n}.svg`)
+      .then((r) => (r.ok ? r.text() : ""))
+      .then((s) => { _KU_SVG[n] = s; })
+      .catch(() => { _KU_SVG[n] = ""; })
+  ));
+  return _kuSvgJanji;
+}
+
+function kuAvatar(keadaan, animasi) {
+  const svg = _KU_SVG[keadaan];
+  if (!svg) return `<div class="ku-foto ku-foto-kosong" aria-hidden="true"></div>`;
+  return `<div class="ku-foto${animasi ? " ku-menggambar" : ""}"
+            role="img" aria-label="Ilustrasi kondisi udara, ${keadaan}">${svg}</div>`;
+}
+
+/* ---- Pemetaan kelas ke ilustrasi ----
+   Digerakkan NAMA KELAS, bukan angka, sebab ISPU lima kelas dan AQI enam.
+   Satu set gambar melayani keduanya.
+
+   Dua kelas terburuk AQI memakai wajah yang sama, respirator. Sesudah itu
+   tidak ada lagi yang bisa membedakannya selain WARNA, dan warnanya memang
+   sudah berbeda, ungu lawan merah tua. */
+const KU_AVATAR_ISPU = ["senyum", "netral", "khawatir", "masker", "respirator"];
+const KU_AVATAR_AQI  = ["senyum", "netral", "khawatir", "masker", "respirator", "respirator"];
+
+/* Saran tindakan. Sengaja kalimat pendek yang bisa dikerjakan, bukan vonis
+   medis. Nomor indeksnya sejajar dengan tabel kelas masing masing. */
+const KU_SARAN_ISPU = [
+  "Udara bersih. Aktivitas di luar aman untuk semua orang.",
+  "Masih aman. Kelompok yang sangat peka boleh mengurangi kegiatan berat di luar.",
+  "Kurangi kegiatan berat di luar. Anak, lansia, dan penderita asma sebaiknya di dalam.",
+  "Hindari kegiatan di luar. Pakai masker kalau terpaksa keluar.",
+  "Tetap di dalam ruangan. Tutup jendela dan pakai penyaring udara kalau ada.",
+];
+const KU_SARAN_AQI = [
+  "Udara bersih. Aktivitas di luar aman untuk semua orang.",
+  "Masih aman. Kelompok yang sangat peka boleh mengurangi kegiatan berat di luar.",
+  "Kelompok sensitif mulai terpengaruh. Kurangi kegiatan berat di luar.",
+  "Semua orang mulai terpengaruh. Kurangi kegiatan di luar.",
+  "Hindari kegiatan di luar. Pakai masker kalau terpaksa keluar.",
+  "Tetap di dalam ruangan. Tutup jendela dan pakai penyaring udara kalau ada.",
+];
+
+function _kuIndeksKelas(tabel, nilai) {
+  for (let i = 0; i < tabel.length; i++) if (nilai <= tabel[i][0]) return i;
+  return tabel.length - 1;
+}
+
+/* Ambil nilai, kelas, dan pencemar kritis untuk SATU indeks di satu titik.
+   Dipanggil dua kali, ISPU dan AQI, supaya kartunya lengkap apa pun layer
+   yang sedang aktif di peta. */
+async function _kuBaca(key, lat, lon) {
+  const pd = await loadSeries(key);
+  const vals = sampleSeries(pd, lat, lon);
+  const i = Math.max(0, nearestIndex(pd.meta.times, frames[current] && frames[current].valid_time));
+  const nilai = Math.round(vals[i]);
+  if (!isFinite(nilai)) return null;
+  const tabel = key === "ispu" ? ISPU_KAT : AQI_KAT;
+  const idx = _kuIndeksKelas(tabel, nilai);
+  const [, nama, warna, putih] = tabel[idx];
+  let kritis = null;
+  try {
+    const pk = await loadSeries(key === "ispu" ? "ispu_kritis" : "aqi_kritis");
+    const kode = sampleSeriesNearest(pk, lat, lon);
+    const par = (pd.meta.kritis_param || [])[Math.round(kode[i])];
+    if (par) kritis = KIMIA_HTML[par] || par;
+  } catch (e) { /* pencemar kritis opsional, kartunya tetap sah tanpa itu */ }
+  return { nilai, nama, warna, putih: !!putih, idx, kritis,
+           waktu: pd.meta.times && pd.meta.times[i] };
+}
+
+function _kuJam(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const w = new Date(d.getTime() + 7 * 3600e3);
+  const B = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(w.getUTCDate())} ${B[w.getUTCMonth()]} ${p(w.getUTCHours())}.${p(w.getUTCMinutes())} WIB`;
+}
+
+/* Warna kelas AMAN DIPAKAI DI ATAS PUTIH.
+
+   Warna kelas dipakai dua kali di kartu ini, sebagai alas kepala dan sebagai
+   tinta untuk garis gambar dan angka besar. Sebagai alas dia selalu benar.
+   Sebagai TINTA dia bisa hilang, sebab dua kelas memang kuning, ISPU Tidak
+   Sehat #ead821 dan AQI Moderate #ffff00, dan garis kuning di atas kertas
+   putih praktis tidak terlihat.
+
+   Jadi yang terlalu terang DIGELAPKAN secukupnya, bukan diganti jadi tinta.
+   Menggantinya memutus kaitan warna dengan kelasnya, padahal kaitan itulah
+   gunanya. Patokannya luminans relatif, dan 0,45 itu ambang yang membuat
+   kuning tua masih terbaca kuning tapi sudah cukup gelap untuk dibaca. */
+function _kuWarnaAman(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return hex;
+  let [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255);
+  const lum = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  let L = 0.2126 * lum(r) + 0.7152 * lum(g) + 0.0722 * lum(b);
+  let k = 1;
+  while (L > 0.18 && k > 0.05) {           // gelapkan bertahap sampai cukup kontras
+    k -= 0.05;
+    const rr = r * k, gg = g * k, bb = b * k;
+    L = 0.2126 * lum(rr) + 0.7152 * lum(gg) + 0.0722 * lum(bb);
+  }
+  const h = (v) => Math.round(v * k * 255).toString(16).padStart(2, "0");
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+
+/* Tata letak kolom kanan mengikuti KartuRevisi.jpeg dari pemilik. Bedanya
+   dengan versi pertama, daftar lima baris label-nilai diganti SATU ANGKA
+   BESAR yang jadi pusat perhatian, kategorinya menempel di bawahnya, lalu
+   dua pasak di kaki. Lokasi naik ke atas sebagai baris sendiri.
+
+   Rentang kelas, dulu "301+" di sebelah angkanya, DIBUANG mengikuti rancangan
+   itu. Yang menjelaskan angkanya sekarang nama kategorinya. */
+function _kuSisiHTML(d, opsi) {
+  const { label, lokasi, avatar, saran, catatanSkala, animasi,
+          lawanLabel, lawanWarna, lawanPutih } = opsi;
+  const putih = d.putih ? " ku-putih" : "";
+  const tinta = _kuWarnaAman(d.warna);     // untuk angka besar dan nilai pasak
+  /* Tombol balik berbentuk SUDUT TERKELUPAS di kanan atas, diminta pemilik.
+     Warna di dalam kupasannya warna kelas SISI SEBERANG, jadi sebelum
+     dibalik pun orang sudah melihat warna AQI-nya mengintip. */
+  const kupas = `
+    <button type="button" class="ku-kupas${lawanPutih ? " ku-kupas-putih" : ""}"
+            data-ku-flip="1" aria-label="Lihat ${lawanLabel}"
+            style="--kupas:${lawanWarna}">
+      <span class="ku-kupas-teks">Lihat ${lawanLabel}</span>
+    </button>`;
+  return `
+    ${kupas}
+    <div class="ku-kepala${putih}" style="background:${d.warna}">
+      <span class="ku-merek">Envirocircle &middot; Smokewatch</span>
+      <span class="ku-jenis">${label}</span>
+    </div>
+    <div class="ku-isi">
+      <div class="ku-potret">${kuAvatar(avatar, animasi)}</div>
+      <div class="ku-kanan">
+        <p class="ku-lok"><span>Lokasi</span><b>${lokasi}</b></p>
+        <p class="ku-angka" style="color:${tinta}">${d.nilai}</p>
+        <p class="ku-kat" style="color:${tinta}">${d.nama}</p>
+        <dl class="ku-pasak">
+          <div>
+            <dt>Parameter Kritis</dt>
+            <dd style="color:${tinta}">${d.kritis || "tidak tersedia"}</dd>
+          </div>
+          <div>
+            <dt>Berlaku Untuk</dt>
+            <dd style="color:${tinta}">${_kuJam(d.waktu)}</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+    <p class="ku-saran">${saran}</p>
+    ${catatanSkala ? `<p class="ku-awas">${catatanSkala}</p>` : ""}
+    <p class="ku-kaki">Keluaran model ${MODEL_ID === "wrfchem" ? "WRF-Chem" : "CAMS"}, bukan hasil pengukuran alat di lapangan.</p>`;
+}
+
+/* ---- Lokasi pengguna ----
+   Kartu ini milik tempat PENGGUNA berdiri. Alamatnya dicari balik lewat
+   Nominatim dan ditulis selengkap mungkin, kelurahan sampai provinsi, bukan
+   koordinat lagi.
+
+   Izin lokasi TIDAK diminta diam diam waktu halaman dibuka walaupun
+   kartunya terbuka sendiri. Peramban akan memunculkan kotak izin tanpa ada
+   yang menyentuh apa pun, dan itu perilaku yang layak dicurigai. Jadi kalau
+   izinnya SUDAH pernah diberikan, lokasinya diambil sendiri tanpa bertanya.
+   Kalau belum, kartunya menampilkan tombol, dan menekan tombol itulah yang
+   memicu kotak izin. Menekan tulang punggung panelnya juga dihitung
+   sentuhan, jadi membuka kartu dengan tangan tetap langsung meminta izin. */
+async function kuPunyaIzin() {
+  try {
+    if (!navigator.permissions?.query) return false;
+    return (await navigator.permissions.query({ name: "geolocation" })).state === "granted";
+  } catch (e) { return false; }
+}
+
+function kuLacak() {
+  if (kuGeoMinta) return;
+  if (!navigator.geolocation) { kuGeoGagal = "Peramban ini tidak punya layanan lokasi."; kuIsi(true); return; }
+  kuGeoMinta = true; kuGeoGagal = ""; kuIsi(true);
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      kuGeoMinta = false;
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      if (dataBounds && !dataBounds.contains([lat, lon])) {
+        kuGeoGagal = "Lokasi kamu di luar cakupan peta, Asia dan Pasifik.";
+        kuIsi(true); return;
+      }
+      kuGeo = { lat, lon, alamat: null };
+      map.setView([lat, lon], 8, { animate: true });
+      openPoint(lat, lon, null, true);      // penanda "kamu di sini" di peta
+      kuIsi(true);                          // tampilkan dulu, alamat menyusul
+      try {
+        const a = await reverseGeocodeLengkap(lat, lon);
+        if (kuGeo && kuGeo.lat === lat && a) { kuGeo.alamat = a; kuIsi(false); }
+      } catch (e) { /* alamat opsional, koordinat tetap dipakai */ }
+    },
+    (err) => {
+      kuGeoMinta = false;
+      kuGeoGagal = err && err.code === 1
+        ? "Akses lokasi ditolak. Izinkan lokasi di peramban lalu coba lagi."
+        : "Lokasi tidak bisa diambil sekarang.";
+      kuIsi(true);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+  );
+}
+
+/* Alamat selengkap mungkin, bukan tiga potong seperti judul panel titik.
+   zoom 18 supaya Nominatim turun sampai jalan dan kelurahan. */
+async function reverseGeocodeLengkap(lat, lon) {
+  const url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2" +
+    "&lat=" + lat + "&lon=" + lon + "&zoom=18&addressdetails=1&accept-language=id";
+  const r = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!r.ok) throw new Error("geocode " + r.status);
+  const a = (await r.json()).address || {};
+  /* Kelurahan sampai provinsi. Itu sudah alamat lengkap dalam pengertian
+     administrasi Indonesia, dan panjangnya terkendali. Nama jalan cuma
+     ditambahkan kalau sisanya pendek, sebab kolom tempat dia ditulis cuma
+     sekitar 170 px dan alamat lima baris mendorong angka indeks keluar. */
+  const urut = [
+    a.village || a.neighbourhood || a.hamlet || a.suburb,
+    a.municipality || a.subdistrict || a.city_district,
+    a.city || a.town || a.county || a.regency,
+    a.state,
+  ];
+  const sudah = new Set(), bagian = [];
+  for (const x of urut) if (x && !sudah.has(x)) { sudah.add(x); bagian.push(x); }
+  let teks = bagian.join(", ");
+  if (a.road && !sudah.has(a.road) && (teks.length + a.road.length) <= 56) {
+    teks = a.road + (teks ? ", " + teks : "");
+  }
+  return teks || null;
+}
+
+/* `animasi` sengaja TIDAK selalu menyala. kuIsi dipanggil ulang tiap slider
+   waktu digeser, dan menggambar ulang sketsanya tiap tik itu melelahkan
+   dilihat. Jadi animasinya cuma waktu kartunya dibuka atau lokasinya
+   berganti, bukan waktu jamnya berganti. */
+async function kuIsi(animasi) {
+  const depan = $("ku-depan"), belakang = $("ku-belakang");
+  if (!depan || !belakang) return;
+
+  if (!kuGeo) {
+    const isi = kuGeoMinta
+      ? `<p>Menunggu izin lokasi…</p>`
+      : `<span class="material-symbols-outlined">my_location</span>
+         ${kuGeoGagal ? `<p>${kuGeoGagal}</p>` : `<p>Kartu ini dibuat untuk tempat kamu berdiri.</p>`}
+         <button type="button" class="ku-btn" data-ku-lacak="1">
+           <span class="material-symbols-outlined">near_me</span>Pakai lokasi saya
+         </button>`;
+    depan.innerHTML = belakang.innerHTML = `<div class="ku-kosong">${isi}</div>`;
+    return;
+  }
+
+  const token = ++kuToken;
+  const { lat, lon, alamat } = kuGeo;
+  const lokasi = alamat || fmtCoord(lat, lon);
+  if (!depan.querySelector(".ku-kepala")) {
+    depan.innerHTML = belakang.innerHTML = `<div class="ku-kosong"><p>Membaca…</p></div>`;
+  }
+  let dI = null, dA = null;
+  await _kuMuatSvg();
+  if (token !== kuToken) return;
+  try { dI = await _kuBaca("ispu", lat, lon); } catch (e) { /* lanjut */ }
+  try { dA = await _kuBaca("aqi", lat, lon); } catch (e) { /* lanjut */ }
+  if (token !== kuToken) return;
+  const gagal = `<div class="ku-kosong"><p>Indeks tidak tersedia di titik ini.</p></div>`;
+  depan.innerHTML = dI ? _kuSisiHTML(dI, {
+    label: "ISPU", lokasi, animasi, avatar: KU_AVATAR_ISPU[dI.idx], saran: KU_SARAN_ISPU[dI.idx],
+    lawanLabel: "AQI", lawanWarna: (dA ? dA.warna : "#2b83ba"), lawanPutih: !!(dA && dA.putih),
+    // Naskah dari pemilik, lewat temannya. Bagian yang dulu dikurung kurawal
+    // di naskah aslinya ditandai <b>, itu memang maksud kurawalnya.
+    catatanSkala: "ISPU merupakan indeks kualitas udara yang <b>ditetapkan secara "
+      + "resmi oleh Pemerintah Indonesia</b> melalui <b>Permen LHK No. 14 Tahun 2020</b>. "
+      + "Indeksnya terdiri dari lima kelas dan dihitung dari <b>parameter pencemar "
+      + "yang paling dominan</b> di antara pencemar lainnya.",
+  }) : gagal;
+  belakang.innerHTML = dA ? _kuSisiHTML(dA, {
+    label: "AQI (US EPA)", lokasi, animasi, avatar: KU_AVATAR_AQI[dA.idx], saran: KU_SARAN_AQI[dA.idx],
+    lawanLabel: "ISPU", lawanWarna: (dI ? dI.warna : "#2b83ba"), lawanPutih: !!(dI && dI.putih),
+    // Naskah dari pemilik, lewat temannya. Tetap memikul tugas peringatan,
+    // yaitu memberi tahu bahwa ini penggaris lain, bukan pengukuran kedua.
+    catatanSkala: "AQI merupakan indeks kualitas udara <b>acuan standar "
+      + "internasional</b> yang memiliki standar dan metode perhitungan yang berbeda "
+      + "dengan <b>ISPU yang merupakan indeks acuan Indonesia</b>.",
+  }) : gagal;
+}
+
+function kuBalik() {
+  kuSisi = kuSisi === "ispu" ? "aqi" : "ispu";
+  $("ku-dalam")?.classList.toggle("ku-terbalik", kuSisi === "aqi");
+}

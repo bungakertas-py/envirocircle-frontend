@@ -18,6 +18,9 @@
   "use strict";
 
   var pasangan = [
+    /* Kartu Udara PALING ATAS di rel kiri, dan dia satu satunya yang terbuka
+       sendiri waktu halaman dibuka. Diminta user 9 Okt. */
+    { sisi: "sisi-kartu", tombol: "spine-kartu" },
     { sisi: "sisi-param", tombol: "spine-param" },
     /* Model TERPISAH dari Parameter, tombolnya sendiri. Diminta user. Dua
        duanya duduk di rel kiri yang sama, jadi waktu Parameter dibuka kartu
@@ -37,8 +40,15 @@
   function sempit() { return window.matchMedia("(max-width: 900px)").matches; }
 
   function setBuka(k, buka) {
+    if (k.el.classList.contains("terbuka") === buka) return;
     k.el.classList.toggle("terbuka", buka);
     k.btn.setAttribute("aria-expanded", buka ? "true" : "false");
+    /* app.js butuh tahu kapan Kartu Udara dibuka, sebab di situlah izin
+       lokasi diminta. Lewat kejadian, bukan lewat app.js menyadap tombolnya
+       sendiri, supaya urusan buka tutup tetap tinggal di berkas ini. */
+    document.dispatchEvent(new CustomEvent("sisi-ubah", {
+      detail: { id: k.el.id, buka: buka }
+    }));
   }
 
   kartu.forEach(function (k) {
@@ -52,6 +62,15 @@
       }
     });
   });
+
+  /* Kartu Udara terbuka sendiri, kecuali di layar HP. Di HP badannya
+     memakan hampir seluruh layar dan petanya jadi tidak terlihat sama
+     sekali, jadi di sana dia menunggu ditekan. */
+  var kartuUdara = kartu.filter(function (k) { return k.el.id === "sisi-kartu"; })[0];
+  if (kartuUdara && !window.matchMedia("(max-width: 640px)").matches) {
+    /* Ditunda satu putaran supaya app.js sempat memasang penyimaknya. */
+    setTimeout(function () { setBuka(kartuUdara, true); }, 0);
+  }
 
   /* Esc menutup semuanya. Kalau ada panel titik atau kotak cari yang terbuka,
      app.js yang mengurus miliknya sendiri, dua duanya tidak bertabrakan sebab

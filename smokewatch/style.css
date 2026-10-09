@@ -3360,6 +3360,18 @@ body { font-weight: 200; }
    ===================================================================== */
 @media (max-width: 640px) {
   .rel, .alat { display: none; }
+  /* Rel KANAN dihidupkan lagi, tapi isinya cuma Kartu Udara. Parameter,
+     Model, dan Fitur memang sudah diwakili bilah bawah di HP, sedangkan
+     kartu ini tidak punya wakil di sana. Tanpa ini kartunya hilang sama
+     sekali di HP. Dia menunggu ditekan, tidak terbuka sendiri seperti di
+     desktop, sebab badannya memakan hampir seluruh layar. */
+  /* Rak alat kanan DIHIDUPKAN LAGI, tapi isinya cuma Kartu Udara.
+     Parameter, Model, dan Fitur memang sudah diwakili bilah bawah di HP,
+     sedangkan kartu ini tidak punya wakil di sana. Tanpa ini kartunya
+     hilang sama sekali di HP. */
+  .alat { display: flex; background: transparent; }
+  .alat > *:not(#sisi-kartu) { display: none; }
+  #sisi-kartu .sisi-body { width: calc(100vw - 52px); }
   /* Di bawah scrim tinggal identitas, jadi tidak perlu sepanjang desktop. */
   .scrim {
     height: 132px;
@@ -3843,4 +3855,254 @@ body { font-weight: 200; }
 
 @media (max-width: 640px) {
   .zoom-baris { gap: 6px; }
+}
+
+/* =====================================================================
+   KARTU UDARA, 9 Oktober 2026
+   Kartu identitas kualitas udara satu titik. Depan ISPU, belakang AQI.
+   ===================================================================== */
+
+/* Sejak 9 Okt kartunya PANEL SENDIRI di rel kiri, paling atas, tepat di
+   bawah badge Last update. Dia tidak lagi melayang di pojok. Yang mengurus
+   buka tutupnya mesin kartu tepi yang sudah ada, jadi Parameter dan Model
+   turun sendiri waktu kartu ini terbuka, tanpa satu baris JS tata letak. */
+/* ---- Letaknya ----
+   Sempat dicoba mendatar di bawah badge Last update, lalu pemilik memindah
+   ke kanan, "geser deng ke kanan dibawah fitur dan vertical lagi aja dan
+   membukan kekiri... harusnya susunannya kaya parameter dan model gitu".
+
+   Jadi dia kartu tepi biasa, anak `.alat` persis di bawah Fitur, dan
+   SELURUH perilakunya sudah ditangani aturan yang ada. `.alat .sisi--kanan`
+   membuat dia menumpuk tegak di bawah Fitur, `.sisi--kanan` membuat
+   badannya melebar ke kiri dengan tulang punggung di kanan, dan
+   `.sisi-lbl` yang memutar labelnya 90 derajat. Tidak ada satu pun aturan
+   letak baru di sini. */
+/* Lebarnya disamakan dengan Fitur di atasnya, 376 px, supaya dua kartu
+   yang bertumpuk itu satu bidang waktu dua duanya terbuka. Tinggi dan
+   penggulungnya sengaja TIDAK ditulis, biar ikut aturan
+   `.alat .sisi--kanan .sisi-body` yang sudah mengurus itu untuk Fitur. */
+#sisi-kartu .sisi-body {
+  width: 376px; padding: 0;
+  border: 0; background: transparent;
+}
+.ku { width: 100%; pointer-events: auto; font-family: var(--font-ui); }
+
+/* Pembalikan. perspective di INDUK, preserve-3d di yang berputar.
+   Kartu ini sengaja dipasang di luar kartu tepi mana pun, sebab
+   preserve-3d gugur kalau ada transform di leluhurnya, dan kartu tepi di
+   app ini dipasang dengan translateY(-50%). */
+/* GRID satu petak, dua sisi ditumpuk di petak yang sama. Bukan absolute.
+   Dengan absolute tinggi kartunya diatur sisi DEPAN saja, padahal sisi
+   belakang punya satu paragraf lebih banyak, yaitu peringatan skala, jadi
+   kakinya terpotong. Dengan grid tingginya ikut sisi yang paling tinggi. */
+.ku-dalam {
+  display: grid; transform-style: preserve-3d;
+  transition: transform .55s cubic-bezier(.4, .2, .2, 1);
+}
+.ku-dalam > .ku-sisi { grid-area: 1 / 1; }
+.ku-dalam.ku-terbalik { transform: rotateY(180deg); }
+.ku-sisi {
+  position: relative;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  background: var(--paper); border: 0.7px solid var(--ink-20); border-radius: 8px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .16);
+  overflow: hidden;
+}
+/* Sisi belakang ditumpuk di atas sisi depan, bukan di bawahnya, lalu
+   diputar. Keduanya harus menempati petak yang sama supaya tinggi kartunya
+   tidak melompat waktu dibalik. */
+.ku-belakang { transform: rotateY(180deg); }
+
+.ku-kepala {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 8px; padding: 9px 14px; color: var(--ink);
+}
+.ku-kepala.ku-putih { color: #fff; }
+/* Kepala kartu sempit sekarang, sebab sudut kanannya dimakan lipatan.
+   Mereknya boleh terpotong elipsis kalau mepet, jenis indeksnya TIDAK, dia
+   yang membedakan dua sisi kartu. */
+.ku-merek {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 8.5px; font-weight: 300; letter-spacing: .1em; text-transform: uppercase; opacity: .9;
+}
+.ku-jenis { flex: none; white-space: nowrap; font-size: 12px; font-weight: 400; letter-spacing: .08em; }
+
+.ku-isi { display: flex; gap: 12px; padding: 14px; }
+
+/* Potret menggantikan pas foto. Perbandingannya 4:5 seperti pas foto, dan
+   itu yang membuat kartunya langsung terbaca sebagai kartu identitas. */
+.ku-potret {
+  flex: none; width: 98px; display: flex; flex-direction: column; gap: 6px;
+}
+/* Potret. Gambar VEKTOR dari berkas .ai milik pemilik, ditempel langsung ke
+   DOM supaya lingkaran latarnya bisa diwarnai dari sini. Yang diwarnai CUMA
+   lingkarannya lewat --ku-bg, sosok orangnya dibiarkan apa adanya sebab
+   mewarnai kulit dan hoodie ikut kelas indeks justru merusak gambarnya. */
+.ku-foto {
+  width: 98px; height: 124px; display: block; overflow: hidden;
+  border: 0.7px solid var(--ink-20); border-radius: 4px; background: var(--paper);
+}
+.ku-foto svg { display: block; width: 100%; height: 100%; }
+.ku-foto-kosong { background: var(--ink-05); }
+/* ---- Kolom kanan, tata letak KartuRevisi ----
+   Daftar lima baris label-nilai diganti satu angka besar sebagai pusat
+   perhatian. Urutan bacanya dari atas, di mana, berapa, artinya apa, lalu
+   dua pasak di kaki.
+
+   Bobot hurufnya di sini sengaja lebih tebal daripada sisa app yang
+   bermain di 200-300. Angka indeks itu satu satunya hal yang harus terbaca
+   dari jarak satu meter, dan kartu ini memang dirancang begitu oleh
+   pemilik. */
+.ku-kanan { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* Label DI ATAS nilainya, bukan di sampingnya seperti rancangan pertama.
+   Sebabnya alamat lengkap itu panjang, dan kolom kanan cuma sekitar 170 px.
+   Bersanding dengan labelnya dia melipat sampai lima baris dan mendorong
+   angka indeks jauh ke bawah. */
+.ku-lok { margin: 0; padding-right: 34px; }
+.ku-lok span {
+  display: block; font-size: 9px; font-weight: 300; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-50);
+}
+/* Alamat lengkap bisa empat baris, jadi hurufnya dikecilkan dan barisnya
+   dirapatkan supaya tidak mendorong angka indeks terlalu jauh ke bawah. */
+.ku-lok b {
+  display: block; font-weight: 300; font-size: 11px; line-height: 1.3;
+  color: var(--ink); overflow-wrap: anywhere;
+}
+.ku-angka {
+  margin: 6px 0 0; text-align: center;
+  font-size: 46px; font-weight: 500; line-height: .95; letter-spacing: -.02em;
+}
+.ku-kat {
+  margin: 2px 0 0; text-align: center;
+  font-size: 11px; font-weight: 500; letter-spacing: .01em;
+}
+/* `margin-top: auto` mendorong pasaknya ke kaki kolom, jadi kakinya sejajar
+   dengan kaki potret di sebelahnya berapa pun panjang nama lokasinya. */
+.ku-pasak {
+  margin: auto 0 0; padding-top: 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px;
+}
+.ku-pasak dt {
+  font-size: 9.5px; font-weight: 500; color: var(--ink);
+  text-align: center; line-height: 1.25;
+}
+.ku-pasak dd {
+  margin: 1px 0 0; font-size: 9.5px; font-weight: 500;
+  text-align: center; line-height: 1.25; overflow-wrap: anywhere;
+}
+
+.ku-saran {
+  margin: 0; padding: 10px 14px; border-top: 0.7px solid var(--ink-20);
+  font-size: 11.5px; font-weight: 200; line-height: 1.45; color: var(--ink-70);
+}
+/* Peringatan skala di sisi AQI. Garis kiri saja, BUKAN merah. Ini catatan
+   baca, bukan bahaya, dan warna alarm di sini akan bersaing dengan warna
+   kelas yang justru membawa arti. */
+.ku-awas {
+  margin: 0 14px 10px; padding: 2px 0 2px 9px;
+  border-left: 2px solid var(--aksen);
+  font-size: 10.5px; font-weight: 200; line-height: 1.4; color: var(--ink-70);
+}
+/* Penekanan di dalam catatan skala. Naik satu tingkat bobot dan dipekatkan
+   warnanya, bukan ditebalkan habis, sebab blok ini catatan baca dan huruf
+   tebal di sini akan bersaing dengan angka indeks yang justru pusatnya. */
+.ku-awas b { font-weight: 400; color: var(--ink); }
+.ku-kaki {
+  margin: 0; padding: 7px 14px 9px; border-top: 0.7px solid var(--ink-20);
+  font-size: 9.5px; font-weight: 200; letter-spacing: .02em; color: var(--ink-50);
+}
+.ku-kosong {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 34px 20px; text-align: center; color: var(--ink-50);
+}
+.ku-kosong p { margin: 0; font-size: 11.5px; font-weight: 200; line-height: 1.45; }
+.ku-kosong .material-symbols-outlined { font-size: 24px; }
+.ku-kosong .ku-btn { margin-top: 2px; }
+
+/* ---- Tombol balik, sudut terkelupas ----
+   Diminta pemilik, "tombol flipnya ditaro di pojok kanan atas kartu dengan
+   style terkelupas sedikit dan dalam kupasan tersebut ada tulisan Lihat AQI
+   dan warna dalam kupasannya sesuai warna indeks".
+
+   Segitiga siku di pojok kanan atas, warnanya warna kelas SISI SEBERANG
+   yang disuntik JS lewat --kupas. Tulisannya dimiringkan 45 derajat
+   mengikuti lipatannya. Duduk di LUAR .ku-sisi yang overflow-nya hidden,
+   makanya dia anak langsung .ku-sisi dan digambar paling akhir. */
+.ku-kupas {
+  position: absolute; top: 0; right: 0; z-index: 3;
+  width: 76px; height: 76px; padding: 0; border: 0; cursor: pointer;
+  background: var(--kupas, #2b83ba);
+  color: var(--ink);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  /* Bayangan lipatan. Garis gelap tipis di tepi miringnya memberi kesan
+     kertas terangkat tanpa perlu bayangan asli, yang memang dilarang di
+     seluruh app ini. */
+  background-image: linear-gradient(225deg, rgba(255,255,255,.28) 0%, rgba(0,0,0,.12) 72%, rgba(0,0,0,.26) 100%);
+  transition: width .2s ease, height .2s ease;
+}
+.ku-kupas.ku-kupas-putih { color: #fff; }
+.ku-kupas:hover { width: 88px; height: 88px; }
+/* Tulisannya sejajar GARIS LIPATAN, yaitu diagonal dari kiri atas ke kanan
+   bawah, jadi diputar searah jarum jam 45 derajat. */
+.ku-kupas-teks {
+  position: absolute; top: 24px; right: -8px;
+  width: 88px; text-align: center;
+  transform: rotate(45deg); transform-origin: 50% 50%;
+  font-size: 9px; font-weight: 500; letter-spacing: .05em;
+  text-transform: uppercase; pointer-events: none; white-space: nowrap;
+}
+/* Kepala kartu dan baris lokasi harus mundur dari lipatannya, kalau tidak
+   tulisannya tertimpa. Lipatannya 76 px, di ketinggian tulisan kepala dia
+   memakan sekitar 56 px, di baris lokasi tinggal sekitar 34 px. */
+.ku-kepala { padding-right: 62px; }
+.ku-lok { padding-right: 34px; }
+
+.ku-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; cursor: pointer;
+  background: var(--paper); color: var(--ink);
+  border: 0.7px solid var(--ink-20); border-radius: 999px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 300; letter-spacing: .06em;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .10);
+  transition: background .18s ease, color .18s ease;
+}
+.ku-btn:hover { background: var(--lime); color: var(--on-lime); }
+.ku-btn .material-symbols-outlined { font-size: 16px; }
+.ku-btn-ikon { padding: 7px; }
+
+@media (max-width: 640px) {
+  /* Lebar kartunya sekarang ditentukan badan panelnya, lihat blok LAYAR HP
+     di atas. Di sini tinggal mengecilkan isinya. */
+  .ku-isi { gap: 10px; padding: 11px; }
+  .ku-potret, .ku-foto { width: 92px; }
+  .ku-foto { height: 117px; }
+  .ku-angka { font-size: 38px; }
+}
+
+/* ---- Animasi, sapuan miring ----
+   Jalurnya vektor tapi semuanya BIDANG BERISI, bukan garis, jadi
+   stroke-dashoffset tidak bisa dipakai untuk menggambar sendiri. Yang dipakai
+   sapuan miring dari kiri atas ke kanan bawah, seperti tangan melintasi
+   kertas, dan itu jalan untuk bidang berisi maupun garis.
+
+   Menyala CUMA lewat kelas .ku-menggambar, yang dipasang waktu kartu dibuka
+   atau titiknya berganti, bukan tiap slider digeser. */
+@keyframes ku-sapu {
+  from { clip-path: polygon(0 0, 0 0, -34% 100%, -34% 100%); filter: blur(1.5px); opacity: .25; }
+  60%  { filter: blur(.4px); opacity: 1; }
+  to   { clip-path: polygon(0 0, 134% 0, 100% 100%, 0 100%); filter: blur(0); opacity: 1; }
+}
+/* TANPA `both`, dan itu disengaja. Dengan `both` keadaan AWAL keyframe
+   ikut dipasang sebelum animasinya jalan, dan keadaan awalnya menyembunyikan
+   gambar. Begitu animasinya tidak sempat jalan sekali saja, entah sebab
+   peramban tidak menganimasikan clip-path atau sebab lukisannya terlambat,
+   potretnya hilang PERMANEN sebab kelasnya tidak pernah dicabut. Sudah
+   kejadian waktu diuji, satu dari empat kali potretnya kosong. Tanpa `both`
+   keadaan sebelum dan sesudahnya normal, jadi gagal animasi cuma berarti
+   tidak ada animasi. */
+.ku-foto.ku-menggambar { animation: ku-sapu .85s cubic-bezier(.3,.1,.2,1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ku-foto.ku-menggambar { animation: none; }
 }
