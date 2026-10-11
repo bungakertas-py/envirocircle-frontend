@@ -18,8 +18,9 @@
   "use strict";
 
   var pasangan = [
-    /* Kartu Udara PALING ATAS di rel kiri, dan dia satu satunya yang terbuka
-       sendiri waktu halaman dibuka. Diminta user 9 Okt. */
+    /* Kartu Udara. Sengaja TIDAK terbuka sendiri waktu halaman dibuka.
+       Sempat dibuat begitu lalu dicabut pemilik 11 Okt, "diawal smokewatch
+       kaya biasa aja, kaya atmosight dan oceansight". */
     { sisi: "sisi-kartu", tombol: "spine-kartu" },
     { sisi: "sisi-param", tombol: "spine-param" },
     /* Model TERPISAH dari Parameter, tombolnya sendiri. Diminta user. Dua
@@ -62,15 +63,6 @@
       }
     });
   });
-
-  /* Kartu Udara terbuka sendiri, kecuali di layar HP. Di HP badannya
-     memakan hampir seluruh layar dan petanya jadi tidak terlihat sama
-     sekali, jadi di sana dia menunggu ditekan. */
-  var kartuUdara = kartu.filter(function (k) { return k.el.id === "sisi-kartu"; })[0];
-  if (kartuUdara && !window.matchMedia("(max-width: 640px)").matches) {
-    /* Ditunda satu putaran supaya app.js sempat memasang penyimaknya. */
-    setTimeout(function () { setBuka(kartuUdara, true); }, 0);
-  }
 
   /* Esc menutup semuanya. Kalau ada panel titik atau kotak cari yang terbuka,
      app.js yang mengurus miliknya sendiri, dua duanya tidak bertabrakan sebab

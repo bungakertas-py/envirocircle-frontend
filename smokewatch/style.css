@@ -3376,7 +3376,7 @@ body { font-weight: 200; }
      sedangkan kartu ini tidak punya wakil di sana. Tanpa ini kartunya
      hilang sama sekali di HP. */
   .alat { display: flex; background: transparent; }
-  .alat > *:not(#sisi-kartu):not(.ku-off) { display: none; }
+  .alat > *:not(#sisi-kartu) { display: none; }
   #sisi-kartu .sisi-body { width: calc(100vw - 52px); }
   /* Di bawah scrim tinggal identitas, jadi tidak perlu sepanjang desktop. */
   .scrim {
@@ -3955,6 +3955,13 @@ body { font-weight: 200; }
   border: 0.7px solid var(--ink-20); border-radius: 4px; background: var(--paper);
 }
 .ku-foto svg { display: block; width: 100%; height: 100%; }
+/* Label di dada hoodie. Putih, sebab hoodienya berganti warna ikut kelas
+   dan putih satu satunya yang terbaca di atas kuning maupun merah tua. */
+.ku-dada {
+  fill: #ffffff;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 500;
+  letter-spacing: .08em; text-transform: uppercase;
+}
 .ku-foto-kosong { background: var(--ink-05); }
 /* ---- Kolom kanan, tata letak KartuRevisi ----
    Daftar lima baris label-nilai diganti satu angka besar sebagai pusat
@@ -4035,69 +4042,47 @@ body { font-weight: 200; }
    Satu pemilih untuk dua sisi kartu, bukan satu di tiap sisi. Dia duduk di
    luar .ku-dalam jadi dia tidak ikut terbalik dan tidak perlu digambar dua
    kali. Diminta pemilik, "kontainernya dibawah kartunya". */
-/* Tombol mati. DI DALAM batang biru, menempel di dasar tulang punggung.
-   Caranya posisi serap di dalam asidenya, bukan sarang, sebab tulang
-   punggung itu sendiri sudah sebuah <button>.
+/* ---- Kedip penarik perhatian ----
+   Diminta pemilik, dua benda saja yang berkedip dan TANPA tulisan tambahan.
 
-   Muncul CUMA sesudah pengguna memilih lokasi, bukan sekadar waktu panel
-   terbuka. Diminta pemilik, "munculnya kalau lokasi udah dipilih user". */
-#sisi-kartu { position: relative; }
-.ku-off {
-  display: none; position: absolute; left: 0; bottom: 0; z-index: 2;
-  flex-direction: column; align-items: center; gap: 1px;
-  width: 40px; padding: 9px 0 10px; cursor: pointer;
-  background: var(--ink); color: var(--paper);
-  border: 0; border-top: 1px solid rgba(255, 255, 255, .22);
-  border-radius: 0 0 0 4px;
-  transition: background .2s ease;
+   Tulang punggung panel berkedip sampai panelnya dibuka sekali, sebab
+   Smokewatch kini terlihat biasa saja di awal dan orang bisa tidak sadar
+   kartunya ada. Tombol unduh berkedip beberapa kali begitu kartunya punya
+   isi, lalu berhenti sendiri, sebab kedip yang tidak pernah berhenti di
+   tombol yang sudah terlihat itu mengganggu.
+
+   Kedipnya LEMBUT, warnanya yang berdenyut, bukan nyala padam. Nyala padam
+   di bidang sebesar tulang punggung terbaca seperti peringatan galat. */
+@keyframes ku-kedip-gelap {
+  0%, 100% { background: var(--ink); }
+  50%      { background: var(--aksen); }
 }
-#sisi-kartu.ada-lokasi .ku-off { display: flex; }
-/* Tulang punggung memberi ruang di kakinya supaya label tegaknya tidak
-   tertimpa tombol itu. */
-#sisi-kartu.ada-lokasi .sisi-spine { padding-bottom: 62px; }
-.ku-off:hover { background: #8a2b20; }
-/* Ukuran lambangnya mengikuti lambang tulang punggung, .sisi-ico 20px. */
-.ku-off .material-symbols-outlined { font-size: 20px; }
-.ku-off-lbl {
-  font-family: var(--font-ui); font-size: 8.5px; font-weight: 300;
-  letter-spacing: .14em; text-transform: uppercase;
+@keyframes ku-kedip-terang {
+  0%, 100% { background: var(--paper); color: var(--ink-70); border-color: var(--ink-20); }
+  50%      { background: var(--lime);  color: var(--on-lime); border-color: var(--lime); }
+}
+#sisi-kartu .sisi-spine.kedip { animation: ku-kedip-gelap 1.4s ease-in-out infinite; }
+/* Berhenti sendiri sesudah tujuh denyut, tidak menunggu ditekan. */
+.ku-unduh.kedip:not(:disabled) { animation: ku-kedip-terang 1.2s ease-in-out 7; }
+@media (prefers-reduced-motion: reduce) {
+  #sisi-kartu .sisi-spine.kedip, .ku-unduh.kedip:not(:disabled) { animation: none; }
 }
 
 .ku-cari { margin-top: 8px; }
-.ku-aksi { display: flex; gap: 6px; }
-.ku-aksi .ku-cari-buka { flex: 1; min-width: 0; }
-/* Tombol unduh. Sepetak dengan tinggi pemilih lokasi di sebelahnya, jadi
-   dua duanya satu baris rata. Mati sampai kartunya benar benar punya isi,
-   sebab mengunduh kartu kosong itu tidak ada gunanya. */
-.ku-unduh {
-  flex: none; width: 36px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; background: var(--paper); color: var(--ink-70);
-  border: 0.7px solid var(--ink-20); border-radius: 6px;
-  transition: color .18s ease, border-color .18s ease;
-}
-.ku-unduh:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-50); }
+/* Tombol unduh, sebaris penuh di bawah pemilih. Mati sampai kartunya benar
+   benar punya isi, sebab mengunduh kartu kosong tidak ada gunanya. */
+.ku-unduh { width: 100%; margin-top: 7px; justify-content: center; }
 .ku-unduh:disabled { opacity: .4; cursor: default; }
-.ku-unduh .material-symbols-outlined { font-size: 18px; }
-.ku-cari-buka {
-  display: flex; align-items: center; gap: 7px; width: 100%;
-  padding: 8px 11px; cursor: pointer; text-align: left;
-  background: var(--paper); color: var(--ink-70);
-  border: 0.7px solid var(--ink-20); border-radius: 6px;
-  font-family: var(--font-ui); font-size: 11px; font-weight: 300; letter-spacing: .04em;
-  transition: color .18s ease, border-color .18s ease;
-}
-.ku-cari-buka:hover { color: var(--ink); border-color: var(--ink-50); }
-.ku-cari-buka > span:nth-child(2) { flex: 1; }
-.ku-cari-buka .material-symbols-outlined { font-size: 17px; }
-.ku-cari-chev { transition: transform .2s ease; }
-.ku-cari-buka.terbuka .ku-cari-chev { transform: rotate(180deg); }
+.ku-unduh:disabled:hover { background: var(--paper); color: var(--ink); }
 
+/* Tiga cara memilih lokasi, SELALU TERLIHAT. Sempat dibungkus pengungkap
+   "Pilih lokasi lain" lalu dicabut pemilik, sebab ketiganya setara dan tidak
+   ada alasan menyembunyikannya di balik satu tekan lagi. */
 .ku-cari-isi {
   display: flex; flex-direction: column; gap: 7px;
-  margin-top: 7px; padding: 10px;
+  padding: 10px;
   background: var(--paper); border: 0.7px solid var(--ink-20); border-radius: 6px;
 }
-.ku-cari-isi[hidden] { display: none; }
 .ku-cari-gps { justify-content: center; }
 /* Garis pemisah bertulis tidak dipakai, dua cara memilih ini setara dan
    tidak perlu dijelaskan mana yang utama. */

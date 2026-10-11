@@ -711,6 +711,7 @@ let kuGeoGagal = "";         // sebab gagal, untuk ditampilkan di kartu
 /* Isi kedua sisi disimpan apa adanya, sebab mengunduh PNG berarti
    MENGGAMBAR ULANG kartunya di canvas, bukan memotret DOM. */
 let kuKartu = null;          // { ispu: {d, o}, aqi: {d, o} }
+let kuTungguPeta = false;    // pengguna memilih cara "klik titik di peta"
 let velocityLayer = null;
 /* Penanda urutan permintaan medan angin. Sejak partikel angin TIDAK LAGI
    ditunggu sebelum peta tampil, dua permintaan bisa berjalan bersamaan waktu
@@ -2457,7 +2458,11 @@ async function openPoint(lat, lon, label, isMe) {
   popupLabel = label || null;
   sharedPoint = { lat, lon, name: label || null, me: !!isMe };
   updateHash();
-  // Kartu Udara TIDAK lagi ikut titik yang diklik, dia mengikuti GPS.
+  /* SATU SATUNYA sambungan ke Kartu Udara, dan sengaja di sini. Semua cara
+     memilih titik di app ini bermuara di openPoint, jadi memasangnya di
+     sini sekaligus menutup pencarian kota di bilah atas, klik peta, klik
+     penanda kota, tombol Lokasi di kartu Fitur, dan tautan dibagikan. */
+  kuIkutTitik(lat, lon, label);
   const judul = label || fmtCoord(lat, lon);
   const token = ++pointToken;                 // hasil yang telat jangan menimpa titik baru
   let popupBawah = false;
@@ -3806,33 +3811,35 @@ async function init() {
       requestAnimationFrame(kuUkurTinggi);
       if (e.detail.id !== "sisi-kartu") return;
       kuOn = e.detail.buka;
+      if (kuOn) $("spine-kartu")?.classList.remove("kedip");
       if (!kuOn) return;
-      if (kuGeo) { kuIsi(true); return; }
-      /* Waktu halaman baru dibuka panel ini membuka DIRINYA SENDIRI, dan
-         kotak izin yang muncul tanpa ada yang disentuh itu mengagetkan.
-         Jadi yang otomatis cuma kalau izinnya memang sudah pernah
-         diberikan. Selebihnya kartunya menampilkan tombol. */
-      kuPunyaIzin().then((boleh) => {
-        if (boleh) kuLacak(); else kuIsi(true);
-      });
+      kuIsi(true);
+      kuSiapkanCari();
     });
-    /* MENYUSUL. sisi.js membuka panel ini sendiri sesaat sesudah halaman
-       dimuat, sedangkan penyimak di atas baru terpasang di sini, yaitu
-       sesudah katalog selesai diambil. Jadi kejadian bukanya sudah lewat dan
-       kartunya tinggal kotak kosong. Sudah kejadian waktu diuji. */
+
+    /* MENYUSUL, dan ini WAJIB. Penyimak di atas baru terpasang di sini,
+       yaitu sesudah katalog selesai diambil, sedangkan panelnya bisa dibuka
+       pengguna jauh lebih dulu. Kalau itu terjadi kejadian bukanya sudah
+       lewat dan kartunya tinggal kotak kosong SELAMANYA. Sudah kejadian dua
+       kali, sekali waktu panelnya masih terbuka sendiri dan sekali lagi
+       waktu penyusul ini sempat kubuang. */
     if ($("sisi-kartu")?.classList.contains("terbuka")) {
       kuOn = true;
-      kuPunyaIzin().then((boleh) => { if (boleh) kuLacak(); else kuIsi(true); });
+      kuIsi(true);
+      kuSiapkanCari();
+    } else {
+      /* Panelnya tertutup dan Smokewatch kini terlihat biasa saja di awal,
+         jadi tulang punggungnya berkedip supaya orang tahu kartunya ada.
+         Berhenti begitu panelnya dibuka sekali. */
+      $("spine-kartu")?.classList.add("kedip");
     }
-
     /* Tombol balik dan tombol minta lokasi lahir ulang tiap kartu digambar,
        jadi penyimaknya ditaruh di wadahnya sekali saja. */
     $("kartu-udara")?.addEventListener("click", (e) => {
       if (e.target.closest("[data-ku-flip]")) return kuBalik();
       if (e.target.closest("[data-ku-lacak]")) return kuLacak();
+      if (e.target.closest("[data-ku-peta]")) return kuPilihLewatPeta();
       if (e.target.closest("#ku-unduh")) return kuUnduh();
-      const buka = e.target.closest("#ku-cari-buka");
-      if (buka) return kuCariBuka($("ku-cari-isi")?.hidden !== false);
       const it = e.target.closest(".ku-cari-item");
       if (it) {
         const inp = $("ku-cari-input"); if (inp) inp.value = "";
@@ -3840,7 +3847,6 @@ async function init() {
         kuPakaiTitik(parseFloat(it.dataset.lat), parseFloat(it.dataset.lon), it.textContent, false);
       }
     });
-    $("ku-off")?.addEventListener("click", kuMati);
     $("ku-cari-hasil")?.addEventListener("scroll", kuTandaGulir, { passive: true });
     kuUkurTinggi();
     window.addEventListener("resize", kuUkurTinggi);
@@ -4230,7 +4236,7 @@ else setupHP();
    app ini walau dia tidak pernah membuka kartunya. */
 const _KU_SVG = {};
 let _kuSvgJanji = null;
-const KU_KEADAAN = ["senyum", "netral", "khawatir", "masker", "respirator"];
+const KU_KEADAAN = ["senyum", "netral", "batuk", "masker", "respirator"];
 
 function _kuMuatSvg() {
   if (_kuSvgJanji) return _kuSvgJanji;
@@ -4243,10 +4249,52 @@ function _kuMuatSvg() {
   return _kuSvgJanji;
 }
 
-function kuAvatar(keadaan, animasi) {
-  const svg = _KU_SVG[keadaan];
+/* Hoodie-nya IKUT WARNA KELAS, diminta pemilik. Warnanya disuntik lewat
+   dua variabel CSS, badan dan dalam tudung, jadi satu set berkas melayani
+   semua kelas ISPU maupun AQI tanpa salinan per warna. */
+function _kuWarnaGelap(hex, k) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return "#074173";
+  const n = parseInt(m[1], 16);
+  const c = (v) => Math.round(v * k).toString(16).padStart(2, "0");
+  return `#${c((n >> 16) & 255)}${c((n >> 8) & 255)}${c(n & 255)}`;
+}
+
+/* Kelas Berbahaya warnanya #0d0d0d, dan hoodie sehitam itu menelan garis
+   tepi sosoknya yang #242424 sehingga avatarnya jadi siluet. Warna yang
+   lebih gelap daripada garis tepinya DITERANGKAN secukupnya, masih terbaca
+   hitam tapi garisnya kembali kelihatan.
+
+   AMBANGNYA RENDAH, 0,09, dan itu disengaja. Luminansi garis tepinya sendiri
+   0,045, jadi warna di atas 0,09 sudah cukup kontras. Ambang yang lebih
+   tinggi ikut menerangkan merah tua Hazardous #7e0023 yang luminansinya
+   0,115, dan hoodienya berubah jadi merah muda yang tidak lagi sesuai
+   dengan warna kelas di kepala kartunya. */
+function _kuWarnaHoodie(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return "#1679AB";
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const L = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  if (L >= 0.09) return hex;
+  const k = 0.15 / Math.max(L, 0.02);
+  const c = (v) => Math.round(Math.min(255, v * k + 22)).toString(16).padStart(2, "0");
+  return `#${c(r)}${c(g)}${c(b)}`;
+}
+
+function kuAvatar(keadaan, warna, label, animasi) {
+  let svg = _KU_SVG[keadaan];
   if (!svg) return `<div class="ku-foto ku-foto-kosong" aria-hidden="true"></div>`;
+  /* Label dada. Cuma dipakai kelas AQI Unhealthy for Sensitive, dan
+     tulisannya PUTIH supaya tetap terbaca di atas hoodie yang warnanya
+     berganti ganti ikut kelas. */
+  if (label) {
+    svg = svg.replace("</svg>",
+      `<text x="150" y="211" text-anchor="middle" class="ku-dada">${label}</text></svg>`);
+  }
+  const hd = _kuWarnaHoodie(warna);
   return `<div class="ku-foto${animasi ? " ku-menggambar" : ""}"
+            style="--ku-hd:${hd};--ku-hd2:${_kuWarnaGelap(hd, 0.52)}"
             role="img" aria-label="Ilustrasi kondisi udara, ${keadaan}">${svg}</div>`;
 }
 
@@ -4254,11 +4302,18 @@ function kuAvatar(keadaan, animasi) {
    Digerakkan NAMA KELAS, bukan angka, sebab ISPU lima kelas dan AQI enam.
    Satu set gambar melayani keduanya.
 
-   Dua kelas terburuk AQI memakai wajah yang sama, respirator. Sesudah itu
-   tidak ada lagi yang bisa membedakannya selain WARNA, dan warnanya memang
-   sudah berbeda, ungu lawan merah tua. */
-const KU_AVATAR_ISPU = ["senyum", "netral", "khawatir", "masker", "respirator"];
-const KU_AVATAR_AQI  = ["senyum", "netral", "khawatir", "masker", "respirator", "respirator"];
+   Pemetaan AQI ditetapkan pemilik 11 Okt dan SENGAJA tidak sejajar dengan
+   ISPU. Dua kelas tak sehatnya sama sama batuk, lalu masker baru di Very
+   Unhealthy, dan masker gas baru di Hazardous. Yang membedakan dua kelas
+   batuk itu WARNA HOODIE dan label dada. */
+const KU_AVATAR_ISPU = ["senyum", "netral", "batuk", "masker", "respirator"];
+const KU_AVATAR_AQI  = ["senyum", "netral", "batuk", "batuk", "masker", "respirator"];
+
+/* Label di dada hoodie. Cuma satu kelas yang memakainya, AQI Unhealthy for
+   Sensitive, sebab kelas itu kembar wajahnya dengan Unhealthy di bawahnya
+   dan labelnya yang membedakan. */
+const KU_LABEL_ISPU = [null, null, null, null, null];
+const KU_LABEL_AQI  = [null, null, "Sensitif", null, null, null];
 
 /* Saran tindakan. Sengaja kalimat pendek yang bisa dikerjakan, bukan vonis
    medis. Nomor indeksnya sejajar dengan tabel kelas masing masing. */
@@ -4371,7 +4426,7 @@ function _kuSisiHTML(d, opsi) {
       <span class="ku-jenis">${label}</span>
     </div>
     <div class="ku-isi">
-      <div class="ku-potret">${kuAvatar(avatar, animasi)}</div>
+      <div class="ku-potret">${kuAvatar(avatar, d.warna, opsi.label2, animasi)}</div>
       <div class="ku-kanan">
         <p class="ku-lok"><span>Lokasi</span><b>${lokasi}</b></p>
         <p class="ku-angka" style="color:${tinta}">${d.nilai}</p>
@@ -4394,26 +4449,20 @@ function _kuSisiHTML(d, opsi) {
 }
 
 /* ---- Lokasi pengguna ----
-   Kartu ini milik tempat PENGGUNA berdiri. Alamatnya dicari balik lewat
-   Nominatim dan ditulis selengkap mungkin, kelurahan sampai provinsi, bukan
-   koordinat lagi.
+   Kartu ini milik tempat PENGGUNA pilih, dan ADA TIGA CARA memilihnya,
+   lokasi lewat GPS, nama kota atau kabupaten, dan klik langsung di peta.
+   Ketiganya ditawarkan di pemilih di bawah kartunya.
 
-   Izin lokasi TIDAK diminta diam diam waktu halaman dibuka walaupun
-   kartunya terbuka sendiri. Peramban akan memunculkan kotak izin tanpa ada
-   yang menyentuh apa pun, dan itu perilaku yang layak dicurigai. Jadi kalau
-   izinnya SUDAH pernah diberikan, lokasinya diambil sendiri tanpa bertanya.
-   Kalau belum, kartunya menampilkan tombol, dan menekan tombol itulah yang
-   memicu kotak izin. Menekan tulang punggung panelnya juga dihitung
-   sentuhan, jadi membuka kartu dengan tangan tetap langsung meminta izin. */
-async function kuPunyaIzin() {
-  try {
-    if (!navigator.permissions?.query) return false;
-    return (await navigator.permissions.query({ name: "geolocation" })).state === "granted";
-  } catch (e) { return false; }
-}
+   Kartunya SENGAJA tidak aktif sampai salah satu cara itu dipakai, dan
+   panelnya pun tidak terbuka sendiri. Diminta pemilik 11 Okt, Smokewatch di
+   awal harus terlihat biasa saja seperti Atmosight dan Oceansight.
 
+   Izin lokasi TIDAK pernah diminta sendiri, bahkan kalau izinnya sudah
+   pernah diberikan. Pengguna yang memilih caranya, dan menekan tombolnya
+   itulah yang memicu kotak izin peramban. */
 function kuLacak() {
   if (kuGeoMinta) return;
+  kuTungguPeta = false;
   if (!navigator.geolocation) { kuGeoGagal = "Peramban ini tidak punya layanan lokasi."; kuIsi(true); return; }
   kuGeoMinta = true; kuGeoGagal = ""; kuIsi(true);
   navigator.geolocation.getCurrentPosition(
@@ -4544,12 +4593,30 @@ function _kuTulis(ctx, ruas, x, y, lebar, opsi) {
 }
 
 /* SVG avatar jadi Image. Lebar tinggi disuntik sebab Firefox menolak
-   menggambar SVG yang cuma berbekal viewBox. */
-function _kuGambarAvatar(nama, w, h) {
+   menggambar SVG yang cuma berbekal viewBox.
+
+   WARNA HOODIE JUGA HARUS DISUNTIK DI SINI, dan ini bukan hiasan. Di kartu
+   layar warnanya datang dari variabel CSS yang dipasang di pembungkusnya,
+   tapi di sini SVG-nya dimuat sebagai GAMBAR LEPAS lewat blob. Dokumen
+   terpisah tidak mewarisi variabel apa pun dari halaman induknya, jadi
+   `var(--ku-hd, #1679AB)` jatuh ke warna cadangannya dan hoodie di PNG
+   unduhan SELALU biru berapa pun kelasnya. Sudah kejadian.
+
+   Label dada juga ditulis ulang dengan atribut biasa, sebab kelas CSS
+   `.ku-dada` pun tidak ikut ke dokumen terpisah. */
+function _kuGambarAvatar(nama, w, h, hd, hd2, label) {
   return new Promise((resolve) => {
     const s = _KU_SVG[nama];
     if (!s) return resolve(null);
-    const ber = s.replace("<svg ", `<svg width="${w}" height="${h}" `);
+    let ber = s.replace("<svg ", `<svg width="${w}" height="${h}" `)
+      .replace(/var\(--ku-hd2,[^)]*\)/g, hd2 || "#074173")
+      .replace(/var\(--ku-hd,[^)]*\)/g, hd || "#1679AB");
+    if (label) {
+      ber = ber.replace("</svg>",
+        `<text x="150" y="211" text-anchor="middle" fill="#ffffff"`
+        + ` font-family="Geologica, system-ui, sans-serif" font-size="12"`
+        + ` font-weight="500" letter-spacing="0.96">${String(label).toUpperCase()}</text></svg>`);
+    }
     const url = URL.createObjectURL(new Blob([ber], { type: "image/svg+xml" }));
     const img = new Image();
     img.onload = () => { resolve(img); URL.revokeObjectURL(url); };
@@ -4571,7 +4638,7 @@ async function kuUnduh() {
   if (!sisi) return;
   const { d, o } = sisi;
   const btn = $("ku-unduh");
-  if (btn) btn.disabled = true;
+  if (btn) { btn.disabled = true; btn.classList.remove("kedip"); }
   try {
     // Font harus benar benar siap, kalau tidak canvas memakai cadangan sistem.
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
@@ -4603,7 +4670,8 @@ async function kuUnduh() {
 
     // ---- potret, kolom kiri ----
     const FY = HK + 36, FW = 248, FH = 314;
-    const img = await _kuGambarAvatar(o.avatar, FW, FH);
+    const hd = _kuWarnaHoodie(d.warna);
+    const img = await _kuGambarAvatar(o.avatar, FW, FH, hd, _kuWarnaGelap(hd, 0.52), o.label2);
     if (img) ctx.drawImage(img, M, FY, FW, FH);
     ctx.strokeStyle = INK20; ctx.lineWidth = 1;
     ctx.strokeRect(M + 0.5, FY + 0.5, FW - 1, FH - 1);
@@ -4680,62 +4748,52 @@ async function kuUnduh() {
   }
 }
 
-/* Satu pintu masuk untuk SEMUA cara memilih lokasi, GPS maupun nama kota.
+/* ---- Kartu Udara mengikuti titik mana pun, lewat jalur apa pun ----
+
+   Versi pertama cuma mengikuti pemilih milik kartunya sendiri, yaitu tombol
+   lokasi saya dan pencarian kota di dalam kartu. Akibatnya pencarian kota di
+   bilah atas, klik di peta, klik penanda kota, tombol Lokasi di kartu Fitur,
+   dan tautan yang dibagikan SEMUANYA memindahkan peta tapi kartunya tidak
+   ikut berpindah. Dilaporkan pemilik, "semua fitur lokasi".
+
+   Obatnya satu tempat saja. Semua jalur itu bermuara di `openPoint`, jadi
+   penyambungannya dipasang di sana dan di sini cuma disediakan fungsinya.
+
    Namanya langsung dipakai supaya kartunya tidak kosong selagi menunggu,
    lalu disempurnakan jadi alamat lengkap kalau pencarian baliknya berhasil. */
-function kuPakaiTitik(lat, lon, nama, akuDisini) {
+function kuIkutTitik(lat, lon, nama) {
+  if (!kuOn) return;                                   // panel tertutup, tak perlu
+  if (kuGeo && kuGeo.lat === lat && kuGeo.lon === lon) return;   // titik yang sama
   kuGeo = { lat, lon, alamat: nama || null };
-  kuGeoGagal = "";
-  kuTandaLokasi();
-  map.setView([lat, lon], 8, { animate: true });
-  openPoint(lat, lon, nama || null, !!akuDisini);
-  kuCariBuka(false);
+  kuGeoGagal = ""; kuGeoMinta = false; kuTungguPeta = false;
   kuIsi(true);
   reverseGeocodeLengkap(lat, lon)
     .then((a) => { if (kuGeo && kuGeo.lat === lat && a) { kuGeo.alamat = a; kuIsi(false); } })
     .catch(() => { /* alamat opsional, nama kota atau koordinat tetap dipakai */ });
 }
 
-/* Mematikan Kartu Udara. Bukan sekadar menutup panel, tapi MENGOSONGKAN
-   isinya sekaligus menutup gelembung titik di peta. Yang terakhir itu yang
-   sebenarnya diminta, pemilik melaporkan gelembung grafik di titik tidak
-   bisa ditutup. closePoint sudah mengurus gelembung, penanda, sidebar, dan
-   hash sekaligus, jadi tidak ada yang perlu dibereskan dua kali di sini. */
-function kuMati() {
-  kuGeo = null; kuKartu = null; kuGeoGagal = ""; kuGeoMinta = false;
-  kuTandaLokasi();
-  kuToken++;                       // batalkan pembacaan yang masih berjalan
-  closePoint();
-  kuCariBuka(false);
+/* Dipakai pemilih di dalam kartu. Peta dipindahkan lalu titiknya dibuka,
+   dan `openPoint` yang memanggil `kuIkutTitik`. Jangan memperbarui kartunya
+   di sini juga, nanti dua jalur mengerjakan hal yang sama. */
+function kuPakaiTitik(lat, lon, nama, akuDisini) {
+  map.setView([lat, lon], 8, { animate: true });
+  openPoint(lat, lon, nama || null, !!akuDisini);
+}
+
+
+/* Cara ketiga, menunggu klik di peta. Klik di peta sebenarnya sudah mengisi
+   kartu ini tanpa tombol apa pun sejak penyambungan di openPoint, jadi yang
+   dikerjakan di sini cuma menutup pemilihnya lalu memasang pesan supaya
+   pengguna tahu caranya ada dan sedang menunggu. */
+function kuPilihLewatPeta() {
+  kuTungguPeta = true;
+  kuGeoGagal = "";
   kuIsi(false);
-  const unduh = $("ku-unduh"); if (unduh) unduh.disabled = true;
-  /* Panelnya ditutup lewat tulang punggungnya, bukan dengan mencabut kelas
-     sendiri, supaya sisi.js tetap satu satunya yang mengurus buka tutup. */
-  if ($("sisi-kartu")?.classList.contains("terbuka")) $("spine-kartu")?.click();
 }
 
 /* ---- Pemilih lokasi di bawah kartu ----
    Daftar kotanya PINJAM dari pencarian di bilah atas, `loadPlaces()` dan
    `places`, berikut cara menyaringnya. Tidak ada daftar kedua. */
-function kuCariBuka(buka) {
-  const isi = $("ku-cari-isi"), tbl = $("ku-cari-buka");
-  if (!isi || !tbl) return;
-  isi.hidden = !buka;
-  tbl.setAttribute("aria-expanded", buka ? "true" : "false");
-  tbl.classList.toggle("terbuka", buka);
-  if (!buka) return;
-  /* Badan panel digulir ke dasar DUA KALI, dan itu perlu. Sekali begitu
-     pemilihnya muncul, sekali lagi sesudah daftar kotanya terisi, sebab
-     daftar itu datang belakangan dan menambah tinggi lagi. Tanpa ini
-     pemilihnya terbuka DI LUAR layar waktu kartunya lebih tinggi daripada
-     ruang yang tersedia, dan orang mengira tombolnya tidak berfungsi. */
-  requestAnimationFrame(kuGulirKeDasar);
-  loadPlaces().then(() => {
-    kuCariHasil($("ku-cari-input")?.value || "");
-    requestAnimationFrame(kuGulirKeDasar);
-  });
-}
-
 /* Batas bawah kartunya ATAS LEGENDA, bukan tepi layar. Tidak bisa ditulis
    mati di CSS sebab titik awal kartunya berpindah, dia duduk di bawah Fitur
    dan Fitur yang terbuka mendorongnya turun. Jadi diukur, dan diukur ulang
@@ -4745,18 +4803,17 @@ function kuUkurTinggi() {
   if (!badan) return;
   const legenda = document.querySelector(".legend-col") || document.querySelector(".ui-bottom");
   const batas = legenda ? legenda.getBoundingClientRect().top : window.innerHeight;
-  // Sisakan ruang untuk tombol OFF di bawah badannya, plus sedikit napas.
-  const ruang = Math.round(batas - panel.getBoundingClientRect().top - 62);
+  const ruang = Math.round(batas - panel.getBoundingClientRect().top - 20);
   badan.style.setProperty("--ku-tinggi", Math.max(180, ruang) + "px");
   kuTandaGulir();
 }
 
-function kuGulirKeDasar() {
-  const badan = $("sisi-kartu")?.querySelector(".sisi-body");
-  /* Langsung, bukan mulus. Mulus itu animasi, dan animasi di sini berarti
-     pemilihnya baru terlihat setengah detik sesudah ditekan. */
-  if (badan) badan.scrollTop = badan.scrollHeight;
+/* Daftar kotanya disiapkan sekali waktu panel dibuka. Tidak ada lagi yang
+   dibuka tutup di sini, ketiga cara memilih lokasi SELALU terlihat. */
+function kuSiapkanCari() {
+  loadPlaces().then(() => kuCariHasil($("ku-cari-input")?.value || ""));
 }
+
 
 /* Tanda bahwa daftar kota masih bisa digulir. Dipasang dan dicabut dari
    sini, bukan dari CSS, sebab CSS tidak bisa tahu isi sebuah kotak lebih
@@ -4793,17 +4850,22 @@ async function kuIsi(animasi) {
   const depan = $("ku-depan"), belakang = $("ku-belakang");
   if (!depan || !belakang) return;
 
-  kuTandaLokasi();
   if (!kuGeo) {
-    const isi = kuGeoMinta
-      ? `<p>Menunggu izin lokasi…</p>`
-      : `<span class="material-symbols-outlined">my_location</span>
-         ${kuGeoGagal ? `<p>${kuGeoGagal}</p>`
-                      : `<p>Kartu ini dibuat untuk tempat kamu berdiri, atau untuk kota yang kamu cari.</p>`}`;
+    let isi;
+    if (kuGeoMinta) {
+      isi = `<p>Menunggu izin lokasi…</p>`;
+    } else if (kuTungguPeta) {
+      isi = `<span class="material-symbols-outlined">ads_click</span>
+             <p>Klik titik mana pun di peta, atau klik nama kota, dan kartunya
+                langsung terisi.</p>`;
+    } else if (kuGeoGagal) {
+      isi = `<span class="material-symbols-outlined">my_location</span><p>${kuGeoGagal}</p>`;
+    } else {
+      isi = `<span class="material-symbols-outlined">badge</span>
+             <p>Pilih dulu lokasinya di bawah. Bisa pakai lokasi kamu, mencari nama
+                kota atau kabupaten, atau klik langsung di peta.</p>`;
+    }
     depan.innerHTML = belakang.innerHTML = `<div class="ku-kosong">${isi}</div>`;
-    /* Belum ada lokasi berarti pemilihnya memang yang dibutuhkan, jadi
-       dibuka sendiri, bukan disembunyikan di balik satu tekan lagi. */
-    if (!kuGeoMinta) kuCariBuka(true);
     return;
   }
 
@@ -4822,6 +4884,7 @@ async function kuIsi(animasi) {
   const gagal = `<div class="ku-kosong"><p>Indeks tidak tersedia di titik ini.</p></div>`;
   const oI = !dI ? null : {
     label: "ISPU", lokasi, animasi, avatar: KU_AVATAR_ISPU[dI.idx], saran: KU_SARAN_ISPU[dI.idx],
+    label2: KU_LABEL_ISPU[dI.idx],
     lawanLabel: "AQI", lawanWarna: (dA ? dA.warna : "#2b83ba"), lawanPutih: !!(dA && dA.putih),
     // Naskah dari pemilik, lewat temannya. Bagian yang dulu dikurung kurawal
     // di naskah aslinya ditandai <b>, itu memang maksud kurawalnya.
@@ -4832,6 +4895,7 @@ async function kuIsi(animasi) {
   };
   const oA = !dA ? null : {
     label: "AQI (US EPA)", lokasi, animasi, avatar: KU_AVATAR_AQI[dA.idx], saran: KU_SARAN_AQI[dA.idx],
+    label2: KU_LABEL_AQI[dA.idx],
     lawanLabel: "ISPU", lawanWarna: (dI ? dI.warna : "#2b83ba"), lawanPutih: !!(dI && dI.putih),
     // Naskah dari pemilik, lewat temannya. Tetap memikul tugas peringatan,
     // yaitu memberi tahu bahwa ini penggaris lain, bukan pengukuran kedua.
@@ -4842,13 +4906,25 @@ async function kuIsi(animasi) {
   depan.innerHTML    = dI ? _kuSisiHTML(dI, oI) : gagal;
   belakang.innerHTML = dA ? _kuSisiHTML(dA, oA) : gagal;
   kuKartu = (dI || dA) ? { ispu: dI && { d: dI, o: oI }, aqi: dA && { d: dA, o: oA } } : null;
-  const unduh = $("ku-unduh"); if (unduh) unduh.disabled = !kuKartu;
+  const unduh = $("ku-unduh");
+  if (unduh) {
+    const adaIsi = !!kuKartu;
+    /* Kedipnya dipasang ulang CUMA waktu tombolnya baru hidup, bukan tiap
+       kartu digambar ulang. Tanpa penjaga ini dia berkedip lagi tiap slider
+       waktu digeser. */
+    if (adaIsi && unduh.disabled) {
+      /* Kelasnya dicabut lalu dipasang lagi dengan aliran ulang di antaranya.
+         Tanpa itu animasinya tidak mau mulai lagi kalau kelasnya memang
+         sudah menempel dari kartu sebelumnya. */
+      unduh.classList.remove("kedip");
+      void unduh.offsetWidth;
+      unduh.classList.add("kedip");
+    }
+    unduh.disabled = !adaIsi;
+    if (!adaIsi) unduh.classList.remove("kedip");
+  }
 }
 
-/* Tombol OFF cuma ada artinya kalau sudah ada lokasi yang dipilih. */
-function kuTandaLokasi() {
-  $("sisi-kartu")?.classList.toggle("ada-lokasi", !!kuGeo);
-}
 
 function kuBalik() {
   kuSisi = kuSisi === "ispu" ? "aqi" : "ispu";

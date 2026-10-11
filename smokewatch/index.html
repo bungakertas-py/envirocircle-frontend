@@ -410,20 +410,15 @@
                    sekaligus. Kalau ditaruh di dalam kartunya dia harus
                    digambar dua kali dan ikut terbalik waktu kartu dibalik. -->
               <div class="ku-cari" id="ku-cari">
-                <div class="ku-aksi">
-                  <button type="button" class="ku-cari-buka" id="ku-cari-buka" aria-expanded="false">
-                    <span class="material-symbols-outlined">edit_location_alt</span>
-                    <span>Pilih lokasi lain</span>
-                    <span class="material-symbols-outlined ku-cari-chev">expand_more</span>
-                  </button>
-                  <button type="button" class="ku-unduh" id="ku-unduh" disabled
-                          aria-label="Unduh kartu ini jadi PNG" title="Unduh PNG">
-                    <span class="material-symbols-outlined">download</span>
-                  </button>
-                </div>
-                <div class="ku-cari-isi" id="ku-cari-isi" hidden>
+                <div class="ku-cari-isi" id="ku-cari-isi">
                   <button type="button" class="ku-btn ku-cari-gps" data-ku-lacak="1">
                     <span class="material-symbols-outlined">near_me</span>Pakai lokasi saya
+                  </button>
+                  <!-- Cara ketiga memilih lokasi. Klik di peta sebenarnya
+                       sudah mengisi kartu ini tanpa tombol apa pun, tombol
+                       ini gunanya memberi tahu bahwa caranya ada. -->
+                  <button type="button" class="ku-btn ku-cari-gps" data-ku-peta="1">
+                    <span class="material-symbols-outlined">ads_click</span>Klik titik di peta
                   </button>
                   <div class="ku-cari-kotak">
                     <span class="material-symbols-outlined">search</span>
@@ -440,22 +435,14 @@
                     </span>
                   </div>
                 </div>
+                <!-- Tombol unduh. Di bawah pemilih, sebaris penuh, dan mati
+                     sampai kartunya benar benar punya isi. -->
+                <button type="button" class="ku-btn ku-unduh" id="ku-unduh" disabled>
+                  <span class="material-symbols-outlined">download</span>Unduh kartu PNG
+                </button>
               </div>
             </div>
           </div>
-          <!-- Tombol mematikan Kartu Udara. Duduk DI DALAM batang tulang
-               punggung yang biru, menempel di dasarnya, dan baru muncul
-               sesudah pengguna memilih lokasi. Secara DOM dia saudara
-               tombol tulang punggung, bukan anaknya, sebab tombol di dalam
-               tombol itu tidak sah. Yang membuatnya terlihat di dalam
-               batang itu posisi serap, bukan sarang.
-               Selain menutup panel dia MENGOSONGKAN kartunya dan menutup
-               gelembung titik di peta, dan yang terakhir itu sebab
-               utamanya, gelembung itu pernah nyangkut tidak bisa ditutup. -->
-          <button type="button" class="ku-off" id="ku-off" title="Matikan Kartu Udara">
-            <span class="material-symbols-outlined">power_settings_new</span>
-            <span class="ku-off-lbl">Off</span>
-          </button>
         </aside>
         </div>
       </div>
