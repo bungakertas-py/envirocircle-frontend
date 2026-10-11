@@ -76,35 +76,46 @@
     var hero = document.querySelector(".hero");
     if (!hero) { a.classList.add("ajak-kecil"); return; }
 
+    /* PATOKANNYA POSISI GULIR, BUKAN POSISI HERO.
+
+       Sempat memakai IntersectionObserver di .hero dan itu SALAH TOTAL di
+       halaman ini. Hero landing Envirocircle dipasang position sticky top
+       nol, dia sengaja dipaku di atas sementara bagian di bawahnya
+       menggeser menutupinya. Akibatnya kotak hero SELAMANYA berada di
+       baris nol sampai setinggi layar, berapa pun halaman digulir, dan
+       pengamatnya selalu melapor hero masih terlihat. Dilaporkan pemilik,
+       "di section showcase, instrument, kok togglenya masih full".
+
+       Gulirnya sendiri tidak berbohong. Lewat setengah layar lebih sedikit
+       berarti mata orang sudah pindah ke bagian berikutnya.
+
+       Pendengarnya pasif dan kerjanya dikerjakan LANGSUNG, tidak dititip
+       ke requestAnimationFrame. Yang dibaca cuma scrollY dan innerHeight,
+       dua duanya TIDAK memaksa tata letak dihitung ulang, dan
+       classList.toggle dengan nilai yang sama tidak mengubah apa apa.
+       Jadi mengekangnya ke bingkai cuma menambah satu jalur yang bisa
+       gagal tanpa menghemat apa pun. */
+    var AMBANG = 0.55;
+
     function nilai() {
-      var k = hero.getBoundingClientRect();
       var tinggi = window.innerHeight || document.documentElement.clientHeight;
-      /* Seperempat hero masih kelihatan berarti masih dianggap di hero. */
-      var tampak = Math.min(k.bottom, tinggi) - Math.max(k.top, 0);
-      a.classList.toggle("ajak-kecil", tampak < k.height * 0.25);
+      a.classList.toggle("ajak-kecil", window.scrollY > tinggi * AMBANG);
     }
 
-    /* Diperiksa SEKALI di sini, langsung, sebelum pengamatnya dipasang.
-       Pengamat baru melapor di akhir bingkai gambar berikutnya, dan
-       halaman yang dibuka sudah dalam keadaan tergulir, entah lewat
-       tautan berjangkar atau lewat posisi gulir yang dipulihkan browser,
-       akan terlanjur memamerkan papan utuh selama satu bingkai itu. */
+    /* Diperiksa SEKALI di sini, langsung. Halaman yang dibuka sudah dalam
+       keadaan tergulir, entah lewat tautan berjangkar atau lewat posisi
+       gulir yang dipulihkan browser, kalau tidak akan terlanjur memamerkan
+       papan utuh. */
     nilai();
-    /* Baru sesudah keadaan pertamanya terpasang transisinya dihidupkan.
-       Dua bingkai, bukan satu, sebab satu bingkai kadang masih jatuh di
-       perhitungan gaya yang sama. */
+    /* Baru sesudah keadaan pertamanya terpasang transisinya dihidupkan,
+       kalau tidak papannya terlihat merayap keluar tiap kali halaman
+       dibuka dalam keadaan tergulir. */
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { a.classList.add("ajak-siap"); });
     });
 
-    /* IntersectionObserver, bukan pendengar scroll. Pendengar scroll
-       menyala puluhan kali per detik dan memaksa tata letak dihitung
-       ulang tiap kali dia menanyakan posisi hero. Yang ini cuma menyala
-       waktu ambangnya benar benar terlewat. */
-    if (!("IntersectionObserver" in window)) return;
-    new IntersectionObserver(function (masuk) {
-      a.classList.toggle("ajak-kecil", !masuk[0].isIntersecting);
-    }, { threshold: 0.25 }).observe(hero);
+    addEventListener("scroll", nilai, { passive: true });
+    addEventListener("resize", nilai, { passive: true });
   }
 
   if (document.readyState === "loading") {

@@ -1356,6 +1356,46 @@
     }
   }
 
+  /* DATANG DARI HALAMAN LAIN MEMBAWA JANGKAR.
+
+     Dilaporkan pemilik, "kalau saya dari page lain kaya Publication &
+     Project atau About us trs saya pilih showcase dan instrument, dia
+     malah ke hero". Tautannya sendiri benar, ../#showcase. Yang salah
+     bukan tautannya tapi cara peramban melayaninya.
+
+     Peramban melompat ke jangkar dengan membaca posisi elemennya, dan di
+     halaman ini bagian bagiannya position sticky. Posisi elemen yang
+     sedang lengket itu BUKAN posisi tata letaknya, dia posisi tempelnya,
+     persis jebakan yang sudah dicatat panjang lebar di atas. Jadi
+     peramban menghitung tujuan yang salah lalu mendarat di hero.
+
+     Pendengar klik di bawah ini tidak menolong, sebab datang dari halaman
+     lain itu tidak ada kliknya. Jadi jangkarnya dilayani sendiri di sini,
+     memakai penanda posisi dan lompat yang sama dengan menu.
+
+     Dikerjakan DUA KALI. Sekali sekarang, dan sekali lagi sesudah semua
+     gambar selesai dimuat, sebab foto hero yang baru mendarat mengubah
+     tinggi halaman dan menggeser tujuannya. Yang kedua DIBATALKAN kalau
+     orangnya sudah menggulir sendiri, supaya kita tidak merebut kendali
+     dari tangannya. */
+  (function () {
+    var id = (location.hash || "").slice(1);
+    var ke = URUT.indexOf(id);
+    if (ke <= 0) return;          /* tidak dikenal, atau #top yang memang nol */
+
+    var disentuh = false;
+    ["wheel", "touchstart", "keydown"].forEach(function (n) {
+      addEventListener(n, function () { disentuh = true; }, { passive: true, once: true });
+    });
+
+    function pergi() { lompat(posisiTataLetak()[ke]); }
+    pergi();
+    requestAnimationFrame(function () { requestAnimationFrame(pergi); });
+    addEventListener("load", function () {
+      if (!disentuh) pergi();
+    });
+  })();
+
   /* Satu pendengar di dokumen, bukan satu per tautan. Menu, lambang merek,
      dan tombol "See it live" di hero semuanya ikut lewat jalur yang sama. */
   document.addEventListener("click", function (e) {
