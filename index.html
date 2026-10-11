@@ -49,6 +49,11 @@
   <!-- Penanda "JS hidup". Keadaan awal animasi hanya dipasang kalau kelas ini ada,
        jadi tanpa JS seluruh teks hero tetap terlihat. -->
   <script>document.documentElement.className += " js-anim";</script>
+  <!-- Ajakan main Adu Cuaca. Satu berkas gaya dan satu berkas
+       skrip, dipakai bersama semua halaman. Markahnya ditanam
+       sendiri oleh ajak.js, jangan ditulis tangan di sini. -->
+  <link rel="stylesheet" href="ajak.css" />
+  <script src="ajak.js" defer></script>
 </head>
 <!-- DUA SAKLAR FOTO HERO. Aturan dan alasannya di blok DUA SAKLAR FOTO di
      style.css. Ringkasnya, ukur terang dua pita pada potongan yang benar benar
@@ -92,17 +97,6 @@
     </div>
   </header>
 
-  <!-- AJAKAN MAIN MINI GAME. Ditaruh DI LUAR .hero, bukan di dalamnya,
-       dua sebabnya. Satu, .hero punya overflow sendiri dan benda yang
-       menempel tepi kanan gampang terpotong di situ. Dua, dia TIDAK diberi
-       data-anim sama sekali, sengaja, supaya tidak ikut koreografi masuk
-       GSAP. Elemen yang ikut koreografi itu dimulai dari opacity nol, dan
-       kalau satu saja pemicunya meleset dia tidak pernah kelihatan lagi.
-       Ajakan ini terlalu penting untuk dipertaruhkan ke situ. -->
-  <a class="ajak-game" href="game/" aria-label="Main mini game Adu Cuaca">
-    <span class="ajak-bos"><img src="game/ajak-kemarau.png" width="48" height="80" alt="" /></span>
-    <span class="ajak-teks">Kalahkan<br />Kemarau<br />Sekarang!</span>
-  </a>
 
   <!-- ============================ HERO ============================ -->
   <section class="hero" id="top">

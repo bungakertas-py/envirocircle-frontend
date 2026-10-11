@@ -16,7 +16,7 @@
    SATU, gambar aulanya 240 x 135 piksel dan cuma boleh diperbesar
    KELIPATAN BULAT. Angkanya dihitung JS lalu ditaruh di --px. Diperbesar
    pecahan, sebagian piksel jadi 6 dan sebagian 7, dan seluruh kerjaan
-   pixel art ini percuma. Naga dan altar ikut --px yang sama, jadi besar
+   pixel art ini percuma. Naganya ikut --px yang sama juga, jadi besar
    kotaknya seragam di seluruh layar.
 
    DUA, image-rendering WAJIB pixelated di tiap gambar piksel. Tanpa itu
@@ -39,6 +39,17 @@
   --teks-rd: rgba(242, 233, 220, .66);
   --teks-sm: rgba(242, 233, 220, .4);
   --garis:   rgba(232, 192, 98, .25);
+
+  /* Perkamen, dipakai GULUNGAN HASIL. Warnanya diambil dari palet latar
+     kemarau, jadi gulungannya sedarah dengan padangnya dan dengan kartu. */
+  --kertas:    #ECDCB2;
+  --kertas-gl: #D6BD86;
+  --tinta:     #2B1311;
+  --tinta-rd:  #5A2814;
+  --kayu:      #8C3F20;
+  --kayu-tr:   #C98D49;
+  --air:       #1A5E6E;
+  --api-tua:   #9C391B;
 }
 
 * { box-sizing: border-box; }
@@ -132,17 +143,62 @@ a { color: inherit; text-decoration: none; }
 }
 .aula-latar, #bos-gambar { image-rendering: pixelated; display: block; }
 .aula-latar { width: 100%; height: 100%; }
+/* Belum ada src sampai permainannya tamat, jadi dia tidak menggambar apa
+   apa. Memudarnya lambat, 1,1 detik, sebab ini bukan efek tapi penutup
+   cerita, dan tempatnya berubah pelan pelan. */
+.aula-akhir {
+  position: absolute; inset: 0;
+  opacity: 0; transition: opacity 1.1s ease;
+}
+.aula-akhir.tampil { opacity: 1; }
 
-/* Kaki naganya mendarat di permukaan altar, dan altarnya sudah menyatu
-   dengan gambar aula. 92 itu jarak dari dasar gambar aula ke dasar naga,
-   dihitung di buat-ruangan.py, jangan dikira kira. */
+/* UKURANNYA DUA KALI gambarnya, 48 piksel digambar jadi 96. Diminta
+   pemilik, "bikin naganya besar, sekarang tu lebih besar kartunya", dan
+   memang benar, naga seukuran 48 di ruangan 288 cuma mengisi seperenam
+   lebar layar lalu kalah ramai sama kartu di tangan.
+
+   Dua kali, bukan 2,2 atau 2,5. Harus bilangan bulat supaya satu piksel
+   gambarnya jatuh pas jadi kotak 2 x 2. Kelipatan pecahan bikin sebagian
+   piksel jadi kotak 2 dan sebagian 3, dan tepinya langsung terlihat
+   bergerigi tidak rata.
+
+   Kotaknya jadi y 2 sampai 98 dari 162, jadi badannya menggantung di atas
+   cakrawala yang ada di y 76. Itu yang bikin dia terbaca MELAYANG, bukan
+   berdiri. 64 itu jarak dari dasar gambar latar ke dasar kotak naganya. */
 #bos-gambar {
   position: absolute; left: 50%;
-  bottom: calc(92px * var(--px));
-  width: calc(48px * var(--px)); height: auto;
+  bottom: calc(64px * var(--px));
+  width: calc(96px * var(--px)); height: auto;
   transform: translateX(-50%);
   animation: bos-napas 3.4s ease-in-out infinite;
 }
+/* ------------------------ TAMAT, DUA AKHIRAN ------------------------- */
+/* Naganya PECAH waktu kalah. Serpihannya bukan gambar baru, tiap serpih itu
+   jendela kecil ke gambar naga yang sama, dipotong lewat background-size
+   800 persen dan background-position. Jadi pecahannya dijamin sama persis
+   dengan naga yang barusan dilihat pemain, dan tidak ada satu berkas pun
+   yang perlu ditambah. */
+.pecahan { position: absolute; inset: 0; pointer-events: none; }
+.serpih {
+  position: absolute; width: 12.5%; height: 12.5%;
+  background-image: url("bos-padam.png?v=9");
+  background-size: 800% 800%;
+  image-rendering: pixelated;
+  will-change: transform, opacity;
+}
+
+/* Naganya MEMBESAR waktu pemain gagal. Bukan bergerak maju, cuma membesar,
+   dan itu justru yang bikin ngeri, dia mendekat tanpa perlu kemana mana.
+   Lengkungnya sengaja lambat di awal lalu menderas di akhir. */
+#bos-gambar.membesar {
+  transform-origin: 50% 58%;
+  animation: bos-membesar 2.8s cubic-bezier(.55, .06, .68, .4) forwards;
+}
+@keyframes bos-membesar {
+  from { transform: translateX(-50%) scale(1); }
+  to   { transform: translateX(-50%) scale(1.9); }
+}
+
 @keyframes bos-napas {
   0%, 100% { transform: translateX(-50%) translateY(0); }
   50%      { transform: translateX(-50%) translateY(calc(-1px * var(--px))); }
@@ -158,7 +214,14 @@ a { color: inherit; text-decoration: none; }
   position: absolute; top: 14px; left: 20px; z-index: 3;
   width: min(380px, 42vw);
   display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
-  text-shadow: 0 2px 0 rgba(13, 9, 6, .95), 0 0 7px rgba(13, 9, 6, .9);
+  /* GARIS LUAR EMPAT ARAH, bukan bayangan jatuh. Latarnya sekarang bisa
+     berganti jadi padang subur yang langitnya biru muda, dan bayangan yang
+     cuma ke bawah langsung kalah di sana. Garis luar penuh bikin tulisannya
+     terbaca di latar apa pun, dan itu juga bahasa UI game piksel. */
+  text-shadow:
+    -2px 0 0 var(--malam), 2px 0 0 var(--malam),
+    0 -2px 0 var(--malam), 0 2px 0 var(--malam),
+    0 0 9px rgba(13, 9, 6, .85);
 }
 /* Nama bosnya TOMBOL, pintu ke ceritanya. Gaya tombol bawaan dicopot
    habis, yang tersisa cuma tulisannya, supaya dia tetap terbaca sebagai
@@ -205,7 +268,7 @@ a { color: inherit; text-decoration: none; }
   pointer-events: none;
 }
 .hp-angka b { font-weight: 500; }
-.giliran { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--teks-rd); }
+.giliran { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--teks); }
 .giliran b { color: var(--emas); }
 
 /* ---------------------------- bagian bawah --------------------------- */
@@ -222,12 +285,15 @@ a { color: inherit; text-decoration: none; }
    latarnya tetap utuh terlihat. */
 .bawah {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-  padding: 0 20px 22px;
+  padding: 0 20px 30px;
 }
 .bawah, .bawah .hasil-akibat, .bawah .hasil-nama {
-  text-shadow: 0 2px 0 rgba(13, 9, 6, .9), 0 0 6px rgba(13, 9, 6, .9);
+  text-shadow:
+    -2px 0 0 var(--malam), 2px 0 0 var(--malam),
+    0 -2px 0 var(--malam), 0 2px 0 var(--malam),
+    0 0 8px rgba(13, 9, 6, .85);
 }
-.arena-pesan { margin: 0 0 30px; text-align: center; font-size: 13px; color: var(--teks); }
+.arena-pesan { margin: 0 0 14px; text-align: center; font-size: 13px; color: var(--teks); }
 
 /* Meja. Tangan di tengah, tumpukan dek menempel di kanan. Tumpukannya
    DIPOSISIKAN MUTLAK, bukan ikut mengalir, supaya tangan tetap benar benar
@@ -245,8 +311,10 @@ a { color: inherit; text-decoration: none; }
 .tangan .kartu:nth-child(2) { z-index: 2; }
 .tangan .kartu:nth-child(3) { z-index: 3; }
 
+/* Tetap mepet kanan layar. Yang menemani tombol itu KARTU DI TANGAN,
+   bukan tumpukan ini. */
 .tumpukan {
-  position: absolute; right: 26px; bottom: 30px;
+  position: absolute; right: 10px; bottom: 4px;
   width: 92px; cursor: default;
 }
 /* Tiga punggung kartu ditumpuk dengan geseran kecil. Dua saja terbaca
@@ -275,6 +343,25 @@ a { color: inherit; text-decoration: none; }
 }
 
 .aksi { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 24px; }
+/* HANYA tombol main yang dipatok di kanan. #aksi-hasil memakai kelas yang
+   sama tapi dia muncul waktu kartu sudah disembunyikan, dan di situ tombol
+   Main Lagi memang lebih benar di tengah. Jadi aturan ini WAJIB pakai id,
+   bukan kelas, kalau tidak dua duanya ikut pindah. */
+#aksi {
+  /* DIPATOK KE TENGAH LALU DIGESER KE KANAN, bukan ditempel ke tepi layar.
+     Yang harus ditemani tombol ini kartu di tangan, dan kartu di tangan
+     selalu di tengah meja berapa pun lebar layarnya. Kalau tombolnya
+     ditempel ke tepi kanan, di layar lebar dia melayang jauh dari
+     kartunya dan hubungan keduanya putus.
+
+     158 itu setengah lebar tangan ditambah sedikit jarak. Tiga kartu 120
+     piksel bertumpuk 38, jadi lebarnya 284 dan setengahnya 142. */
+  position: absolute; left: calc(50% + 158px); bottom: 4px;
+  width: 162px; margin-top: 0;
+  flex-direction: column; align-items: stretch;
+  gap: 10px;
+}
+#aksi .pil { padding: 12px 8px; font-size: 12px; }
 
 /* ------------------------------- KARTU ------------------------------- */
 /* TRANSFORM .kartu MILIK JS, jangan ditulis di sini lagi. Goyang, miring
@@ -546,37 +633,94 @@ a { color: inherit; text-decoration: none; }
    dari #bos-gambar. Jadi tiap efek di dalamnya cukup dipasang dengan
    persen, dan dia ikut benar di layar mana pun. */
 .efek {
-  position: absolute; left: 50%; bottom: calc(92px * var(--px));
-  width: calc(48px * var(--px)); height: calc(48px * var(--px));
+  position: absolute; left: 50%; bottom: calc(64px * var(--px));
+  width: calc(96px * var(--px)); height: calc(96px * var(--px));
   transform: translateX(-50%);
   pointer-events: none; z-index: 2;
 }
 
 /* Awan di atas kepala. Dia WAJIB ada sebelum hujannya, sebab hujan yang
    turun entah dari mana terbaca seperti cacat gambar, bukan serangan. */
-.efek-awan {
-  position: absolute; left: 50%; top: -22%;
-  width: 92%; height: auto;
-  image-rendering: pixelated;
-  animation: awan-datang .34s cubic-bezier(.2, .9, .3, 1.25) both;
-}
-@keyframes awan-datang {
-  0%   { transform: translate(-50%, -60%) scale(.6); opacity: 0; }
   100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
 }
 
 /* Ubin hujan dari PixelLab, digeser terus menerus. Besar ubinnya disimpan
    di --ubin supaya keadaan akhir animasinya bisa memakai angka yang sama,
    dan ulangannya mulus tanpa kelihatan patah. */
-.efek-hujan {
-  --ubin: calc(48px * var(--px) * .55);
-  position: absolute; left: -16%; right: -16%; top: 4%; bottom: -24%;
+/* --------------------------- BADAI SELAYAR --------------------------- */
+/* Diminta pemilik, "bikin hujannya selayar dan awan menutupi 1/4 keatas".
+   Dulu awannya cuma satu gumpal 28 piksel di atas kepala naga dan hujannya
+   sebesar badan naga saja. Kecil, dan yang lebih penting SALAH ARTINYA.
+   Yang dilakukan pemain itu MENURUNKAN HUJAN DI SELURUH WILAYAH, bukan
+   menyiram satu ekor naga. Jadi badainya sekarang selebar layar.
+
+   Lapisan ini anak .aula, BUKAN anak .efek. .efek itu kotak seukuran badan
+   naga, apa pun di dalamnya ikut terkurung di situ. Ditaruh sesudah
+   .aula-isi di DOM supaya hujannya jatuh DI DEPAN naganya. HUD dan kartu
+   pakai z-index 3, jadi mereka tetap di depan badai. */
+/* Mendung, DI DALAM .aula-isi. Dia sengaja TIDAK satu lapisan dengan
+   hujannya. Naganya terbang DI BAWAH awan, jadi awan harus di belakang dia
+   sedangkan hujan harus di depan dia. Satu lapisan tidak bisa dua duanya.
+   Urutannya di sini tidak pakai z-index sama sekali, cukup urutan DOM, di
+   bawah gambar latar dan di atas naganya. */
+.mendung {
+  position: absolute; left: 0; right: 0; top: 0;
+  height: calc(60px * var(--px));
+  overflow: hidden; pointer-events: none;
+}
+
+.langit {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 2;
+  /* SETINGGI GAMBAR LATARNYA, bukan setinggi .aula. .aula dibikin minimal
+     setinggi layar sedangkan gambar latarnya 162 baris dipaku ke atas, jadi
+     di bawahnya kadang ada pita hitam. Hujan yang ikut turun di pita hitam
+     itu langsung terbaca sebagai bocor. */
+  height: calc(162px * var(--px));
+  overflow: hidden; pointer-events: none;
+}
+/* Pitanya 288 x 48 dan SUDAH diuji menyambung, jadi cukup diubin mendatar
+   lalu digeser pelan. Dia menutup 60 dari 162 baris ruangan. Dua puluh dua
+   baris teratasnya SENGAJA dibikin padat di buat-pita-awan.py, jadi berapa
+   pun ia hanyut menyamping tidak ada setitik langit yang bocor di atas. */
+.langit-awan {
+  position: absolute; left: 0; right: 0; top: 0;
+  height: calc(60px * var(--px));
+  background-image: url("awan-pita.png");
+  background-repeat: repeat-x;
+  background-size: calc(288px * var(--px)) calc(60px * var(--px));
+  image-rendering: pixelated;
+  animation: awan-turun .55s cubic-bezier(.2, .9, .3, 1.1) both,
+             awan-hanyut 26s linear infinite .55s;
+}
+/* Turunnya DARI ATAS LAYAR, bukan memudar di tempat. Mendung yang tiba
+   tiba ada itu terbaca seperti cacat gambar, mendung yang bergerak masuk
+   terbaca sebagai cuaca yang datang. */
+@keyframes awan-turun {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+@keyframes awan-hanyut {
+  to { background-position-x: calc(288px * var(--px)); }
+}
+.langit-hujan {
+  --ubin: calc(48px * var(--px) * .62);
+  position: absolute; inset: 0;
   background-image: url("hujan.png");
   background-repeat: repeat;
   background-size: var(--ubin) var(--ubin);
   image-rendering: pixelated;
-  animation: hujan-jatuh .5s linear infinite, efek-muncul .3s ease both;
+  animation: hujan-jatuh .5s linear infinite, efek-muncul .45s ease both;
 }
+/* Keluarnya dipasang lewat kelas, bukan dengan menghapus elemennya
+   seketika. Badai yang hilang satu bingkai itu kasar. */
+.mendung.pergi .langit-awan { animation: awan-naik .5s ease-in both; }
+.langit.pergi .langit-hujan { animation: hujan-jatuh .5s linear infinite,
+                                         efek-muncul .5s ease reverse both; }
+@keyframes awan-naik {
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(-100%); opacity: 0; }
+}
+
 @keyframes hujan-jatuh {
   to { background-position: calc(var(--ubin) * -.4) var(--ubin); }
 }
@@ -619,10 +763,22 @@ a { color: inherit; text-decoration: none; }
    Diminta pemilik. Dia bacaan susulan yang menjelaskan apa yang baru saja
    terjadi, dan di kiri dia jadi catatan pertempuran yang berjalan.
 
-   BINGKAI DAN LATARNYA tetap tidak ada, itu permintaan sebelumnya yang
-   masih berlaku. Keterbacaannya ditanggung bayangan huruf, dan di sini
-   bayangannya harus ditulis sendiri sebab dia sudah tidak menumpang
-   .bawah lagi. */
+   DULU TANPA BINGKAI, sekarang GULUNGAN PERKAMEN. Alasannya berubah sebab
+   latarnya berubah. Waktu latarnya cuma aula ungu yang gelap, tulisan
+   terang plus bayangan sudah cukup. Begitu latarnya bisa berganti jadi
+   padang subur yang langitnya biru muda dan sawahnya hijau terang, tulisan
+   terang di atasnya HILANG, dilaporkan pemilik dengan tangkapan layar.
+
+   Bayangan huruf tidak bisa menyelamatkan paragraf sepanjang ini, dia cuma
+   menolong judul pendek. Yang perlu adalah alas yang buram, dan karena
+   temanya kerajaan, alasnya gulungan. Sekalian cocok, sebab isinya memang
+   catatan pertempuran.
+
+   PENGGULUNGNYA DIGAMBAR SEBAGAI LATAR, bukan sebagai ::before dan
+   ::after. Kotak ini bisa digulir, dan anak elemen ikut tergulir sedangkan
+   latar dengan background-attachment bawaan menempel ke kotaknya. Jadi dua
+   penggulungnya tetap diam di atas dan di bawah sementara tulisannya
+   lewat di antaranya, persis gulungan betulan. */
 .hasil {
   position: absolute; left: 20px; top: 104px; z-index: 3;
   width: min(340px, 32vw);
@@ -630,7 +786,33 @@ a { color: inherit; text-decoration: none; }
   overflow-y: auto;
   text-align: left;
   animation: hasil-masuk .4s cubic-bezier(.2, .8, .3, 1) both;
-  text-shadow: 0 2px 0 rgba(13, 9, 6, .95), 0 0 7px rgba(13, 9, 6, .9);
+
+  padding: 24px 20px;
+  color: var(--tinta);
+  text-shadow: none;
+  background-color: var(--kertas);
+  background-image: var(--gulung), var(--gulung);
+  background-repeat: no-repeat, no-repeat;
+  background-position: left top, left bottom;
+  background-size: 100% 15px, 100% 15px;
+  border-left: 3px solid var(--kayu);
+  border-right: 3px solid var(--kayu);
+  scrollbar-width: thin;
+  scrollbar-color: var(--kayu) rgba(90, 40, 20, .12);
+}
+/* Penggulung kayu, dilihat dari depan. Semua perhentian warnanya KERAS,
+   tanpa satu pun gradasi melunak, sebab gradasi halus di tengah gambar
+   piksel langsung terlihat seperti tempelan dari dunia lain. */
+:root {
+  --gulung: linear-gradient(to bottom,
+    #2B1311 0 2px, #5A2814 2px 4px, #8C3F20 4px 6px,
+    #C98D49 6px 8px, #ECDCB2 8px 9px, #C98D49 9px 11px,
+    #8C3F20 11px 13px, #2B1311 13px 15px);
+}
+.hasil::-webkit-scrollbar { width: 10px; }
+.hasil::-webkit-scrollbar-track { background: rgba(90, 40, 20, .12); }
+.hasil::-webkit-scrollbar-thumb {
+  background: var(--kayu); border: 2px solid var(--kertas);
 }
 /* Masuknya DARI KIRI, menggeser sedikit. Muncul begitu saja dengan
    memudar itu gampang terlewat, apalagi waktu mata orang masih tertinggal
@@ -639,6 +821,35 @@ a { color: inherit; text-decoration: none; }
   from { opacity: 0; transform: translateX(-18px); }
   to   { opacity: 1; transform: translateX(0); }
 }
+/* Warna tulisan di DALAM gulungan dibalik, gelap di atas terang. Semuanya
+   WAJIB diawali .hasil. Kelas hasil-nama dan hasil-akibat dipakai juga di
+   bilah bawah yang latarnya masih gelap, dan kalau aturan ini dibiarkan
+   telanjang tulisan di sana ikut jadi coklat tua lalu lenyap. */
+.hasil .hasil-kepala  { color: var(--tinta-rd); }
+.hasil .hasil-baris   { border-top-color: rgba(90, 40, 20, .3); }
+.hasil .hasil-baris:last-child { border-bottom-color: rgba(90, 40, 20, .3); }
+.hasil .hasil-nama    { color: var(--tinta); }
+.hasil .hasil-akibat  { color: var(--tinta-rd); }
+/* Biru tua untuk yang melukai bos, merah bata untuk yang menyembuhkan.
+   Di sini boleh diberi warna, sebab jawabannya memang SUDAH terbuka.
+   Yang tidak boleh diberi warna cuma kartu di tangan, sebelum dipilih. */
+.hasil .baris-baik  .hasil-angka { color: var(--air); }
+.hasil .baris-buruk .hasil-angka { color: var(--api-tua); }
+.hasil .hasil-rantai {
+  border-color: var(--kayu); background: rgba(154, 90, 48, .16);
+  color: var(--tinta-rd);
+}
+.hasil .hasil-rantai b { color: var(--api-tua); }
+.hasil .hasil-jumlah   { color: var(--tinta-rd); }
+.hasil .hasil-jumlah b { color: var(--air); }
+.hasil .hasil-jumlah .pulih { color: var(--api-tua); }
+.hasil .tamat   { border-top-color: rgba(90, 40, 20, .3); }
+.hasil .tamat p { color: var(--tinta-rd); }
+.hasil .tamat-judul { text-shadow: none; }
+.hasil .menang .tamat-judul { color: var(--air) !important; }
+.hasil .kalah  .tamat-judul { color: var(--api-tua) !important; }
+.hasil .gagal  { color: var(--api-tua); }
+
 .hasil-kepala { margin: 0; font-size: 13px; color: var(--teks-rd); }
 .hasil-daftar { list-style: none; margin: 0; padding: 0; }
 .hasil-baris {
@@ -701,6 +912,12 @@ a { color: inherit; text-decoration: none; }
      tangan, dan dipaksa muat dia menindih kartu. Tanda serunya pindah ke
      kartu masing masing, yang itu memang sudah ada. */
   .tumpukan { display: none; }
+  /* Tumpukannya hilang di sini, jadi tidak ada lagi yang perlu ditemani di
+     kanan. Tombolnya dikembalikan ke bawah kartu, melebar penuh. */
+  #aksi {
+    position: static; width: auto; margin-top: 18px;
+    flex-direction: row; justify-content: center;
+  }
   .tangan .kartu + .kartu { margin-left: -22px; }
   .sorot-rak img { width: 84px; }
   .hud { top: 10px; padding: 10px 14px 9px; }
@@ -716,7 +933,8 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .kartu, .kartu-dalam, .kartu-info { transition: none; }
   .kartu.dipilih .kartu-dalam::after { animation: none; box-shadow: 0 0 0 5px rgba(232, 192, 98, .32); }
-  .hasil-angka, #bos-gambar, .efek-awan, .efek-hujan, .efek-api,
+  .hasil-angka, #bos-gambar, .efek-api,
+  .langit-awan, .langit-hujan, .serpih, #bos-gambar.membesar,
   .tutor-seru { animation: none; }
   .tutor, .lore { transition: none; }
   .angka-apung { animation: none; transform: translate(-50%, -30px); }

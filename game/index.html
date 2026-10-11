@@ -76,17 +76,35 @@
     <section class="aula" id="arena">
 
       <div class="aula-isi">
-        <img class="aula-latar" src="ruangan.png" alt="" width="240" height="135" />
-        <!-- Naganya dari PixelLab, 48 x 48. Tiga keadaannya diturunkan dari
+        <img class="aula-latar" src="latar-kemarau.png" alt="" width="288" height="162" />
+        <!-- Latar penutup. Dia DIAM DI ATAS latar kemarau dan baru dipudarkan
+             masuk waktu permainannya tamat, subur kalau bosnya padam dan
+             hancur kalau bosnya menang. Ditumpuk begini, bukan ditukar src
+             latar utamanya, supaya pergantiannya bisa memudar silang. Tiga
+             gambarnya cakrawalanya sebaris, jadi naganya tidak melompat. -->
+        <img class="aula-latar aula-akhir" id="latar-akhir" alt="" width="288" height="162" />
+        <!-- Mendung. DI DALAM .aula-isi dan DI ATAS gambar latarnya tapi DI
+             BAWAH naganya, urutannya diatur urutan DOM saja. Naganya terbang
+             di bawah awan, bukan di belakangnya, jadi dia tidak boleh
+             tertutup. Hujannya lain cerita, dia di lapisan .langit yang ada
+             di depan semuanya. -->
+        <div class="mendung" id="mendung" aria-hidden="true"></div>
+        <!-- Naganya 48 x 48. Tiga keadaannya diturunkan dari
              satu gambar lewat turunkan-bos.py, baranya diredupkan pelan
              pelan sampai padam. Jangan disunting tangan. -->
-        <img id="bos-gambar" src="bos-sehat.png" alt="Si Kemarau" width="48" height="48" />
+        <img id="bos-gambar" src="bos-sehat.png?v=9" alt="Si Kemarau" width="48" height="48" />
         <!-- Lapisan efek, UKURAN DAN POSISINYA PERSIS SAMA dengan naganya.
              Awan, hujan, api, dan angka melayang semuanya lahir di sini,
              jadi semuanya otomatis menempel di badan bos berapa pun
              perbesaran layarnya. -->
         <div class="efek" id="efek" aria-hidden="true"></div>
       </div>
+
+      <!-- HUJANNYA saja. SESUDAH .aula-isi supaya jatuh di depan naganya,
+           dan di luar .efek supaya tidak ikut terkurung sebesar badan naga.
+           Awannya TIDAK di sini, dia di dalam .aula-isi di belakang naga.
+           Isinya ditanam JS cuma waktu dibutuhkan. -->
+      <div class="langit" id="langit" aria-hidden="true"></div>
 
       <!-- HUD di POJOK KIRI ATAS, tanpa kotak, semuanya rata kiri. Angka
            HP-nya DI DALAM bar dan menempel ke ujung isinya, jadi dia ikut
@@ -131,10 +149,17 @@
                     aria-label="Keterangan semua kartu">!</button>
             <span class="tumpukan-angka"><b>26</b> kartu</span>
           </div>
-        </div>
-        <div class="aksi" id="aksi">
-          <button class="pil" id="serang" type="button" disabled>Serang</button>
-          <button class="pil pil-garis" id="lewati" type="button">Lewati giliran</button>
+
+          <!-- Tombolnya DI DALAM meja, di kanan tumpukan dek, bukan di
+               bawah kartu. Diminta pemilik. Sebabnya bukan kerapian, tapi
+               ruang. Waktu tombolnya duduk di bawah kartu dia makan sekitar
+               tujuh puluh piksel tinggi, dan seluruh isi bawah terdorong
+               naik sampai menutupi wajah naganya. Dipindah ke samping,
+               tingginya hilang dari aliran dan kartunya turun sendiri. -->
+          <div class="aksi" id="aksi">
+            <button class="pil" id="serang" type="button" disabled>Serang</button>
+            <button class="pil pil-garis" id="lewati" type="button">Lewati giliran</button>
+          </div>
         </div>
         <!-- Tombol hasil DI LUAR panel teksnya, dan ini bukan kerapian
              semata. Panel di atas bisa digulir dan tingginya dibatasi, jadi

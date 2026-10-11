@@ -38,7 +38,8 @@
   window.addEventListener("resize", ukurAula);
 
   var el = {};
-  ["bos-gambar", "hp-isi", "hp-angka", "giliran", "pesan", "tangan", "aksi",
+  ["bos-gambar", "latar-akhir", "langit", "mendung",
+   "hp-isi", "hp-angka", "giliran", "pesan", "tangan", "aksi",
    "serang", "lewati", "hasil", "gagal", "hp", "tumpukan-info", "efek", "aksi-hasil", "tutor", "lore"
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
@@ -127,6 +128,95 @@
     setTimeout(function () { a.remove(); }, 1500);
   }
 
+  /* Dibangun sekali lalu dipakai ulang. Kalau tiap serangan elemennya
+     dibuat baru, animasi mendung turunnya mulai dari nol lagi tiap kali dan
+     badainya terasa dipotong potong. */
+  function badai() {
+    /* DUA WADAH, bukan satu. Mendungnya di belakang naga dan hujannya di
+       depan naga, jadi mereka tidak bisa tinggal di lapisan yang sama. */
+    var m = el.mendung, l = el.langit;
+    if (!m || !l) return;
+    clearTimeout(badai.buang);
+    clearTimeout(badai.sapu);
+    m.classList.remove("pergi");
+    l.classList.remove("pergi");
+    if (!m.firstChild) m.innerHTML = '<div class="langit-awan"></div>';
+    if (!l.firstChild) l.innerHTML = '<div class="langit-hujan"></div>';
+    badai.buang = setTimeout(function () {
+      m.classList.add("pergi"); l.classList.add("pergi");
+    }, 2000);
+    badai.sapu = setTimeout(function () {
+      m.classList.remove("pergi"); m.innerHTML = "";
+      l.classList.remove("pergi"); l.innerHTML = "";
+    }, 2520);
+  }
+
+  /* ===================== DUA AKHIRAN ===================== */
+
+  /* Naganya pecah berhamburan. Serpihannya dipotong dari gambar naga itu
+     sendiri, jadi tidak ada berkas tambahan dan pecahannya dijamin sama
+     persis dengan yang barusan dilihat pemain.
+
+     Arah lemparnya DIHITUNG dari posisi tiap serpih, bukan diacak penuh.
+     Serpih di kiri atas terlempar ke kiri atas, yang di kanan bawah ke
+     kanan bawah. Acak penuh terbaca seperti kerusakan gambar, terpancar
+     dari tengah terbaca seperti meledak. Yang diacak cuma jauhnya dan
+     putarannya, dan itu yang bikin ledakannya tidak terlihat seperti
+     kembang api yang terlalu rapi. */
+  function pecahkanBos() {
+    var bos = el["bos-gambar"];
+    if (!bos || !el.efek) return;
+    if (DIAM) { bos.style.opacity = "0"; return; }
+
+    var N = 8, wadah = document.createElement("div");
+    wadah.className = "pecahan";
+    for (var i = 0; i < N * N; i++) {
+      var c = i % N, r = (i / N) | 0, sp = document.createElement("i");
+      sp.className = "serpih";
+      sp.style.left = (c * 100 / N) + "%";
+      sp.style.top  = (r * 100 / N) + "%";
+      /* Persennya dibagi N-1, bukan N. Itu aturan background-position
+         persen, nol persen berarti tepi kiri dan seratus persen tepi
+         kanan, jadi yang dibagi jarak antar petak bukan jumlah petak. */
+      sp.style.backgroundPosition =
+        (c * 100 / (N - 1)) + "% " + (r * 100 / (N - 1)) + "%";
+      wadah.appendChild(sp);
+    }
+    el.efek.appendChild(wadah);
+    bos.style.opacity = "0";
+
+    var anak = wadah.children, tengah = (N - 1) / 2;
+    for (var j = 0; j < anak.length; j++) {
+      (function (sp, k) {
+        var c = k % N, r = (k / N) | 0;
+        var dx = (c - tengah) / tengah, dy = (r - tengah) / tengah;
+        var jauh = 70 + Math.random() * 150;
+        var putar = Math.random() * 160 - 80;
+        var tunda = Math.random() * 0.14;
+        sp.style.transition =
+          "transform 1.05s cubic-bezier(.15,.7,.35,1) " + tunda + "s," +
+          "opacity .95s ease-in " + (tunda + 0.1) + "s";
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            sp.style.transform =
+              "translate(" + (dx * jauh) + "px," + (dy * jauh + 46) + "px)" +
+              " rotate(" + putar + "deg)";
+            sp.style.opacity = "0";
+          });
+        });
+      })(anak[j], j);
+    }
+    getarkan(999, 0);   /* luka besar, layarnya ikut berguncang keras */
+  }
+
+  /* Pemain gagal, dan naganya membesar. Tidak maju, cuma membesar di
+     tempat, dan itu cukup untuk terbaca sebagai mendekat. */
+  function besarkanBos() {
+    var bos = el["bos-gambar"];
+    if (!bos || DIAM) return;
+    bos.classList.add("membesar");
+  }
+
   function efekHantam(luka, pulih) {
     if (DIAM) {
       if (luka) angkaApung("-" + luka, "angka-luka");
@@ -135,16 +225,15 @@
     }
     if (luka > 0) {
       /* Awannya WAJIB ada, bukan hiasan. Hujan yang turun entah dari mana
-         terbaca seperti cacat gambar. Begitu ada awan di atas kepalanya,
-         hujan itu jadi punya sebab. */
-      var awan = document.createElement("img");
-      awan.className = "efek-awan"; awan.src = "awan.png"; awan.alt = "";
-      el.efek.appendChild(awan);
-      var hj = document.createElement("div");
-      hj.className = "efek-hujan";
-      el.efek.appendChild(hj);
+         terbaca seperti cacat gambar. Begitu ada mendung yang menggantung
+         di atas, hujan itu jadi punya sebab.
+
+         SELEBAR LAYAR, bukan sebesar naga. Yang dikerjakan pemain itu
+         menurunkan hujan di seluruh wilayah, dan kalau hujannya cuma
+         sebesar badan naga yang tersampaikan malah seperti menyiram satu
+         ekor binatang. */
+      badai();
       angkaApung("-" + luka, "angka-luka");
-      setTimeout(function () { awan.remove(); hj.remove(); }, 1900);
     }
     if (pulih > 0) {
       for (var i = 0; i < 5; i++) {
@@ -613,7 +702,20 @@
     el["hp-angka"].textContent = S.hp;
     el.giliran.textContent = S.giliran;
     el["bos-gambar"].src =
-      S.hp <= 0 ? "bos-padam.png" : (persen <= 60 ? "bos-terluka.png" : "bos-sehat.png");
+      S.hp <= 0 ? "bos-padam.png?v=9" : (persen <= 60 ? "bos-terluka.png?v=9" : "bos-sehat.png?v=9");
+  }
+
+  /* Src-nya dipasang SEBELUM kelas tampilnya, dan pemudaran dimulai satu
+     bingkai kemudian lewat requestAnimationFrame. Kalau dua duanya diset
+     dalam satu tarikan, browser kadang sempat menggambar gambarnya sudah
+     keburu buram penuh dan transisinya hilang. */
+  function gantiLatar(berkas) {
+    var g = el["latar-akhir"];
+    if (!g || g.classList.contains("tampil")) return;
+    g.src = berkas;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { g.classList.add("tampil"); });
+    });
   }
 
   /* Angkanya meletus satu per satu, bukan berbarengan. Tundaan 90
@@ -685,6 +787,16 @@
 
     if (habis || mentok) {
       S.fase = "tamat";
+      /* Tempatnya ikut berubah. Bos padam, hujan kembali dan padangnya
+         menghijau. Bos menang, padangnya hangus. Latar penutupnya ditumpuk
+         di atas latar kemarau lalu dipudarkan masuk, jadi perubahannya
+         terbaca sebagai akibat, bukan sebagai layar baru. Ditunda sebentar
+         supaya pemain sempat melihat pukulan terakhirnya mendarat dulu. */
+      gantiLatar(habis ? "latar-subur.png" : "latar-hancur.png");
+      /* Ditunda sebentar. Pemain baru saja melihat pukulan terakhirnya
+         mendarat, dan kalau naganya langsung pecah di bingkai yang sama
+         dua kejadian itu bertabrakan dan tidak ada yang terbaca. */
+      setTimeout(habis ? pecahkanBos : besarkanBos, 520);
       setTimeout(function () { bunyi(habis ? "menang" : "kalah"); }, 420);
       document.getElementById("ulang").addEventListener("click", function () {
         bunyi("tombol"); mulai();
@@ -723,6 +835,23 @@
        ini, main lagi sesudah kalah dimulai dengan naga yang masih terbakar. */
     var sisaEfek = el.efek.querySelectorAll("*");
     for (var i = 0; i < sisaEfek.length; i++) sisaEfek[i].remove();
+    [el.mendung, el.langit].forEach(function (w) {
+      if (w) { w.classList.remove("pergi"); w.innerHTML = ""; }
+    });
+    /* Naganya dipulihkan. Serpihannya sudah ikut tersapu bersama isi
+       .efek di atas, tapi naga aslinya masih tak terlihat dan masih
+       memakai kelas membesar kalau tadi pemain kalah. */
+    if (el["bos-gambar"]) {
+      el["bos-gambar"].style.opacity = "";
+      el["bos-gambar"].classList.remove("membesar");
+    }
+    /* Padangnya dibalikkan ke kemarau. Src-nya ikut dikosongkan, bukan cuma
+       kelasnya dibuang, supaya pemudaran berikutnya mulai dari nol lagi
+       walau latar penutupnya kebetulan sama dengan yang tadi. */
+    if (el["latar-akhir"]) {
+      el["latar-akhir"].classList.remove("tampil");
+      el["latar-akhir"].removeAttribute("src");
+    }
     el.hasil.hidden = true;
     el["aksi-hasil"].hidden = true;
     el.tangan.hidden = false;
@@ -781,7 +910,7 @@
     el.lore.innerHTML =
       '<div class="lore-panel">' +
         '<button class="sorot-tutup" type="button" aria-label="Tutup">&times;</button>' +
-        '<img class="lore-bos" src="bos-sehat.png" alt="" width="48" height="48">' +
+        '<img class="lore-bos" src="bos-sehat.png?v=9" alt="" width="48" height="48">' +
         '<h2 class="lore-judul">Si Kemarau</h2>' +
         '<p class="lore-gelar">Naga kekeringan</p>' +
         LORE.map(function (t) { return "<p>" + aman(t) + "</p>"; }).join("") +
@@ -811,7 +940,7 @@
       judul: "Lawanmu Si Kemarau",
       teks: "Naga kekeringan. Nyawanya 1400 dan kamu cuma punya tujuh " +
             "giliran. Satu satunya cara ngalahin dia, bikin hujan turun.",
-      gambar: '<img class="tutor-bos" src="ajak-kemarau.png" alt="" width="48" height="80">'
+      gambar: '<img class="tutor-bos" src="bos-sehat.png?v=9" alt="" width="48" height="48">'
     },
     {
       judul: "Tiap giliran dapat tiga kartu",

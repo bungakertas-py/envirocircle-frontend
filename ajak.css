@@ -1,0 +1,195 @@
+/* =====================================================================
+   AJAKAN MAIN, tempel kanan layar, SENGAJA TIDAK SENADA.
+   Diminta pemilik, "khusus toggle tersebut stylenya harus pixelart ya,
+   biar dia statement terlihat dan user notice".
+
+   Seluruh situs ini kertas putih, garis rambut 0,7 piksel, huruf tipis,
+   nol bayangan. Benda ini kebalikannya semua. Gelap, bergaris tebal empat
+   piksel, berbayang keras tanpa kabur, hurufnya kotak kotak. Dia memang
+   harus terbaca sebagai benda dari dunia lain yang nyasar ke halaman ini.
+   Kalau suatu saat ada yang merapikannya supaya "menyatu", dia kehilangan
+   seluruh gunanya.
+
+   DIPISAH DARI style.css karena dia sekarang muncul di SEMUA halaman, dan
+   tiga app punya style.css sendiri sendiri. Satu berkas di sini jauh lebih
+   aman daripada menyalin aturan yang sama ke empat tempat lalu lupa
+   memperbaruinya di salah satunya.
+   ===================================================================== */
+/* ===================== BENTUK TOMBOL KEPALA ======================
+   Dipakai di tiga app peta saja. Di sana layarnya sudah penuh panel dan
+   papan tempel besar di tepi kanan cuma menutupi petanya. Jadi dia ikut
+   bentuk tombol kepala yang sudah ada di app itu, kotak 26 piksel, dan
+   warnanya MEMINJAM token app-nya sendiri lewat var. Jadi dia ikut
+   berubah kalau palet app-nya berubah, tanpa disentuh dari sini. */
+.ajak-kepala {
+  box-sizing: border-box;
+  flex: none; width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface, #fff);
+  border: 2px solid var(--ink, #111);
+  box-shadow: 2px 2px 0 0 var(--ink, #111);
+  cursor: pointer; pointer-events: auto; margin-left: 2px;
+  text-decoration: none; overflow: hidden;
+}
+.ajak-kepala:hover { background: var(--lime, #c5ff95); }
+
+/* Tiga app sudah MELUCUTI kotak dari tombol menunya, sekarang menunya
+   cuma tulisan bergaris di atasnya. Jadi di dalam .alat-nav kotak di atas
+   itu dilucuti juga, dan yang tersisa cuma garis atas yang sama persis
+   dengan tetangganya. Dua kelas di pemilih ini bukan kebetulan, aturan
+   app-nya memakai .alat-nav a yang nilainya satu kelas satu elemen, jadi
+   dua kelas diperlukan supaya aturan ini yang menang. */
+.alat-nav .ajak-kepala {
+  display: flex; align-items: center; gap: 7px;
+  width: auto; height: auto; margin-left: 0;
+  padding: 10px 0 0; overflow: visible;
+  background: transparent; box-shadow: none;
+  border: 0; border-top: 1px solid rgba(255, 255, 255, .45);
+  opacity: .82;
+  transition: opacity .18s ease, border-color .18s ease;
+}
+.alat-nav .ajak-kepala:hover {
+  background: transparent; opacity: 1; border-top-color: #fff;
+}
+/* Naganya DITERANGKAN di sini, bukan di berkas gambarnya. Tetangganya di
+   menu itu tulisan putih di atas peta, dan naga abu tua kalah habis di
+   atas peta yang terang. Dinaikkan terangnya plus diberi bayangan jatuh
+   keras, dia jadi sekuat tulisan di sebelahnya tanpa perlu gambar kedua. */
+/* 24 piksel, tepat setengah gambarnya yang 48, dan pas di samping huruf
+   13 piksel tanpa menenggelamkannya. */
+.alat-nav .ajak-kepala img {
+  width: 24px; height: 24px;
+  filter: brightness(1.45) contrast(1.05)
+          drop-shadow(0 1px 0 rgba(0, 0, 0, .9))
+          drop-shadow(0 0 3px rgba(0, 0, 0, .7));
+}
+/* 24 piksel, TEPAT setengah gambarnya yang 48. Kotak dalamnya 22 sesudah
+   garis, jadi dia tersunat satu piksel di tiap sisi, dan satu piksel itu
+   kebetulan memang tepi kosong gambarnya. Ukuran yang bukan kelipatan
+   bulat, 22 misalnya, bikin barisan pikselnya hilang tidak rata dan
+   naganya terlihat rusak. */
+.ajak-kepala img {
+  display: block; width: 24px; height: 24px;
+  image-rendering: pixelated;
+}
+
+.ajak-game {
+  box-sizing: border-box;
+  position: fixed;
+  right: 0;
+  top: 25%;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 136px;
+  padding: 14px 10px 16px;
+  background: #0d0906;
+  border: 4px solid #e8c062;
+  border-right: 0;
+  color: #e8c062;
+  text-decoration: none;
+  box-shadow: -7px 7px 0 rgba(0, 0, 0, .35);
+  /* SENGAJA TANPA TRANSISI sampai ajak.js memasang kelas ajak-siap satu
+     bingkai kemudian. Keadaan awalnya ditentukan dengan mengukur hero,
+     dan mengukur itu memaksa tata letak dihitung lebih dulu. Akibatnya
+     browser sempat melihat papan ini dalam keadaan utuh, lalu kelas
+     menyusutnya dipasang, lalu transisinya ikut jalan. Yang terlihat
+     pemain, papan besar merayap keluar layar tiap kali membuka halaman
+     yang sudah tergulir. Transisinya baru dihidupkan sesudah keadaan
+     pertamanya terpasang. */
+  transition: none;
+}
+.ajak-game.ajak-siap {
+  transition: transform .26s cubic-bezier(.2, .8, .3, 1),
+              width .2s ease, background .2s ease;
+}
+
+/* Melebar ke KIRI waktu disentuh, BUKAN bergeser ke kiri. Dulu dia
+   digeser pakai translateX, dan karena dia dipatok ke tepi kanan layar,
+   menggesernya meninggalkan celah tipis di kanan. Dilaporkan pemilik,
+   "saya gamau ada gap tipis, saya mau tetap kaya nyambung gitu". Lebarnya
+   yang ditambah, jadi tepi kanannya tidak pernah lepas dari tepi layar. */
+.ajak-game:hover,
+.ajak-game:focus-visible { width: 152px; background: #16100a; }
+
+/* ------------------------- KEADAAN MENYUSUT -------------------------- */
+/* Di luar hero dan di halaman lain dia didorong keluar layar, menyisakan
+   satu jalur tipis yang masih bisa dipencet. Didorong pakai transform,
+   bukan diubah right-nya, supaya yang bergerak cuma lapisan gambar dan
+   tidak ada satu pun tata letak yang dihitung ulang tiap bingkai. */
+.ajak-game.ajak-kecil { transform: translateX(calc(100% - 17px)); }
+.ajak-game.ajak-kecil:hover,
+.ajak-game.ajak-kecil:focus-visible {
+  transform: translateX(0); width: 152px;
+}
+
+/* Anak panah kecil di jalur tipisnya, supaya orang tahu dia bisa ditarik.
+   Dipatok 4 piksel dari tepi kiri benda, jadi dia justru satu satunya isi
+   yang masih kelihatan waktu sisanya sudah keluar layar. */
+.ajak-game::after {
+  content: "";
+  position: absolute; left: 4px; top: 50%;
+  width: 7px; height: 7px;
+  border-left: 3px solid #e8c062;
+  border-bottom: 3px solid #e8c062;
+  transform: translateY(-50%) rotate(45deg);
+  opacity: 0; transition: opacity .2s ease;
+  pointer-events: none;
+}
+.ajak-game.ajak-kecil::after { opacity: 1; }
+.ajak-game.ajak-kecil:hover::after,
+.ajak-game.ajak-kecil:focus-visible::after { opacity: 0; }
+
+/* Isinya ikut memudar waktu menyusut. Tanpa ini, sepotong sayap naga
+   nongol di jalur tipisnya dan terbaca seperti gambar terpotong. */
+.ajak-kecil .ajak-bos, .ajak-kecil .ajak-teks {
+  opacity: 0; transition: opacity .16s ease;
+}
+.ajak-kecil:hover .ajak-bos, .ajak-kecil:hover .ajak-teks,
+.ajak-kecil:focus-visible .ajak-bos, .ajak-kecil:focus-visible .ajak-teks {
+  opacity: 1; transition: opacity .24s ease .08s;
+}
+
+.ajak-bos img {
+  display: block;
+  width: 96px; height: auto;          /* 48 x 2, kelipatan bulat */
+  image-rendering: pixelated;
+}
+/* Naganya bernapas pelan. Gerak kecil di tepi layar itu yang paling kuat
+   menarik sudut mata, jauh lebih kuat daripada warna. */
+.ajak-bos { animation: ajak-napas 3.2s ease-in-out infinite; display: block; }
+@keyframes ajak-napas {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+.ajak-teks {
+  font-family: "Pixelify Sans", monospace;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .8);
+}
+
+@media (max-width: 860px) {
+  .ajak-game {
+    top: auto; bottom: 16px; right: 0;
+    flex-direction: row; gap: 8px;
+    width: auto; padding: 8px 12px 8px 8px;
+  }
+  .ajak-game:hover, .ajak-game:focus-visible { width: auto; }
+  .ajak-game.ajak-kecil:hover, .ajak-game.ajak-kecil:focus-visible { width: auto; }
+  .ajak-bos img { width: 48px; }
+  .ajak-teks { font-size: 11px; text-align: left; }
+  .ajak-teks br { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ajak-game, .ajak-bos, .ajak-game::after,
+  .ajak-kecil .ajak-bos, .ajak-kecil .ajak-teks { transition: none; animation: none; }
+}
