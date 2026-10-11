@@ -1997,3 +1997,80 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   .tim-foto { aspect-ratio: 16 / 10; }
   .tim-bio { font-size: 14px; line-height: 25px; }
 }
+
+/* =====================================================================
+   AJAKAN MAIN MINI GAME, 11 Oktober 2026.
+
+   SATU SATUNYA benda di seluruh situs ini yang gayanya pixel art, dan itu
+   DISENGAJA. Diminta pemilik, "khusus toggle tersebut stylenya harus
+   pixelart ya, biar dia statement terlihat dan user notice".
+
+   Seluruh halaman ini kertas putih, garis rambut 0,7 piksel, huruf tipis,
+   nol bayangan. Benda ini kebalikannya semua. Gelap, bergaris tebal empat
+   piksel, berbayang keras tanpa kabur, hurufnya kotak kotak. Dia memang
+   harus terbaca sebagai benda dari dunia lain yang nyasar ke halaman ini.
+   Kalau suatu saat ada yang merapikannya supaya "menyatu", dia kehilangan
+   seluruh gunanya.
+
+   Satu aturan yang tetap dipatuhi, image-rendering pixelated. Naganya
+   48 x 80 piksel dan diperbesar TEPAT dua kali.
+   ===================================================================== */
+.ajak-game {
+  position: fixed;
+  right: 0;
+  top: 25%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 136px;
+  padding: 14px 10px 16px;
+  background: #0d0906;
+  border: 4px solid #e8c062;
+  border-right: 0;
+  color: #e8c062;
+  text-decoration: none;
+  box-shadow: -7px 7px 0 rgba(0, 0, 0, .35);
+  transition: transform .18s ease, background .18s ease;
+}
+.ajak-game:hover { transform: translateX(-8px); background: #16100a; }
+
+.ajak-bos img {
+  display: block;
+  width: 96px; height: auto;          /* 48 x 2, kelipatan bulat */
+  image-rendering: pixelated;
+}
+/* Naganya bernapas pelan. Gerak kecil di tepi layar itu yang paling kuat
+   menarik sudut mata, jauh lebih kuat daripada warna. */
+.ajak-bos { animation: ajak-napas 3.2s ease-in-out infinite; display: block; }
+@keyframes ajak-napas {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+.ajak-teks {
+  font-family: "Pixelify Sans", monospace;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .8);
+}
+
+@media (max-width: 860px) {
+  .ajak-game {
+    top: auto; bottom: 16px; right: 0;
+    flex-direction: row; gap: 8px;
+    width: auto; padding: 8px 12px 8px 8px;
+  }
+  .ajak-bos img { width: 48px; }
+  .ajak-teks { font-size: 11px; text-align: left; }
+  .ajak-teks br { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ajak-game, .ajak-bos { transition: none; animation: none; }
+}

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Adu Cuaca &middot; Envirocircle</title>
+  <meta name="description" content="Mini game kartu tentang cuaca Indonesia. Kenali fenomena dan parameter yang bikin hujan turun, lalu pakai buat ngalahin bosnya." />
+
+  <link rel="canonical" href="https://envirocircle.info/game/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Envirocircle" />
+  <meta property="og:title" content="Adu Cuaca, mini game kartu cuaca Indonesia" />
+  <meta property="og:description" content="Kenali fenomena dan parameter yang bikin hujan turun, lalu pakai buat ngalahin bosnya." />
+  <meta property="og:url" content="https://envirocircle.info/game/" />
+  <meta name="theme-color" content="#0b1424" />
+  <link rel="icon" type="image/png" href="../favicon.png" />
+  <link rel="apple-touch-icon" href="../icon-192.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Geologica saja, sama dengan landing dan tiga app. Material Symbols
+       dipakai cuma untuk panah balik di bilah atas. -->
+  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&display=swap" rel="stylesheet" />
+  <!-- Huruf piksel, DIPAKAI TERBATAS. Judul, label, angka, dan tombol
+       saja. Kalimat penjelasan tetap Geologica, sebab huruf piksel di
+       ukuran kecil dan kalimat panjang itu menyiksa mata. -->
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="bilah">
+    <a class="brand" href="../">
+      <span class="brand-mark"><img src="../img/logo-envirocircle.png" width="614" height="614" alt="" /></span>
+      <span class="brand-name">Envirocircle</span>
+    </a>
+    <div class="bilah-kanan">
+      <!-- Tombol buka tutorial lagi. Tutorialnya cuma muncul sendiri di
+           kunjungan pertama, dan orang yang lupa caranya harus punya jalan
+           balik yang kelihatan, bukan harus membersihkan penyimpanan
+           browsernya. -->
+      <button class="tanya" id="tukar-suara" type="button"
+              aria-label="Suara">&#9834;</button>
+      <button class="tanya" id="buka-tutor" type="button"
+              aria-label="Cara main">?</button>
+      <a class="balik" href="../">
+<!-- Panahnya HURUF BIASA, bukan ikon Material Symbols. Font ikon itu
+           bekerja dengan ligatur, dan selama fontnya belum termuat yang
+           tampil adalah tulisan "arrow_back" mentah mentah. Sudah kejadian
+           sekali waktu diuji. Satu ikon tidak sepadan dengan satu permintaan
+           font tambahan plus risiko itu. -->
+      <span class="balik-panah" aria-hidden="true">&#8592;</span>
+        <span>Beranda</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- TUTORIAL. Isinya dibangun JS dari satu daftar slide, bukan ditulis
+       satu satu di sini, supaya naskahnya duduk di satu tempat dan gampang
+       diubah tanpa menyentuh tata letak. -->
+  <div class="tutor" id="tutor" hidden></div>
+  <div class="lore" id="lore" hidden></div>
+
+  <!-- ====================== AULA SI KEMARAU ======================
+       Satu layar penuh, tidak ada apa apa lagi di halaman ini. Judul,
+       paragraf pembuka, dan daftar 26 kartu SENGAJA DIBUANG, diminta
+       pemilik, supaya yang dilihat orang cuma aulanya, naganya, dan
+       kartunya. Daftar kartu nanti pindah ke halaman keterangan
+       tersendiri.
+
+       Gambar aulanya 240 x 135 piksel dan DIPERBESAR KELIPATAN BULAT
+       saja, angkanya dihitung JS lalu ditaruh di --px. Diperbesar
+       pecahan, pikselnya jadi tidak sama besar dan seluruh kerjaan ini
+       percuma. -->
+  <main>
+    <section class="aula" id="arena">
+
+      <div class="aula-isi">
+        <img class="aula-latar" src="ruangan.png" alt="" width="240" height="135" />
+        <!-- Naganya dari PixelLab, 48 x 48. Tiga keadaannya diturunkan dari
+             satu gambar lewat turunkan-bos.py, baranya diredupkan pelan
+             pelan sampai padam. Jangan disunting tangan. -->
+        <img id="bos-gambar" src="bos-sehat.png" alt="Si Kemarau" width="48" height="48" />
+        <!-- Lapisan efek, UKURAN DAN POSISINYA PERSIS SAMA dengan naganya.
+             Awan, hujan, api, dan angka melayang semuanya lahir di sini,
+             jadi semuanya otomatis menempel di badan bos berapa pun
+             perbesaran layarnya. -->
+        <div class="efek" id="efek" aria-hidden="true"></div>
+      </div>
+
+      <!-- HUD di POJOK KIRI ATAS, tanpa kotak, semuanya rata kiri. Angka
+           HP-nya DI DALAM bar dan menempel ke ujung isinya, jadi dia ikut
+           bergeser ke kiri tiap kali bosnya kena pukul. -->
+      <div class="hud">
+        <!-- Nama bosnya TOMBOL, bukan tulisan. Dia pintu ke ceritanya, dan
+             ceritanya memuat petunjuk. Tanda serunya kecil tapi perlu, tanpa
+             dia orang tidak tahu nama itu bisa dipencet. -->
+        <button class="bos-nama" id="bos-info" type="button">
+          Si Kemarau <i class="bos-seru">!</i>
+        </button>
+        <div class="hp" id="hp">
+          <span class="hp-isi" id="hp-isi"></span>
+          <span class="hp-angka"><b id="hp-angka">1400</b></span>
+        </div>
+        <span class="giliran">Giliran <b id="giliran">1</b> dari 7</span>
+      </div>
+
+      <!-- Keterangan hasil serangan ditaruh DI KIRI, bukan di bawah
+           bersama kartu. Diminta pemilik. Dia memang lebih pas di situ,
+           dia bacaan susulan yang menjelaskan apa yang baru saja terjadi,
+           bukan kontrol yang harus dipencet. Ditaruh di bawah, dia duduk
+           di tempat kartu dan tombol, dan mata jadi ragu mana yang harus
+           dilihat duluan. Di kiri dia jadi catatan pertempuran yang
+           berjalan, sejajar dengan bilah darah di atasnya. -->
+      <div class="hasil" id="hasil" hidden></div>
+
+      <div class="bawah">
+        <p class="arena-pesan" id="pesan">Pilih kartu yang menurutmu bikin hujan turun.</p>
+        <div class="meja">
+          <div class="tangan" id="tangan"></div>
+
+          <!-- TUMPUKAN DEK di kanan meja, pola Balatro. Dia bukan hiasan,
+               dia jalan masuk ke keterangan seluruh kartu. Tanda serunya di
+               pojok kanan atas tumpukan, sama dengan tanda seru di kartu,
+               jadi orang tidak perlu belajar dua lambang. -->
+          <div class="tumpukan" id="tumpukan">
+            <img src="punggung.svg" alt="" width="200" height="288" />
+            <img src="punggung.svg" alt="" width="200" height="288" />
+            <img src="punggung.svg" alt="" width="200" height="288" />
+            <button class="tumpukan-info" id="tumpukan-info" type="button"
+                    aria-label="Keterangan semua kartu">!</button>
+            <span class="tumpukan-angka"><b>26</b> kartu</span>
+          </div>
+        </div>
+        <div class="aksi" id="aksi">
+          <button class="pil" id="serang" type="button" disabled>Serang</button>
+          <button class="pil pil-garis" id="lewati" type="button">Lewati giliran</button>
+        </div>
+        <!-- Tombol hasil DI LUAR panel teksnya, dan ini bukan kerapian
+             semata. Panel di atas bisa digulir dan tingginya dibatasi, jadi
+             tombol yang ditaruh di dalamnya ikut terpotong waktu isinya
+             panjang. Di layar tamat isinya memang paling panjang, dan di
+             situlah tombol Main Lagi justru paling dibutuhkan. -->
+        <div class="aksi" id="aksi-hasil" hidden></div>
+        <p class="gagal" id="gagal" hidden>Daftar kartunya gagal dimuat.</p>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- suara.js HARUS di depan game.js, game.js memanggil window.Suara
+       sejak baris pertamanya. -->
+  <script src="suara.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

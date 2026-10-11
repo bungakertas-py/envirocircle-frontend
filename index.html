@@ -39,6 +39,11 @@
        yang dipakai di sini cuma yang ringan, 200 dan 300. -->
   <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
+  <!-- Huruf piksel, DIPAKAI DI SATU TEMPAT SAJA di halaman ini, ajakan
+       main mini game di tepi kanan. Sengaja menabrak gaya halaman, sebab
+       memang itu gunanya, dia harus terlihat seperti benda dari dunia lain
+       supaya orang menoleh. -->
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
   <!-- Penanda "JS hidup". Keadaan awal animasi hanya dipasang kalau kelas ini ada,
@@ -86,6 +91,18 @@
       </nav>
     </div>
   </header>
+
+  <!-- AJAKAN MAIN MINI GAME. Ditaruh DI LUAR .hero, bukan di dalamnya,
+       dua sebabnya. Satu, .hero punya overflow sendiri dan benda yang
+       menempel tepi kanan gampang terpotong di situ. Dua, dia TIDAK diberi
+       data-anim sama sekali, sengaja, supaya tidak ikut koreografi masuk
+       GSAP. Elemen yang ikut koreografi itu dimulai dari opacity nol, dan
+       kalau satu saja pemicunya meleset dia tidak pernah kelihatan lagi.
+       Ajakan ini terlalu penting untuk dipertaruhkan ke situ. -->
+  <a class="ajak-game" href="game/" aria-label="Main mini game Adu Cuaca">
+    <span class="ajak-bos"><img src="game/ajak-kemarau.png" width="48" height="80" alt="" /></span>
+    <span class="ajak-teks">Kalahkan<br />Kemarau<br />Sekarang!</span>
+  </a>
 
   <!-- ============================ HERO ============================ -->
   <section class="hero" id="top">
@@ -227,11 +244,19 @@
         <p class="hero-lead" data-anim="fade">Modelling Indonesia&rsquo;s air, weather and ocean. Open as maps, or worked up into the studies behind permits and plans.</p>
       </div>
 
-      <!-- Dua pintu untuk dua kebutuhan. Yang cari hujan dan yang cari asap
-           karhutla itu bukan orang yang sama, jadi satu tombol umum menyuruh
-           mereka menebak. Atmosight yang berisi, Smokewatch bergaris, sebab
-           dua tombol berisi sama sama mencolok justru menghilangkan titik
-           tumpu. Kalau mau ditukar, pindahkan saja kelas pill--garis. -->
+      <!-- Tiga pintu untuk tiga pekerjaan. Sempat diringkas jadi satu
+           tombol mini game 11 Oktober 2026, lalu DIKEMBALIKAN di hari yang
+           sama, dan keputusan kedua ini yang benar. Hero itu tempat orang
+           memutuskan mau ke mana, dan tiga produk yang isinya beda beda
+           tidak bisa diwakili satu tombol.
+
+           Oceansight ikut masuk, dia dulu belum ada waktu hero ini pertama
+           ditulis. Atmosight BERISI dan dua lainnya bergaris, sebab tiga
+           tombol berisi sama sama mencolok justru menghilangkan titik
+           tumpu. Kalau mau ditukar, pindahkan saja kelas pill--garis.
+
+           Mini game-nya sekarang punya tempat sendiri, lihat .ajak-game
+           di ekor berkas ini. -->
       <div class="hero-foot">
         <a class="pill pill--lg" href="atmosight/" data-anim="fade">
           <span>Open Atmosight</span>
@@ -239,6 +264,10 @@
         </a>
         <a class="pill pill--lg pill--garis" href="smokewatch/" data-anim="fade">
           <span>Open Smokewatch</span>
+          <span class="pill-ico"><span class="material-symbols-outlined">arrow_outward</span></span>
+        </a>
+        <a class="pill pill--lg pill--garis" href="oceansight/" data-anim="fade">
+          <span>Open Oceansight</span>
           <span class="pill-ico"><span class="material-symbols-outlined">arrow_outward</span></span>
         </a>
       </div>
