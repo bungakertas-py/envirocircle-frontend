@@ -378,6 +378,20 @@ a { color: inherit; text-decoration: none; }
 }
 #aksi .pil { padding: 12px 8px; font-size: 12px; }
 
+/* Ulang dari awal, CERMINAN tombol serang. Dipatok dari tengah meja juga,
+   digeser sejauh yang sama tapi ke kiri, jadi dua duanya ikut melebar
+   sendiri waktu tangan bertambah kartu di rank atas. */
+.ulang-awal {
+  position: absolute; right: calc(50% + var(--sisi, 158px)); bottom: 4px;
+  width: 162px; padding: 12px 8px; font-size: 12px;
+}
+/* Waktu sedang bertanya dia berubah jadi merah bara, sama dengan tombol
+   serang, supaya jelas pencetan berikutnya benar benar mengerjakan
+   sesuatu dan bukan sekadar tombol biasa. */
+.ulang-awal.ulang-yakin {
+  background: var(--bara); border-color: var(--emas); color: #fff;
+}
+
 /* ------------------------------- KARTU ------------------------------- */
 /* TRANSFORM .kartu MILIK JS, jangan ditulis di sini lagi. Goyang, miring
    ikut tetikus, angkat, dan skalanya semua dihitung di game.js dalam satu
@@ -984,6 +998,12 @@ a { color: inherit; text-decoration: none; }
   #aksi {
     position: static; width: auto; margin-top: 18px;
     flex-direction: row; justify-content: center;
+  }
+  /* Di layar sempit tidak ada ruang di samping kartu, jadi dia ikut turun
+     ke bawah dan melebar penuh. */
+  .ulang-awal {
+    position: static; display: block; width: 100%;
+    margin-top: 10px;
   }
   .tangan .kartu + .kartu { margin-left: -22px; }
   .sorot-rak img { width: 84px; }

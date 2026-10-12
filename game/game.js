@@ -94,7 +94,7 @@
   ["bos-gambar", "latar-akhir", "langit", "mendung",
    "hp-isi", "hp-angka", "giliran", "pesan", "tangan", "aksi",
    "serang", "lewati", "hasil", "gagal", "hp", "tumpukan-info", "efek", "aksi-hasil", "tutor", "lore",
-   "tingkat-pilih", "tingkat-nama"
+   "tingkat-pilih", "tingkat-nama", "ulang-awal"
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   /* ================== GERAK KARTU ALA BALATRO ==================
@@ -667,6 +667,32 @@
      dianimasikan waktu dibagi, dan kotak itu ikut transform, jadi
      angkanya berubah ubah tiap bingkai. offsetLeft dan offsetWidth
      memulangkan angka TATA LETAK yang kebal transform. */
+  function sembunyiUlang(sembunyi) {
+    if (!el["ulang-awal"]) return;
+    el["ulang-awal"].hidden = sembunyi;
+    if (sembunyi) batalYakin();
+  }
+
+  /* DUA LANGKAH, bukan sekali pencet. Tombol ini membuang permainan yang
+     sedang berjalan, dan dia duduk persis di samping kartu yang sering
+     diklik. Sekali salah pencet, tujuh giliran hilang. Klik pertama cuma
+     mengubah tulisannya jadi tanya, dan kalau tiga detik tidak dijawab dia
+     kembali sendiri supaya tidak ada tombol yang menggantung dalam keadaan
+     bertanya. */
+  var jamYakin = null;
+  function batalYakin() {
+    clearTimeout(jamYakin); jamYakin = null;
+    if (!el["ulang-awal"]) return;
+    el["ulang-awal"].textContent = "Ulang dari awal";
+    el["ulang-awal"].classList.remove("ulang-yakin");
+  }
+  function tanyaUlang() {
+    if (jamYakin) { batalYakin(); mulai(); return; }
+    el["ulang-awal"].textContent = "Yakin? Pencet lagi";
+    el["ulang-awal"].classList.add("ulang-yakin");
+    jamYakin = setTimeout(batalYakin, 3000);
+  }
+
   function setelSisiTombol() {
     var m = document.querySelector(".meja");
     if (!m || !el.tangan) return;
@@ -741,6 +767,7 @@
     catat(pilihan);
     S.fase = "hasil";
     el.aksi.hidden = true;
+    sembunyiUlang(true);
     el.pesan.hidden = true;
 
     var bosR = el["bos-gambar"].getBoundingClientRect();
@@ -783,6 +810,7 @@
     catat([]);
     S.fase = "hasil";
     el.aksi.hidden = true;
+    sembunyiUlang(true);
     el.pesan.hidden = true;
     var tum = document.getElementById("tumpukan").getBoundingClientRect();
     var semua = [].slice.call(el.tangan.querySelectorAll(".kartu"));
@@ -952,6 +980,7 @@
     el.hasil.hidden = false;
     el.tangan.hidden = true;
     el.aksi.hidden = true;
+    sembunyiUlang(true);
     el.pesan.hidden = true;
 
     /* Tombolnya ditulis ke wadahnya SENDIRI, bukan diselipkan ke dalam
@@ -1022,6 +1051,7 @@
     el["aksi-hasil"].hidden = true;
     el.tangan.hidden = false;
     el.aksi.hidden = false;
+    sembunyiUlang(false);
     el.pesan.hidden = false;
     el.serang.disabled = true;
     el.serang.textContent = "Serang";
@@ -1059,6 +1089,7 @@
     el["aksi-hasil"].hidden = true;
     el.tangan.hidden = false;
     el.aksi.hidden = false;
+    sembunyiUlang(false);
     el.pesan.hidden = false;
     el.serang.disabled = true;
     el.serang.textContent = "Serang";
@@ -1261,6 +1292,9 @@
       CELAKA = d.filter(function (k) { return !k.menolong; });
       el.serang.addEventListener("click", serang);
       el.lewati.addEventListener("click", function () { bunyi("tombol"); lewati(); });
+      if (el["ulang-awal"]) el["ulang-awal"].addEventListener("click", function () {
+        bunyi("tombol"); tanyaUlang();
+      });
       if (el["tingkat-pilih"]) el["tingkat-pilih"].addEventListener("click", function () {
         bunyi("tombol"); bukaTingkat();
       });
