@@ -1680,12 +1680,26 @@ let popupLabel = null;   // nama kota kalau titiknya dari klik label kota
    backend memang begitu keadaannya, dan pesan ke pengunjung harus beda
    dari galat sungguhan. WRF kimia contohnya, per 12 September 2026
    point_meta.json-nya masih dibangun di sana. */
+/* fetch dengan SATU pengulangan kalau jaringannya yang gagal (TypeError,
+   misalnya sambungan direset hostingan atau permintaan dibatalkan browser).
+   Dilihat 12 Oktober 2026 di uji produksi: satu dari tiga klik pertama
+   point_meta.json-nya gugur begitu, dan tanpa ini panelnya langsung bilang
+   gagal. Balasan HTTP apa pun (404, 500) TIDAK diulang, itu bukan soal jaringan. */
+async function fetchUlang(url, opt) {
+  try { return await fetch(url, opt); }
+  catch (e) {
+    if (!(e instanceof TypeError)) throw e;
+    await new Promise((r) => setTimeout(r, 400));
+    return fetch(url, opt);
+  }
+}
+
 let seriesMetaLoading = null;
 async function loadSeriesMeta(segar) {
   if (seriesMeta && !segar) return seriesMeta;
   if (seriesMetaLoading && !segar) return seriesMetaLoading;
   seriesMetaLoading = (async () => {
-    const r = await fetch(DATA_BASE + "point_meta.json", segar ? { cache: "reload" } : {});
+    const r = await fetchUlang(DATA_BASE + "point_meta.json", segar ? { cache: "reload" } : {});
     if (!r.ok) {
       const e = new Error("point_meta.json HTTP " + r.status);
       if (r.status === 404) e.belumAda = true;
@@ -1785,7 +1799,7 @@ async function bacaSel(m, lat, lon) {
   const nkol = x1 - x0 + 1, baris = y1 === y0 ? [y0] : [y0, y1];
   const potongan = await Promise.all(baris.map(async (y) => {
     const awal = (y * m.nx + x0) * c.stride, akhir = awal + nkol * c.stride - 1;
-    const r = await fetch(DATA_BASE + c.file, { headers: { Range: "bytes=" + awal + "-" + akhir } });
+    const r = await fetchUlang(DATA_BASE + c.file, { headers: { Range: "bytes=" + awal + "-" + akhir } });
     if (r.status !== 206) {
       /* Server yang mengabaikan Range membalas 200 berikut SELURUH berkas.
          Jangan ditelan, putuskan dan laporkan. */
