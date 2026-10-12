@@ -1243,35 +1243,56 @@ function togglePlay() {
 }
 
 // ================= POINT DETAIL =================
-let pointData = null;      // { meta, vars: {name:{arr,scale,offset}} }
-let pointLoading = null;
 let pointMarker = null;
 let sharedPoint = null;    // {lat,lon,name} titik aktif → dipakai untuk link Bagikan
 let lastPoint = null;      // untuk export CSV
 const MS_TO_KT = 1.943844;
 const DIRS = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"]; // 8 arah dari Utara searah jarum jam
 
-async function loadPointData() {
-  if (pointData) return pointData;
-  if (pointLoading) return pointLoading;
-  pointLoading = (async () => {
-    const meta = await fetch(DATA_BASE + "point_meta.json").then((r) => r.json());
-    const gz = await fetch(DATA_BASE + "point_data.bin.gz").then((r) => r.arrayBuffer());
-    const stream = new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const buf = await new Response(stream).arrayBuffer();
-    const vars = {};
-    for (const v of meta.vars) {
-      const Ctor = v.dtype === "uint8" ? Uint8Array : Int16Array;
-      vars[v.var] = { arr: new Ctor(buf, v.byteOffset, v.byteLength / Ctor.BYTES_PER_ELEMENT),
-                      scale: v.scale, offset: v.offset };
-    }
-    pointData = { meta, vars };
-    return pointData;
-  })();
-  return pointLoading;
+/* loadPointData() DIBUANG 12 Okt 2026, dan ini bukan kerapian belaka.
+
+   Dia meminta point_data.bin.gz, satu berkas gendut berisi semua variabel.
+   Backend SUDAH LAMA berhenti mengirimnya untuk app ini dan menggantinya
+   dengan satu berkas per variabel, pd_<var>.bin.gz, yang dibaca loadSeries.
+   Alamat lamanya sekarang 404 di dua duanya, CAMS dan WRF kimia, sudah
+   diperiksa.
+
+   Fungsinya sendiri tidak pernah dipanggil jadi tidak ada yang rusak, tapi
+   dia menyesatkan siapa pun yang membaca berkas ini dan mengira app ini
+   masih bekerja seperti Atmosight. Tidak. Yang dipakai di sini loadSeries,
+   dan dia cuma mengunduh lapisan yang sedang aktif. */
+
+/* DERET DARI city_data.json, TANPA MENYENTUH JARINGAN.
+
+   Sama alasannya dengan di Atmosight. Berkas itu sudah diunduh sejak peta
+   dibuka untuk label kota, dan isinya seluruh deret waktu 514 kota, bukan
+   cuma angka jam ini. Jadi titik yang memang salah satu dari 514 itu bisa
+   digambar seketika.
+
+   Dikemas jadi kisi 2 x 2 berisi empat nilai yang sama, BUKAN 1 x 1.
+   sampleSeries menghitung jaraknya sendiri dengan (east - west) / (nx - 1),
+   dan nx satu membuat pembaginya nol.
+
+   Tidak semua lapisan ada di sini. aqi, ispu_kritis, aqi_kritis, paparan,
+   dan dt_vol tidak disampel ke city_data, dan untuk lapisan itu jalannya
+   kembali seperti biasa. */
+function deretKota(key, nama) {
+  if (!nama || !cityData || !cityIndexByName) return null;
+  const baris = cityData.data && cityData.data[key];
+  if (!baris) return null;
+  const i = cityIndexByName.get(nama);
+  if (i === undefined || !baris[i]) return null;
+  const nt = cityData.times.length, arr = new Float64Array(nt * 4);
+  for (let t = 0; t < nt; t++) {
+    const v = baris[i][t];
+    arr[t * 4] = arr[t * 4 + 1] = arr[t * 4 + 2] = arr[t * 4 + 3] = v;
+  }
+  return { meta: { nx: 2, ny: 2, west: 0, east: 1, north: 1, south: 0, nt,
+                   scale: cityData.scales[key] || 1, times: cityData.times },
+           arr, dariKota: true };
 }
 
-// Bilinear di titik (lat,lon) untuk semua waktu -> array nilai.
+// Bilinear di titik (lat,lon) untuk semua waktu -> array nilai.// Bilinear di titik (lat,lon) untuk semua waktu -> array nilai.
 function sampleVar(pd, name, lat, lon) {
   const v = pd.vars[name];
   if (!v) return null;
@@ -1668,9 +1689,17 @@ async function loadSeries(key) {
   }
   const m = seriesMeta[key];
   if (!m) throw new Error("deret titik tak ada untuk " + key);
-  const gz = await fetch(DATA_BASE + m.file).then((r) => r.arrayBuffer());
-  const stream = new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"));
-  const buf = await new Response(stream).arrayBuffer();
+  /* DIBUKA SAMBIL DIUNDUH, bukan sesudah. Cara lama menunggu seluruh berkas
+     jadi satu ArrayBuffer dulu, baru membungkusnya jadi Blob, baru
+     mengalirkannya ke pembuka gzip. Untuk pd_pbl yang 8,6 MB itu berarti
+     bentuk mampat dan bentuk terbukanya hidup bersamaan di memori, dan
+     pembukaannya baru mulai sesudah bita terakhir mendarat. Badan
+     tanggapannya memang sudah aliran, jadi langsung disambung saja. */
+  const rb = await fetch(DATA_BASE + m.file);
+  if (!rb.ok) throw new Error(m.file + " HTTP " + rb.status);
+  const buf = await new Response(
+    rb.body.pipeThrough(new DecompressionStream("gzip"))
+  ).arrayBuffer();
   seriesCache[key] = { meta: m, arr: new Int16Array(buf) };
   return seriesCache[key];
 }
@@ -2345,8 +2374,10 @@ function catatanModel(key) {
 
 // Isi detail titik. Dipakai popup MAUPUN sidebar, jadi yang dikembalikan cuma
 // potongan isinya, bukan bungkusnya.
-async function badanTitik(key, lat, lon) {
-  const pd = await loadSeries(key);
+async function badanTitik(key, lat, lon, pdSiap) {
+  /* pdSiap itu deret dari city_data yang sudah ada di memori, dipakai untuk
+     gambar pertama yang tanpa jaringan. Lihat deretKota dan openPoint. */
+  const pd = pdSiap || await loadSeries(key);
   const vals = sampleSeries(pd, lat, lon);
   let warna = (LEGENDS[key]?.cells?.[1]?.[1]) || "#35c84a";
   let kepala = "";
@@ -2360,6 +2391,10 @@ async function badanTitik(key, lat, lon) {
     warna = bg;
     let kritis = "";
     try {
+      /* DILEWAT di gambar pertama. Ini permintaan jaringan kedua, dan
+         menungguinya membuang seluruh gunanya gambar cepat tadi.
+         Angkanya menyusul di gambar kedua. */
+      if (pd.dariKota) throw new Error("lewati di gambar cepat");
       const pk = await loadSeries("ispu_kritis");
       const kode = sampleSeriesNearest(pk, lat, lon);
       const par = (pd.meta.kritis_param || [])[Math.round(kode[i])];
@@ -2376,6 +2411,10 @@ async function badanTitik(key, lat, lon) {
     warna = bg;
     let dom = "";
     try {
+      /* DILEWAT di gambar pertama. Ini permintaan jaringan kedua, dan
+         menungguinya membuang seluruh gunanya gambar cepat tadi.
+         Angkanya menyusul di gambar kedua. */
+      if (pd.dariKota) throw new Error("lewati di gambar cepat");
       const pk = await loadSeries("aqi_kritis");
       const kode = sampleSeriesNearest(pk, lat, lon);
       const par = (pd.meta.kritis_param || [])[Math.round(kode[i])];
@@ -2399,6 +2438,10 @@ async function badanTitik(key, lat, lon) {
     warna = bg;
     let rinci = "";
     try {
+      /* DILEWAT di gambar pertama. Ini permintaan jaringan kedua, dan
+         menungguinya membuang seluruh gunanya gambar cepat tadi.
+         Angkanya menyusul di gambar kedua. */
+      if (pd.dariKota) throw new Error("lewati di gambar cepat");
       const pv = await loadSeries("dt_vol");
       const vol = sampleSeries(pv, lat, lon)[i];          // km3
       if (isFinite(vol) && vol > 0) {
@@ -2498,6 +2541,29 @@ async function openPoint(lat, lon, label, isMe) {
       .openOn(map);
     if (popupBawah) _popupKeBawah(pointPopup);
   }
+  /* GAMBAR CEPAT, tanpa jaringan sama sekali, untuk titik yang memang
+     salah satu dari 514 kota dan kabupaten di city_data. Itu keadaan yang
+     paling sering, sebab orang mengklik penanda kota atau mencarinya di
+     bilah atas. Berkas lapisannya tetap diunduh sesudah ini dan panelnya
+     digambar ulang, yang menyusul cuma tambahan seperti pencemar kritis. */
+  let adaCepat = false;
+  const pdCepat = deretKota(key, label);
+  if (pdCepat) {
+    try {
+      const c = await badanTitik(key, lat, lon, pdCepat);
+      if (token !== pointToken) return;
+      adaCepat = true;
+      if (sidebar) {
+        const t0 = $("pt-par"); if (t0) t0.innerHTML = c.par;
+        isiSidebar(c.badan);
+      } else if (pointPopup) {
+        pointPopup.setContent(`<div class="pp-title">${judul}<span class="pp-par">${c.par}</span></div>` +
+                              `<div class="pp-body">${c.badan}</div>`);
+        if (popupBawah) _popupKeBawah(pointPopup);
+      }
+    } catch (e) { console.warn("gambar cepat gagal", e); }
+  }
+
   try {
     const { par, badan } = await badanTitik(key, lat, lon);
     if (token !== pointToken) return;
@@ -2518,6 +2584,10 @@ async function openPoint(lat, lon, label, isMe) {
   } catch (e) {
     console.error(e);
     if (token !== pointToken) return;
+    /* Kalau gambar cepatnya sudah berhasil, kegagalan di sini JANGAN
+       menimpanya dengan pesan galat. Panel berisi lebih berguna daripada
+       panel berisi kabar buruk, dan yang hilang cuma tambahannya. */
+    if (adaCepat) return;
     const pesan = e && e.belumAda
       ? "Detail titik belum tersedia untuk model ini."
       : "Data titik gagal dimuat.";
@@ -2525,6 +2595,23 @@ async function openPoint(lat, lon, label, isMe) {
     else if (pointPopup) pointPopup.setContent(
       `<div class="pp-title">${judul}</div><div class="pp-body"><div class="pp-kabar">${pesan}</div></div>`);
   }
+}
+
+/* UNDUH DI LATAR, JANGAN MENUNGGU DIKLIK.
+
+   Berkas deret untuk lapisan aktif 3 sampai 8,6 MB, sekitar satu sampai
+   dua detik di hostingan ini. Tidak sebesar Atmosight, tapi tetap terasa
+   kalau baru dimulai waktu orang sudah mengklik dan menunggu.
+
+   DITUNDA dulu, sebab bandwidth di detik detik pertama milik ubin peta dan
+   bingkai pertama. DIBATALKAN di sambungan hemat atau lambat. Dan yang
+   diambil CUMA lapisan yang sedang aktif, bukan semuanya, sebab orang
+   membuka panel titik untuk lapisan yang sedang dia lihat. */
+function prefetchTitik() {
+  const c = navigator.connection;
+  if (c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ""))) return;
+  if (!activeLayer) return;
+  loadSeries(activeLayer).catch(() => { /* diam, ini cuma ancang ancang */ });
 }
 
 function closePoint() {
@@ -2826,10 +2913,14 @@ function timeIndexOf(times) {
 // GREEDY anti-tabrakan piksel → hanya yang tak overlap yang digambar. Efeknya
 // zoom-out = ibukota provinsi saja; makin zoom-in makin banyak kota/kabupaten.
 // ---- Sumber nilai label kota ----
-// SENGAJA bukan point_data.bin.gz. Berkas itu 21 MB (seluruh grid 473x265), padahal
-// label cuma butuh 514 titik. city_data.json sudah disampel di backend: ~100 KB
-// terkirim. point_data tetap ada, tapi kembali malas: baru diunduh saat pengguna
-// mengklik peta atau membuka Skew-T.
+// SENGAJA bukan berkas deret per variabel. Diukur 12 Okt 2026, pd_pbl 8,6 MB
+// dan pd_o3 7,9 MB, seluruh kisi untuk semua jam, padahal label cuma butuh
+// 514 titik. city_data.json sudah disampel di backend, dan ber-Brotli dia
+// cuma 1,09 MB di CAMS dan 571 KB di WRF kimia.
+//
+// Berkas ini SEKARANG PUNYA TUGAS KEDUA. Isinya seluruh deret waktu 514
+// kota, bukan cuma angka jam ini, jadi panel titik untuk kota bernama bisa
+// digambar seketika dari sini tanpa menyentuh jaringan. Lihat deretKota.
 let cityData = null, cityDataLoading = null, cityIndexByName = null;
 function loadCityData() {
   if (cityData) return Promise.resolve(cityData);
@@ -3036,8 +3127,9 @@ function toggleCityIcons() {
   refreshCityIcons();
 }
 
-// Label kota selalu ada sejak peta dibuka. point_data dimuat di latar, jadi peta
-// tetap bisa dipakai selagi berkasnya turun; labelnya menyusul saat sudah siap.
+// Label kota selalu ada sejak peta dibuka. Berkas deret lapisan aktif ikut
+// diunduh di latar, lihat prefetchTitik, jadi peta tetap bisa dipakai selagi
+// berkasnya turun dan labelnya menyusul saat sudah siap.
 function initCityLabels() {
   if (!cityGroup) cityGroup = L.layerGroup([], { pane: "cityicons" });
   cityGroup.addTo(map);
@@ -3978,6 +4070,7 @@ async function init() {
     }
     await whenHeatmapReady();          // reveal setelah frame pertama tergambar
     hideSkeleton();
+    setTimeout(prefetchTitik, 2500);   // ancang ancang panel titik, lihat prefetchTitik
   } catch (err) {
     showLoadMsg("Gagal memuat data: " + err.message);
     console.error(err);

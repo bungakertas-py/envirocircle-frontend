@@ -1400,9 +1400,20 @@ async function loadPointData() {
   if (pointLoading) return pointLoading;
   pointLoading = (async () => {
     const meta = await fetch(DATA_BASE + "point_meta.json").then((r) => r.json());
-    const gz = await fetch(DATA_BASE + "point_data.bin.gz").then((r) => r.arrayBuffer());
-    const stream = new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const buf = await new Response(stream).arrayBuffer();
+    /* DIBUKA SAMBIL DIUNDUH, bukan sesudah. Cara lama menunggu seluruh
+       berkas selesai jadi satu ArrayBuffer, baru membungkusnya jadi Blob,
+       baru mengalirkannya ke pembuka gzip. Untuk WRF itu berarti 47 MB
+       bentuk mampat DAN 120 MB bentuk terbuka hidup bersamaan di memori,
+       dan pembukaannya baru mulai sesudah bita terakhir mendarat.
+
+       Badan tanggapannya memang sudah aliran, jadi dia bisa langsung
+       disambung ke pembuka gzip. Membukanya berjalan selagi mengunduh, dan
+       bentuk mampatnya tidak pernah perlu disimpan utuh. */
+    const r = await fetch(DATA_BASE + "point_data.bin.gz");
+    if (!r.ok) throw new Error("point_data.bin.gz HTTP " + r.status);
+    const buf = await new Response(
+      r.body.pipeThrough(new DecompressionStream("gzip"))
+    ).arrayBuffer();
     const vars = {};
     for (const v of meta.vars) {
       const Ctor = v.dtype === "uint8" ? Uint8Array : Int16Array;
@@ -1413,6 +1424,42 @@ async function loadPointData() {
     return pointData;
   })();
   return pointLoading;
+}
+
+/* DERET DARI city_data.json, TANPA MENYENTUH JARINGAN.
+
+   city_data.json sudah diunduh sejak peta dibuka, dia yang memberi angka
+   di label kota. Isinya bukan cuma angka jam ini, tapi SELURUH deret waktu
+   untuk 514 kota dan kabupaten. Jadi kalau orang membuka titik yang memang
+   salah satu dari 514 itu, entah dengan mengklik penandanya atau lewat
+   pencarian di bilah atas, seluruh isi panelnya sudah ada di tangan dan
+   panelnya bisa tampil SEKETIKA tanpa menunggu berkas 47 MB.
+
+   Angkanya BUKAN hampiran. Backend menyampelnya dari kisi yang sama, di
+   titik yang sama, jadi untuk kota bernama ini justru angka yang persis
+   sama dengan yang nanti keluar dari point_data.
+
+   Dikemas supaya sampleVar bisa membacanya tanpa diubah, yaitu kisi 1 x 1.
+   Di kisi sejengkal itu bilinearnya runtuh jadi satu nilai, persis yang
+   dimau, dan tidak ada satu baris pun di jalur gambar yang perlu tahu dari
+   mana datanya datang.
+
+   Yang TIDAK ada di sini cuma arah angin. city_data menyimpan kecepatan
+   saja. Makanya point_data tetap diunduh di latar, dan panelnya digambar
+   ulang begitu dia mendarat. */
+function deretKota(nama) {
+  if (!nama || !cityData || !cityIndexByName) return null;
+  const i = cityIndexByName.get(nama);
+  if (i === undefined) return null;
+  const vars = {};
+  for (const k in cityData.data) {
+    const baris = cityData.data[k][i];
+    if (!baris) continue;
+    vars[k] = { arr: Float64Array.from(baris), scale: cityData.scales[k] || 1, offset: 0 };
+  }
+  if (!vars.temp && !vars.rain) return null;
+  return { meta: { nx: 1, ny: 1, bounds: [0, 0, 0, 0], dx: 1, dy: 1, times: cityData.times },
+           vars, dariKota: true };
 }
 
 // Bilinear di titik (lat,lon) untuk semua waktu -> array nilai.
@@ -1719,8 +1766,14 @@ function chartSeries(pd, lat, lon) {
   switch (BASE_OF[activeLayer] || activeLayer) {
     case "wind_surface": {
       const u = sampleVar(pd, "u", lat, lon), v = sampleVar(pd, "v", lat, lon);
+      /* Deret dari city_data tidak punya u dan v, cuma kecepatan jadi. Tanpa
+         penjaga ini u.map melempar dan SELURUH panelnya gagal, bukan cuma
+         grafiknya. */
+      const nilai = u && v
+        ? u.map((uu, i) => Math.sqrt(uu * uu + v[i] * v[i]) * MS_TO_KT)
+        : sampleVar(pd, "wind", lat, lon);
       return { label: "Kecepatan Angin", unit: "kt", color: "#0029d7", type: "line",
-               times, values: u.map((uu, i) => Math.sqrt(uu * uu + v[i] * v[i]) * MS_TO_KT) };
+               times, values: nilai || [] };
     }
     case "temp_surface": return num("temp", "Suhu", "°C", "#e42320", "line", [0, 50]);
     case "humidity_surface": return num("humidity", "Kelembapan", "%", "#1f8a5c", "line", [0, 100]);
@@ -1864,12 +1917,51 @@ async function openPoint(lat, lon, label, isMe) {
   sharedPoint = { lat, lon, name: label || null };
   updateHash();
   const body = $("pt-body"); if (body) body.innerHTML = pointSkeleton();
+  const tokenKu = pointToken;
+
+  /* DUA LANGKAH, dan langkah pertamanya tanpa jaringan sama sekali.
+
+     Kalau titik ini salah satu dari 514 kota dan kabupaten di city_data,
+     dan itu keadaan yang paling sering sebab orang memang mengklik penanda
+     kota atau mencarinya di bilah atas, panelnya digambar SEKARANG JUGA.
+     Angkanya sudah ada di memori sejak peta dibuka.
+
+     Baru sesudah itu point_data ditunggu, dan panelnya digambar ulang
+     dengan arah anginnya. Untuk klik di tempat yang bukan kota, langkah
+     pertama ini dilewat dan jalannya persis seperti dulu. */
+  const cepat = deretKota(label);
+  if (cepat) { try { renderPoint(cepat, lat, lon); } catch (e) { console.warn(e); } }
+
   try {
-    renderPoint(await loadPointData(), lat, lon);
+    const pd = await loadPointData();
+    if (pointToken !== tokenKu) return;   // sudah pindah ke titik lain
+    renderPoint(pd, lat, lon);
   } catch (e) {
-    if (body) body.innerHTML = '<div class="pt-loading">Gagal memuat data titik.</div>';
+    if (pointToken !== tokenKu) return;
+    /* Kalau langkah cepatnya sudah menggambar, kegagalan di sini JANGAN
+       menimpanya dengan pesan galat. Yang hilang cuma arah anginnya, dan
+       panel berisi lebih berguna daripada panel berisi kabar buruk. */
+    if (!cepat && body) body.innerHTML = '<div class="pt-loading">Gagal memuat data titik.</div>';
     console.error(e);
   }
+}
+
+/* UNDUH DI LATAR, JANGAN MENUNGGU DIKLIK.
+
+   point_data WRF 47 MB, sekitar sembilan detik di hostingan ini. Sembilan
+   detik terasa lama kalau orang sudah mengklik dan menunggu, dan nyaris
+   tidak terasa kalau dia berjalan selagi orang masih melihat petanya.
+
+   DITUNDA dulu, bukan langsung. Bandwidth di detik detik pertama milik
+   ubin peta dan bingkai pertama, dan merebutnya justru membuat peta terasa
+   lebih lambat demi panel yang belum tentu dibuka.
+
+   DIBATALKAN di sambungan hemat atau lambat. Berkas 47 MB untuk panel yang
+   mungkin tidak pernah dibuka itu kasar untuk yang memakai kuota. */
+function prefetchTitik() {
+  const c = navigator.connection;
+  if (c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ""))) return;
+  loadPointData().catch(() => { /* diam, ini cuma ancang ancang */ });
 }
 
 // Skeleton panel titik: tulang shimmer per-kontainer (ringkasan, chip, kartu
@@ -1998,7 +2090,15 @@ function renderPoint(pd, lat, lon) {
   const temp = sampleVar(pd, "temp", lat, lon), rain = sampleVar(pd, "rain", lat, lon);
   const rh = sampleVar(pd, "humidity", lat, lon), cloud = sampleVar(pd, "cloud", lat, lon);
   const pres = sampleVar(pd, "pressure", lat, lon), cape = sampleVar(pd, "cape", lat, lon);
-  const wind = u && v ? u.map((uu, i) => windAt(uu, v[i])) : null;
+  let wind = u && v ? u.map((uu, i) => windAt(uu, v[i])) : null;
+  /* Dari city_data yang ada cuma KECEPATANNYA, arahnya tidak disampel di
+     sana. Kolomnya tetap dipasang dengan arah kosong, bukan dibuang, supaya
+     waktu point_data mendarat beberapa detik kemudian dan panelnya digambar
+     ulang, jumlah kolomnya tidak berubah dan tabelnya tidak melompat. */
+  if (!wind) {
+    const kec = sampleVar(pd, "wind", lat, lon);     // city_data: sudah knot
+    if (kec) wind = kec.map((k) => ({ spd: k, dir: "" }));
+  }
   lastPoint = { lat, lon, times, temp, rain, wind, rh, cloud, pres };
 
   // Kolom disusun dari variabel yang MEMANG ada. Model WRF tak punya tutupan
@@ -2006,7 +2106,7 @@ function renderPoint(pd, lat, lon) {
   const kolom = [
     ["Tgl/Jam", (i) => fmtHour(times[i])],
     temp && ["°C", (i) => temp[i].toFixed(1)],
-    wind && ["Angin", (i) => Math.round(wind[i].spd) + " " + wind[i].dir],
+    wind && ["Angin", (i) => (Math.round(wind[i].spd) + " " + wind[i].dir).trim()],
     rain && ["mm/j", (i) => rain[i].toFixed(1)],
     rh && ["RH%", (i) => Math.round(rh[i])],
     cloud && ["Awan%", (i) => Math.round(cloud[i])],
@@ -2754,10 +2854,14 @@ function alarmHtml(a, namaKota) {
 // GREEDY anti-tabrakan piksel → hanya yang tak overlap yang digambar. Efeknya
 // zoom-out = ibukota provinsi saja; makin zoom-in makin banyak kota/kabupaten.
 // ---- Sumber nilai label kota ----
-// SENGAJA bukan point_data.bin.gz. Berkas itu 21 MB (seluruh grid 473x265), padahal
-// label cuma butuh 514 titik. city_data.json sudah disampel di backend: ~100 KB
-// terkirim. point_data tetap ada, tapi kembali malas: baru diunduh saat pengguna
-// mengklik peta atau membuka Skew-T.
+// SENGAJA bukan point_data.bin.gz. Diukur 12 Okt 2026, berkas itu 22,5 MB di
+// GFS dan 47,2 MB di WRF, seluruh kisi untuk semua jam dan semua variabel,
+// padahal label cuma butuh 514 titik. city_data.json sudah disampel di
+// backend, dan ber-Brotli dia cuma 118 KB di GFS dan 253 KB di WRF.
+//
+// Berkas ini SEKARANG PUNYA TUGAS KEDUA. Isinya seluruh deret waktu 514
+// kota, bukan cuma angka jam ini, jadi panel titik untuk kota bernama bisa
+// digambar seketika dari sini tanpa menyentuh jaringan. Lihat deretKota.
 let cityData = null, cityDataLoading = null, cityIndexByName = null;
 function loadCityData() {
   if (cityData) return Promise.resolve(cityData);
@@ -2938,7 +3042,9 @@ function toggleCityIcons() {
   refreshCityIcons();
 }
 
-// Label kota selalu ada sejak peta dibuka. point_data dimuat di latar, jadi peta
+// Label kota selalu ada sejak peta dibuka. point_data SEKARANG BETUL BETUL
+// dimuat di latar, lihat prefetchTitik. Dulu kalimat ini bohong, pemuatannya
+// malas dan baru mulai waktu orang mengklik. Jadi peta
 // tetap bisa dipakai selagi berkasnya turun; labelnya menyusul saat sudah siap.
 function initCityLabels() {
   if (!cityGroup) cityGroup = L.layerGroup([], { pane: "cityicons" });
@@ -4792,6 +4898,7 @@ async function init() {
     drawPosHujan();
     await whenHeatmapReady();          // reveal setelah frame pertama tergambar
     hideSkeleton();
+    setTimeout(prefetchTitik, 2500);   // ancang ancang panel titik, lihat prefetchTitik
   } catch (err) {
     showLoadMsg("Gagal memuat data: " + err.message);
     console.error(err);
