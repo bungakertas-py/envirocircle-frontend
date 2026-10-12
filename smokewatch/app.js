@@ -1672,23 +1672,42 @@ let seriesCache = {};        // key layer -> {meta, arr}
 let pointPopup = null;
 let popupLabel = null;   // nama kota kalau titiknya dari klik label kota
 
-async function loadSeries(key) {
-  if (seriesCache[key]) return seriesCache[key];
-  if (!seriesMeta) {
-    /* 404 di sini BUKAN kerusakan. Model yang berkas titiknya belum dikirim
-       backend memang begitu keadaannya, dan pesan ke pengunjung harus beda
-       dari galat sungguhan. WRF kimia contohnya, per 12 September 2026
-       point_meta.json-nya masih dibangun di sana. */
-    const r = await fetch(DATA_BASE + "point_meta.json");
+/* point_meta.json dimuat sekali, dipakai loadSeries maupun loadSeriesTitik.
+   `segar` memaksa tarik ulang melewati cache browser, dipakai kalau ukuran
+   berkas di server tidak cocok lagi dengan metanya, lihat bacaSel.
+
+   404 di sini BUKAN kerusakan. Model yang berkas titiknya belum dikirim
+   backend memang begitu keadaannya, dan pesan ke pengunjung harus beda
+   dari galat sungguhan. WRF kimia contohnya, per 12 September 2026
+   point_meta.json-nya masih dibangun di sana. */
+let seriesMetaLoading = null;
+async function loadSeriesMeta(segar) {
+  if (seriesMeta && !segar) return seriesMeta;
+  if (seriesMetaLoading && !segar) return seriesMetaLoading;
+  seriesMetaLoading = (async () => {
+    const r = await fetch(DATA_BASE + "point_meta.json", segar ? { cache: "reload" } : {});
     if (!r.ok) {
       const e = new Error("point_meta.json HTTP " + r.status);
       if (r.status === 404) e.belumAda = true;
       throw e;
     }
     seriesMeta = await r.json();
-  }
-  const m = seriesMeta[key];
+    return seriesMeta;
+  })();
+  seriesMetaLoading.catch(() => { seriesMetaLoading = null; });
+  return seriesMetaLoading;
+}
+
+/* GRID UTUH satu variabel. Sejak 12 Oktober 2026 hanya untuk yang memang
+   butuh seluruh grid, yaitu peta daya tampung yang digambar di browser
+   (dtGambar, wilayah.js). Backend cuma menulis gz utuh untuk dt_*, variabel
+   lain tidak punya "file" lagi. Popup titik lewat loadSeriesTitik. */
+async function loadSeries(key) {
+  if (seriesCache[key]) return seriesCache[key];
+  const sm = await loadSeriesMeta();
+  const m = sm[key];
   if (!m) throw new Error("deret titik tak ada untuk " + key);
+  if (!m.file) throw new Error("grid utuh tak ada untuk " + key + ", pakai loadSeriesTitik");
   /* DIBUKA SAMBIL DIUNDUH, bukan sesudah. Cara lama menunggu seluruh berkas
      jadi satu ArrayBuffer dulu, baru membungkusnya jadi Blob, baru
      mengalirkannya ke pembuka gzip. Untuk pd_pbl yang 8,6 MB itu berarti
@@ -1702,6 +1721,94 @@ async function loadSeries(key) {
   ).arrayBuffer();
   seriesCache[key] = { meta: m, arr: new Int16Array(buf) };
   return seriesCache[key];
+}
+
+/* SATU TITIK SAJA, LEWAT HTTP RANGE. 12 Oktober 2026.
+
+   loadSeries mengunduh SELURUH grid satu variabel, 3 sampai 9 MB, padahal
+   satu popup cuma butuh empat sel di sekitar titiknya. Diukur hari itu
+   hostingan melayani 1 MB/s, jadi klik pertama menunggu beberapa detik di
+   PC dan lebih lama di HP, dan diulang lagi untuk ispu_kritis atau dt_vol.
+
+   Backend sekarang menulis pd_<key>.bin, susunan [y][x][t] int16 tanpa
+   kompresi, sel (x,y) mulai di byte (y*nx + x)*stride. Empat sel bilinear
+   itu dua baris bersebelahan, dua permintaan Range sekitar 250 byte masing
+   masing. Hasilnya dikemas jadi kisi 2 x 2 dengan bounds yang digeser ke sel
+   itu, supaya sampleSeries dan sampleSeriesNearest tidak perlu tahu dari
+   mana datanya datang. Posisi pecahan titik di dalam sel tetap sama persis,
+   jadi angkanya identik dengan jalur lama.
+
+   Kalau grid utuhnya sudah ada di memori (lapisan dt_* yang petanya baru
+   digambar) itu yang dipakai, tanpa jaringan. Kalau meta tidak punya "cells"
+   datanya masih format lama dan loadSeries yang dipakai. */
+const selCache = new Map();        // DATA_BASE|key|x0,y0 -> Promise pd kisi 2x2
+async function loadSeriesTitik(key, lat, lon) {
+  if (seriesCache[key]) return seriesCache[key];
+  let sm = await loadSeriesMeta();
+  let m = sm[key];
+  if (!m) throw new Error("deret titik tak ada untuk " + key);
+  if (!m.cells) return loadSeries(key);
+  const { x0, y0 } = selSekitar(m, lat, lon);
+  const kunci = DATA_BASE + "|" + key + "|" + x0 + "," + y0;
+  if (!selCache.has(kunci)) {
+    const p = (async () => {
+      try { return await bacaSel(m, lat, lon); }
+      catch (e) {
+        /* Ukuran berkas di server tidak cocok dengan meta, berarti meta di
+           tangan sudah basi, data baru mendarat di antara dua permintaan.
+           Tarik meta segar lalu coba sekali lagi. */
+        if (!e.basi) throw e;
+        sm = await loadSeriesMeta(true); m = sm[key];
+        if (!m || !m.cells) return loadSeries(key);
+        return bacaSel(m, lat, lon);
+      }
+    })();
+    p.catch(() => selCache.delete(kunci));
+    selCache.set(kunci, p);
+  }
+  return selCache.get(kunci);
+}
+
+// Empat sel pengapit titik. Hitungannya persis sampleSeries, supaya
+// bilinearnya jatuh di sel yang sama.
+function selSekitar(m, lat, lon) {
+  const { nx, ny, west, east, north, south } = m;
+  const dx = (east - west) / (nx - 1), dy = (north - south) / (ny - 1);
+  const fx = Math.max(0, Math.min(nx - 1, (lon - west) / dx));
+  const fy = Math.max(0, Math.min(ny - 1, (north - lat) / dy));
+  const x0 = Math.floor(fx), y0 = Math.floor(fy);
+  return { x0, x1: Math.min(x0 + 1, nx - 1), y0, y1: Math.min(y0 + 1, ny - 1), dx, dy };
+}
+
+async function bacaSel(m, lat, lon) {
+  const c = m.cells, { x0, x1, y0, y1, dx, dy } = selSekitar(m, lat, lon);
+  const nkol = x1 - x0 + 1, baris = y1 === y0 ? [y0] : [y0, y1];
+  const potongan = await Promise.all(baris.map(async (y) => {
+    const awal = (y * m.nx + x0) * c.stride, akhir = awal + nkol * c.stride - 1;
+    const r = await fetch(DATA_BASE + c.file, { headers: { Range: "bytes=" + awal + "-" + akhir } });
+    if (r.status !== 206) {
+      /* Server yang mengabaikan Range membalas 200 berikut SELURUH berkas.
+         Jangan ditelan, putuskan dan laporkan. */
+      try { if (r.body) await r.body.cancel(); } catch (_) { /* abaikan */ }
+      throw new Error(c.file + " HTTP " + r.status + ", bukan 206");
+    }
+    const total = parseInt((r.headers.get("Content-Range") || "").split("/")[1], 10);
+    if (total && total !== c.bytes) { const e = new Error("point_meta basi"); e.basi = true; throw e; }
+    const b = new Uint8Array(await r.arrayBuffer());
+    if (b.length !== nkol * c.stride) throw new Error(c.file + " potongan " + b.length + " byte, mau " + nkol * c.stride);
+    return b;
+  }));
+  /* Selalu 2 x 2 walau di tepi grid selnya cuma satu, sebab sampleSeries
+     membagi dengan (nx - 1). Sel tepi digandakan, dan bounds-nya tetap
+     selebar satu sel supaya posisi pecahan titiknya tidak bergeser. */
+  const nt = m.nt, arr = new Int16Array(nt * 4);
+  for (let r = 0; r < 2; r++) for (let k = 0; k < 2; k++) {
+    const rb = Math.min(r, baris.length - 1), kb = Math.min(k, nkol - 1);
+    const dv = new DataView(potongan[rb].buffer, potongan[rb].byteOffset + kb * c.stride, c.stride);
+    for (let t = 0; t < nt; t++) arr[t * 4 + r * 2 + k] = dv.getInt16(t * 2, true);
+  }
+  const w = m.west + x0 * dx, n = m.north - y0 * dy;
+  return { meta: { ...m, nx: 2, ny: 2, west: w, east: w + dx, north: n, south: n - dy }, arr };
 }
 
 /* =====================================================================
@@ -2377,7 +2484,7 @@ function catatanModel(key) {
 async function badanTitik(key, lat, lon, pdSiap) {
   /* pdSiap itu deret dari city_data yang sudah ada di memori, dipakai untuk
      gambar pertama yang tanpa jaringan. Lihat deretKota dan openPoint. */
-  const pd = pdSiap || await loadSeries(key);
+  const pd = pdSiap || await loadSeriesTitik(key, lat, lon);
   const vals = sampleSeries(pd, lat, lon);
   let warna = (LEGENDS[key]?.cells?.[1]?.[1]) || "#35c84a";
   let kepala = "";
@@ -2395,7 +2502,7 @@ async function badanTitik(key, lat, lon, pdSiap) {
          menungguinya membuang seluruh gunanya gambar cepat tadi.
          Angkanya menyusul di gambar kedua. */
       if (pd.dariKota) throw new Error("lewati di gambar cepat");
-      const pk = await loadSeries("ispu_kritis");
+      const pk = await loadSeriesTitik("ispu_kritis", lat, lon);
       const kode = sampleSeriesNearest(pk, lat, lon);
       const par = (pd.meta.kritis_param || [])[Math.round(kode[i])];
       if (par) kritis = `<div class="pp-kritis">Pencemar kritis <b>${KIMIA_HTML[par] || par}</b></div>`;
@@ -2415,7 +2522,7 @@ async function badanTitik(key, lat, lon, pdSiap) {
          menungguinya membuang seluruh gunanya gambar cepat tadi.
          Angkanya menyusul di gambar kedua. */
       if (pd.dariKota) throw new Error("lewati di gambar cepat");
-      const pk = await loadSeries("aqi_kritis");
+      const pk = await loadSeriesTitik("aqi_kritis", lat, lon);
       const kode = sampleSeriesNearest(pk, lat, lon);
       const par = (pd.meta.kritis_param || [])[Math.round(kode[i])];
       if (par) dom = `<div class="pp-kritis">Polutan dominan <b>${KIMIA_HTML[par] || par}</b></div>`;
@@ -2442,7 +2549,7 @@ async function badanTitik(key, lat, lon, pdSiap) {
          menungguinya membuang seluruh gunanya gambar cepat tadi.
          Angkanya menyusul di gambar kedua. */
       if (pd.dariKota) throw new Error("lewati di gambar cepat");
-      const pv = await loadSeries("dt_vol");
+      const pv = await loadSeriesTitik("dt_vol", lat, lon);
       const vol = sampleSeries(pv, lat, lon)[i];          // km3
       if (isFinite(vol) && vol > 0) {
         const bmua = BAKU_MUTU[parDT]["24 jam"];
@@ -2597,21 +2704,22 @@ async function openPoint(lat, lon, label, isMe) {
   }
 }
 
-/* UNDUH DI LATAR, JANGAN MENUNGGU DIKLIK.
+/* ANCANG ANCANG, TAPI YANG RINGAN.
 
-   Berkas deret untuk lapisan aktif 3 sampai 8,6 MB, sekitar satu sampai
-   dua detik di hostingan ini. Tidak sebesar Atmosight, tapi tetap terasa
-   kalau baru dimulai waktu orang sudah mengklik dan menunggu.
+   Dulu ini mengunduh grid utuh lapisan aktif, 3 sampai 8,6 MB, di latar.
+   Dengan pd_<key>.bin yang dibaca per sel itu tidak perlu lagi, cukup
+   point_meta.json supaya klik pertama langsung tahu letak selnya. Grid utuh
+   hanya diambil kalau datanya masih format lama.
 
    DITUNDA dulu, sebab bandwidth di detik detik pertama milik ubin peta dan
-   bingkai pertama. DIBATALKAN di sambungan hemat atau lambat. Dan yang
-   diambil CUMA lapisan yang sedang aktif, bukan semuanya, sebab orang
-   membuka panel titik untuk lapisan yang sedang dia lihat. */
+   bingkai pertama. DIBATALKAN di sambungan hemat atau lambat. */
 function prefetchTitik() {
   const c = navigator.connection;
   if (c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ""))) return;
   if (!activeLayer) return;
-  loadSeries(activeLayer).catch(() => { /* diam, ini cuma ancang ancang */ });
+  loadSeriesMeta()
+    .then((sm) => { const m = sm[activeLayer]; if (m && !m.cells && m.file) return loadSeries(activeLayer); })
+    .catch(() => { /* diam, ini cuma ancang ancang */ });
 }
 
 function closePoint() {
@@ -4435,7 +4543,7 @@ function _kuIndeksKelas(tabel, nilai) {
    Dipanggil dua kali, ISPU dan AQI, supaya kartunya lengkap apa pun layer
    yang sedang aktif di peta. */
 async function _kuBaca(key, lat, lon) {
-  const pd = await loadSeries(key);
+  const pd = await loadSeriesTitik(key, lat, lon);
   const vals = sampleSeries(pd, lat, lon);
   const i = Math.max(0, nearestIndex(pd.meta.times, frames[current] && frames[current].valid_time));
   const nilai = Math.round(vals[i]);
@@ -4445,7 +4553,7 @@ async function _kuBaca(key, lat, lon) {
   const [, nama, warna, putih] = tabel[idx];
   let kritis = null;
   try {
-    const pk = await loadSeries(key === "ispu" ? "ispu_kritis" : "aqi_kritis");
+    const pk = await loadSeriesTitik(key === "ispu" ? "ispu_kritis" : "aqi_kritis", lat, lon);
     const kode = sampleSeriesNearest(pk, lat, lon);
     const par = (pd.meta.kritis_param || [])[Math.round(kode[i])];
     if (par) kritis = KIMIA_HTML[par] || par;

@@ -53,7 +53,15 @@ RedirectMatch 404 /\.gitignore$
   # Data peta berganti tiap hari, jadi jangan disimpan lama lama di browser.
   # Sepuluh menit cukup untuk menahan muat ulang beruntun tanpa membuat orang
   # melihat data kemarin.
-  <FilesMatch "\.(json|webp|png)$">
+  #
+  # .bin dan .gz ikut sejak 12 Oktober 2026. Sebelumnya berkas deret titik
+  # (point_data.bin.gz, pd_*.bin.gz, kini point_cells.bin dan pd_*.bin)
+  # dikirim TANPA Cache-Control sama sekali, jadi tiap muat ulang halaman
+  # mengunduhnya lagi dari nol. Berkas per sel dibaca lewat HTTP Range, dan
+  # browser menyimpan potongan 206 itu dengan validator Last-Modified yang
+  # sama, jadi potongan dari berkas lama tidak pernah tercampur dengan yang
+  # baru.
+  <FilesMatch "\.(json|webp|png|bin|gz)$">
     Header set Cache-Control "public, max-age=600"
   </FilesMatch>
 

@@ -1290,8 +1290,8 @@ function setActiveLayer(layerKey) {
   showFrame(current);
   syncIsobars();                 // isobar auto muncul/lepas mengikuti layer Tekanan
   // panel titik ikut variabel aktif
-  if (pointData && lastPoint && $("point-panel")?.classList.contains("open"))
-    renderPoint(pointData, lastPoint.lat, lastPoint.lon);
+  if (pdTerakhir && lastPoint && $("point-panel")?.classList.contains("open"))
+    renderPoint(pdTerakhir, lastPoint.lat, lastPoint.lon);
   updateHash();
 }
 
@@ -1392,14 +1392,34 @@ let pointLoading = null;
 let pointMarker = null;
 let sharedPoint = null;    // {lat,lon,name} titik aktif → dipakai untuk link Bagikan
 let lastPoint = null;      // untuk export CSV
+let pdTerakhir = null;     // pd titik aktif (kisi kecil atau blob), untuk gambar ulang saat layer ganti
 const MS_TO_KT = 1.943844;
 const DIRS = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"]; // 8 arah dari Utara searah jarum jam
 
+/* META DIMUAT SEKALI, DIPAKAI DUA JALUR.
+
+   point_meta.json kecil, 2 sampai 3 KB. Dia yang bilang apakah model ini
+   sudah punya point_cells.bin (kunci "cells") atau masih blob lama. `segar`
+   memaksa tarik ulang melewati cache browser, dipakai kalau ukuran berkas di
+   server tidak cocok lagi dengan metanya, lihat bacaSel. */
+let pointMeta = null, pointMetaLoading = null;
+async function loadPointMeta(segar) {
+  if (pointMeta && !segar) return pointMeta;
+  if (pointMetaLoading && !segar) return pointMetaLoading;
+  pointMetaLoading = fetch(DATA_BASE + "point_meta.json", segar ? { cache: "reload" } : {})
+    .then((r) => { if (!r.ok) throw new Error("point_meta.json HTTP " + r.status); return r.json(); })
+    .then((m) => { pointMeta = m; return m; });
+  return pointMetaLoading;
+}
+
+/* JALUR LAMA, blob utuh. Sejak 12 Oktober 2026 hanya dipakai kalau meta
+   tidak punya "cells", yaitu data format lama seperti cadangan di GitHub
+   Pages. Klik biasa lewat ambilTitik di bawah. */
 async function loadPointData() {
   if (pointData) return pointData;
   if (pointLoading) return pointLoading;
   pointLoading = (async () => {
-    const meta = await fetch(DATA_BASE + "point_meta.json").then((r) => r.json());
+    const meta = await loadPointMeta();
     /* DIBUKA SAMBIL DIUNDUH, bukan sesudah. Cara lama menunggu seluruh
        berkas selesai jadi satu ArrayBuffer, baru membungkusnya jadi Blob,
        baru mengalirkannya ke pembuka gzip. Untuk WRF itu berarti 47 MB
@@ -1424,6 +1444,92 @@ async function loadPointData() {
     return pointData;
   })();
   return pointLoading;
+}
+
+/* SATU TITIK SAJA, LEWAT HTTP RANGE. 12 Oktober 2026.
+
+   Jalur lama di atas mengunduh SELURUH grid, 22 MB GFS dan 47 MB WRF,
+   padahal satu panel cuma butuh empat sel di sekitar titiknya. Diukur hari
+   itu hostingan melayani 1 MB/s, jadi klik pertama menunggu 22 sampai 46
+   detik di PC, dan di HP lebih lama lagi atau tabnya mati kehabisan memori
+   sebab bentuk terbukanya 120 MB.
+
+   Backend sekarang menulis point_cells.bin, susunan [y][x][var][t] tanpa
+   kompresi. Semua waktu semua variabel satu sel berderet, dan sel (x,y)
+   mulai di byte (y*nx + x)*stride. Jadi empat sel bilinear itu dua baris
+   bersebelahan, dua permintaan Range sekitar 1 KB masing masing, dan
+   panelnya tampil di bawah sedetik juga di HP.
+
+   Hasilnya dikemas jadi kisi kecil 2 x 2 (atau 1 x 2, 2 x 1, 1 x 1 di tepi
+   grid) dengan bounds yang digeser ke sel itu, supaya sampleVar dan
+   renderPoint tidak perlu tahu dari mana datanya datang. Posisi pecahan
+   titik di dalam selnya tetap sama persis, jadi angkanya identik dengan
+   jalur lama. */
+const selCache = new Map();        // DATA_BASE|x0,y0 -> Promise pd kisi kecil
+async function ambilTitik(lat, lon) {
+  let meta = await loadPointMeta();
+  if (!meta.cells) return loadPointData();
+  const kotak = selSekitar(meta, lat, lon);
+  const kunci = DATA_BASE + "|" + kotak.x0 + "," + kotak.y0;
+  if (!selCache.has(kunci)) {
+    const p = (async () => {
+      try { return await bacaSel(meta, kotak); }
+      catch (e) {
+        /* Ukuran berkas di server tidak cocok dengan meta, berarti meta di
+           tangan sudah basi, data baru mendarat di antara dua permintaan.
+           Tarik meta segar lalu coba sekali lagi. */
+        if (!e.basi) throw e;
+        meta = await loadPointMeta(true);
+        if (!meta.cells) return loadPointData();
+        return bacaSel(meta, selSekitar(meta, lat, lon));
+      }
+    })();
+    p.catch(() => selCache.delete(kunci));
+    selCache.set(kunci, p);
+  }
+  return selCache.get(kunci);
+}
+
+// Empat sel pengapit titik. Hitungannya persis sampleVar, supaya bilinearnya
+// jatuh di sel yang sama.
+function selSekitar(meta, lat, lon) {
+  const { nx, ny, bounds, dx, dy } = meta, [w, , , n] = bounds;
+  const fx = Math.max(0, Math.min(nx - 1, (lon - w) / dx));
+  const fy = Math.max(0, Math.min(ny - 1, (n - lat) / dy));
+  const x0 = Math.floor(fx), y0 = Math.floor(fy);
+  return { x0, x1: Math.min(x0 + 1, nx - 1), y0, y1: Math.min(y0 + 1, ny - 1) };
+}
+
+async function bacaSel(meta, { x0, x1, y0, y1 }) {
+  const c = meta.cells, nkol = x1 - x0 + 1, baris = y1 === y0 ? [y0] : [y0, y1];
+  const potongan = await Promise.all(baris.map(async (y) => {
+    const awal = (y * meta.nx + x0) * c.stride, akhir = awal + nkol * c.stride - 1;
+    const r = await fetch(DATA_BASE + c.file, { headers: { Range: "bytes=" + awal + "-" + akhir } });
+    if (r.status !== 206) {
+      /* Server yang mengabaikan Range membalas 200 berikut SELURUH berkas.
+         Jangan ditelan, putuskan dan laporkan. */
+      try { if (r.body) await r.body.cancel(); } catch (_) { /* abaikan */ }
+      throw new Error(c.file + " HTTP " + r.status + ", bukan 206");
+    }
+    const total = parseInt((r.headers.get("Content-Range") || "").split("/")[1], 10);
+    if (total && total !== c.bytes) { const e = new Error("point_meta basi"); e.basi = true; throw e; }
+    const b = new Uint8Array(await r.arrayBuffer());
+    if (b.length !== nkol * c.stride) throw new Error(c.file + " potongan " + b.length + " byte, mau " + nkol * c.stride);
+    return b;
+  }));
+  const nbar = baris.length, bidang = nkol * nbar, nt = meta.times.length, vars = {};
+  for (const v of meta.vars) {
+    const u8 = v.dtype === "uint8";
+    const arr = u8 ? new Uint8Array(nt * bidang) : new Int16Array(nt * bidang);
+    for (let r = 0; r < nbar; r++) for (let k = 0; k < nkol; k++) {
+      const dv = new DataView(potongan[r].buffer, potongan[r].byteOffset + k * c.stride + v.cellOffset, v.cellLength);
+      for (let t = 0; t < nt; t++) arr[t * bidang + r * nkol + k] = u8 ? dv.getUint8(t) : dv.getInt16(t * 2, true);
+    }
+    vars[v.var] = { arr, scale: v.scale, offset: v.offset };
+  }
+  const [w, , , n] = meta.bounds, { dx, dy } = meta;
+  return { meta: { ...meta, nx: nkol, ny: nbar, bounds: [w + x0 * dx, n - y1 * dy, w + x1 * dx, n - y0 * dy] },
+           vars };
 }
 
 /* DERET DARI city_data.json, TANPA MENYENTUH JARINGAN.
@@ -1926,15 +2032,16 @@ async function openPoint(lat, lon, label, isMe) {
      kota atau mencarinya di bilah atas, panelnya digambar SEKARANG JUGA.
      Angkanya sudah ada di memori sejak peta dibuka.
 
-     Baru sesudah itu point_data ditunggu, dan panelnya digambar ulang
-     dengan arah anginnya. Untuk klik di tempat yang bukan kota, langkah
+     Baru sesudah itu sel titiknya ditunggu (ambilTitik, dua permintaan
+     Range kecil), dan panelnya digambar ulang dengan arah anginnya. Untuk klik di tempat yang bukan kota, langkah
      pertama ini dilewat dan jalannya persis seperti dulu. */
   const cepat = deretKota(label);
-  if (cepat) { try { renderPoint(cepat, lat, lon); } catch (e) { console.warn(e); } }
+  if (cepat) { pdTerakhir = cepat; try { renderPoint(cepat, lat, lon); } catch (e) { console.warn(e); } }
 
   try {
-    const pd = await loadPointData();
+    const pd = await ambilTitik(lat, lon);
     if (pointToken !== tokenKu) return;   // sudah pindah ke titik lain
+    pdTerakhir = pd;
     renderPoint(pd, lat, lon);
   } catch (e) {
     if (pointToken !== tokenKu) return;
@@ -1946,22 +2053,23 @@ async function openPoint(lat, lon, label, isMe) {
   }
 }
 
-/* UNDUH DI LATAR, JANGAN MENUNGGU DIKLIK.
+/* ANCANG ANCANG, TAPI YANG RINGAN.
 
-   point_data WRF 47 MB, sekitar sembilan detik di hostingan ini. Sembilan
-   detik terasa lama kalau orang sudah mengklik dan menunggu, dan nyaris
-   tidak terasa kalau dia berjalan selagi orang masih melihat petanya.
+   Dulu ini mengunduh point_data 47 MB di latar supaya klik pertama tidak
+   menunggu. Dengan point_cells.bin yang dibaca per sel itu tidak perlu lagi,
+   cukup point_meta.json yang 3 KB supaya klik pertama langsung tahu letak
+   selnya. Blob utuh hanya diambil kalau datanya masih format lama.
 
    DITUNDA dulu, bukan langsung. Bandwidth di detik detik pertama milik
-   ubin peta dan bingkai pertama, dan merebutnya justru membuat peta terasa
-   lebih lambat demi panel yang belum tentu dibuka.
-
-   DIBATALKAN di sambungan hemat atau lambat. Berkas 47 MB untuk panel yang
-   mungkin tidak pernah dibuka itu kasar untuk yang memakai kuota. */
+   ubin peta dan bingkai pertama. DIBATALKAN di sambungan hemat atau lambat,
+   sebab blob 47 MB untuk panel yang mungkin tidak pernah dibuka itu kasar
+   untuk yang memakai kuota. */
 function prefetchTitik() {
   const c = navigator.connection;
   if (c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ""))) return;
-  loadPointData().catch(() => { /* diam, ini cuma ancang ancang */ });
+  loadPointMeta()
+    .then((m) => { if (!m.cells) return loadPointData(); })
+    .catch(() => { /* diam, ini cuma ancang ancang */ });
 }
 
 // Skeleton panel titik: tulang shimmer per-kontainer (ringkasan, chip, kartu
