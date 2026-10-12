@@ -21,8 +21,61 @@
   var GILIRAN_MAKS = 7;
   var KOMBO = 1.6;
 
+  /* ====================== TIGA TINGKAT ======================
+
+     NYAWA BOSNYA TIDAK IKUT BERUBAH. Tetap 1400, tetap tujuh giliran, bos
+     yang sama. Yang berubah cuma TANGANNYA, dan peluang menangnya jatuh
+     sendiri. Disimulasikan 40 ribu undian per tingkat, lihat
+     setel-hp-tingkat.py di scratchpad.
+
+       rank          tangan                      menang benar   pakai rantai
+       Squire        3 kartu susunan pasti             91%            99%
+       Knight        4 kartu undian bebas              72%            86%
+       Dragonslayer  5 kartu bebas, seperempat         56%            77%
+                     giliran isinya jebakan semua
+
+     Ini DISENGAJA begini, bukan kebetulan. Menurunkan nyawa bos di tingkat
+     atas memang bisa, tapi pemain membacanya sebagai bos yang makin lemah,
+     dan itu kebalikan dari maksudnya. Dengan nyawa tetap, yang naik cuma
+     tuntutan ke pemainnya.
+
+     Yang paling berharga ada di kolom terakhir. Di Squire, menyambung
+     rantai sebab cuma menaikkan peluang menang 8 poin. Di Dragonslayer
+     menaikkan 21 poin. Jadi naik rank MEMAKSA orang mengerti sebab
+     akibatnya, bukan sekadar hafal mana kartu baik.
+
+     CATATAN NAMA. Di kode namanya tetap "tingkat", sebab yang diurus di
+     sini memang tingkat kesulitan. Yang dilihat pemain "rank", dan nama
+     ranknya sengaja istilah game yang umum, bukan terjemahan. Bedanya
+     disengaja, jangan disamakan tanpa mengganti dua duanya. */
+  var TINGKAT = [
+    { nomor: 1, nama: "Squire", kartu: 3, susun: "pasti",
+      jelas: "Tiap tangan pasti berisi satu fenomena yang menolong, satu " +
+             "parameter yang menolong, dan satu jebakan." },
+    { nomor: 2, nama: "Knight", kartu: 4, susun: "bebas",
+      jelas: "Empat kartu diundi bebas dari seluruh dek. Bisa dapat dua " +
+             "jebakan sekaligus, bisa dapat dua kartu baik yang kekuatannya " +
+             "beda jauh." },
+    { nomor: 3, nama: "Dragonslayer", kartu: 5, susun: "bebas", jebakanPenuh: 0.25,
+      jelas: "Lima kartu bebas, dan kira kira satu dari empat giliran " +
+             "isinya jebakan semua. Di giliran itu langkah yang benar " +
+             "adalah MELEWATI, sebab tidak semua tindakan memperbaiki keadaan." },
+  ];
+  var KUNCI_TINGKAT = "aduCuaca.tingkat";
+  var tingkat = TINGKAT[0];
+
+  function bacaTingkat() {
+    var n = 1;
+    try { n = parseInt(localStorage.getItem(KUNCI_TINGKAT), 10) || 1; } catch (e) { n = 1; }
+    tingkat = TINGKAT[Math.min(TINGKAT.length, Math.max(1, n)) - 1];
+  }
+  function simpanTingkat(n) {
+    tingkat = TINGKAT[Math.min(TINGKAT.length, Math.max(1, n)) - 1];
+    try { localStorage.setItem(KUNCI_TINGKAT, String(tingkat.nomor)); } catch (e) { /* tidak apa apa */ }
+  }
+
   var DEK = [];
-  var FEN_BAIK = [], PAR_BAIK = [], CELAKA = [];
+  var FEN_BAIK = [], PAR_BAIK = [], CELAKA = [], SEMUA_KARTU = [];
   var S = null;
 
   /* Perbesaran gambar aula. WAJIB BILANGAN BULAT. Diperbesar 6,25 kali
@@ -40,7 +93,8 @@
   var el = {};
   ["bos-gambar", "latar-akhir", "langit", "mendung",
    "hp-isi", "hp-angka", "giliran", "pesan", "tangan", "aksi",
-   "serang", "lewati", "hasil", "gagal", "hp", "tumpukan-info", "efek", "aksi-hasil", "tutor", "lore"
+   "serang", "lewati", "hasil", "gagal", "hp", "tumpukan-info", "efek", "aksi-hasil", "tutor", "lore",
+   "tingkat-pilih", "tingkat-nama"
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   /* ================== GERAK KARTU ALA BALATRO ==================
@@ -561,13 +615,30 @@
      sekali di tangan itu pasti yang menolong. Pemain yang jeli bisa
      memanfaatkan itu tanpa tahu ilmunya. Dibiarkan, sebab ini permainan
      belajar, bukan adu siasat. */
-  function undiTangan() {
-    var h = [acak(FEN_BAIK), acak(PAR_BAIK), acak(CELAKA)];
-    for (var i = h.length - 1; i > 0; i--) {
+  function kocok(a) {
+    for (var i = a.length - 1; i > 0; i--) {
       var j = Math.floor(Math.random() * (i + 1));
-      var t = h[i]; h[i] = h[j]; h[j] = t;
+      var t = a[i]; a[i] = a[j]; a[j] = t;
     }
-    return h;
+    return a;
+  }
+  /* Ambil n kartu BERBEDA dari sebuah daftar. Tanpa penjaga kembar, undian
+     bebas bisa memberi dua kartu yang sama persis di satu tangan, dan itu
+     terbaca sebagai cacat, bukan sebagai kesialan. */
+  function ambilBeda(daftar, n) {
+    return kocok(daftar.slice()).slice(0, Math.min(n, daftar.length));
+  }
+
+  function undiTangan() {
+    if (tingkat.susun === "pasti") {
+      return kocok([acak(FEN_BAIK), acak(PAR_BAIK), acak(CELAKA)]);
+    }
+    /* Giliran yang isinya jebakan semua. Ini bukan kesialan, ini PELAJARAN,
+       dan satu satunya langkah benar di sini adalah melewati giliran. */
+    if (tingkat.jebakanPenuh && Math.random() < tingkat.jebakanPenuh) {
+      return ambilBeda(CELAKA, tingkat.kartu);
+    }
+    return ambilBeda(SEMUA_KARTU, tingkat.kartu);
   }
 
   /* Kartu baru DIBAGIKAN dari tumpukan di kanan, bukan muncul begitu saja.
@@ -577,6 +648,36 @@
      sebagai keadaan awal yang diturunkan pelan pelan tiap bingkai. Sama
      dengan cara sorotan kartu, dan sebabnya sama, yang digeser cuma
      transform jadi tata letaknya tidak dihitung ulang tiap bingkai. */
+  /* Tombol Serang dan Lewati dipatok dari TENGAH meja, digeser sejauh
+     separuh lebar tangan. Dulu angkanya dipaku 158, benar untuk tiga kartu
+     dan salah untuk empat atau lima. Begitu rank Knight dan Dragonslayer
+     lahir, tangannya melebar sampai 448 piksel dan tombolnya ketimpa
+     kartu. Dilaporkan pemilik.
+
+     Lebarnya DIUKUR, bukan dihitung dari jumlah kartu, supaya dia tetap
+     benar kalau suatu saat lebar kartu atau tindihannya diubah di CSS.
+
+     DUA JEBAKAN di pengukurannya, dua duanya sudah kena.
+
+     Jangan mengukur #tangan. Dia wadah lentur selebar meja, jadi yang
+     didapat lebar layar bukan lebar kartu, dan tombolnya terlempar ke
+     tepi layar.
+
+     Jangan memakai getBoundingClientRect pada kartunya. Kartu sedang
+     dianimasikan waktu dibagi, dan kotak itu ikut transform, jadi
+     angkanya berubah ubah tiap bingkai. offsetLeft dan offsetWidth
+     memulangkan angka TATA LETAK yang kebal transform. */
+  function setelSisiTombol() {
+    var m = document.querySelector(".meja");
+    if (!m || !el.tangan) return;
+    var k = el.tangan.querySelectorAll(".kartu");
+    if (!k.length) return;
+    var kiri = k[0].offsetLeft;
+    var kanan = k[k.length - 1].offsetLeft + k[k.length - 1].offsetWidth;
+    var w = kanan - kiri;
+    if (w > 0) m.style.setProperty("--sisi", (w / 2 + 18) + "px");
+  }
+
   function gambarTangan(bagikan) {
     el.tangan.innerHTML = "";
     var sel = S.tangan.map(function (k) {
@@ -637,6 +738,7 @@
     if (rantai) luka = Math.round(luka * KOMBO);
 
     S.salah += pilihan.filter(function (k) { return !k.menolong; }).length;
+    catat(pilihan);
     S.fase = "hasil";
     el.aksi.hidden = true;
     el.pesan.hidden = true;
@@ -678,6 +780,7 @@
 
   function lewati() {
     if (S.fase !== "pilih") return;
+    catat([]);
     S.fase = "hasil";
     el.aksi.hidden = true;
     el.pesan.hidden = true;
@@ -730,6 +833,80 @@
       '<span class="hasil-akibat">' + aman(k.akibat) + '</span></li>';
   }
 
+  /* ========================== RAPOR ==========================
+
+     Dulu di layar tamat orang cuma dibilangi "ada 2 kartu yang malah
+     menyehatkan dia". Jumlahnya saja, tanpa yang mana dan tanpa kenapa.
+     Padahal justru di detik itu dia paling ingin tahu.
+
+     Yang dicatat DUA MACAM, dan yang kedua sama pentingnya.
+       SALAH  kartu jebakan yang terlanjur dimainkan
+       LEWAT  kartu menolong yang ada di tangan tapi tidak dipakai
+
+     Yang kedua baru mungkin dicatat sejak tangan tidak lagi bersusunan
+     pasti. Di rank Squire hampir tidak pernah terjadi, di Knight dan
+     Dragonslayer sering, dan di situlah pelajarannya. */
+  function catat(pilihan) {
+    var dipakai = pilihan.map(function (k) { return k.id; });
+    S.catatan.push({
+      g: S.giliran,
+      salah: pilihan.filter(function (k) { return !k.menolong; }),
+      lewat: S.tangan.filter(function (k) {
+        return k.menolong && dipakai.indexOf(k.id) < 0;
+      }),
+    });
+  }
+
+  var PINTU = { Atmosight: "../atmosight/", Smokewatch: "../smokewatch/",
+                Oceansight: "../oceansight/" };
+
+  /* Dikelompokkan per kartu, bukan per giliran. Orang yang memainkan El
+     Nino tiga kali tidak perlu dibacakan alasan yang sama tiga kali, dia
+     perlu tahu bahwa dia mengulanginya tiga kali. */
+  function kumpulkan(ambil) {
+    var peta = {}, urut = [];
+    S.catatan.forEach(function (c) {
+      ambil(c).forEach(function (k) {
+        if (!peta[k.id]) { peta[k.id] = { k: k, g: [] }; urut.push(peta[k.id]); }
+        peta[k.id].g.push(c.g);
+      });
+    });
+    return urut;
+  }
+
+  function barisRapor(x, buruk) {
+    var k = x.k, pintu = PINTU[k.lihat];
+    return '<li class="rapor-baris ' + (buruk ? "rapor-buruk" : "rapor-baik") + '">' +
+      '<span class="rapor-nama">' + aman(k.nama) + '</span>' +
+      '<span class="rapor-angka">' + (buruk ? "+" : "-") + k.damage + '</span>' +
+      '<span class="rapor-giliran">giliran ' + x.g.join(", ") + '</span>' +
+      '<span class="rapor-sebab">' + aman(k.akibat) + '</span>' +
+      (pintu ? '<a class="rapor-tautan" href="' + pintu + '">Lihat di ' +
+               aman(k.lihat) + ' &#8594;</a>' : '') +
+      '</li>';
+  }
+
+  function rapor() {
+    var salah = kumpulkan(function (c) { return c.salah; });
+    var lewat = kumpulkan(function (c) { return c.lewat; });
+    var h = '<div class="rapor"><p class="rapor-judul">Rapor</p>';
+    if (!salah.length && !lewat.length) {
+      return h + '<p class="rapor-bersih">Bersih. Tiap giliran kamu memainkan ' +
+             'semua kartu yang menolong, dan tidak satu pun jebakan.</p></div>';
+    }
+    if (salah.length) {
+      h += '<p class="rapor-kepala">Kartu yang justru menyehatkan dia</p>' +
+           '<ul class="rapor-daftar">' +
+           salah.map(function (x) { return barisRapor(x, true); }).join("") + '</ul>';
+    }
+    if (lewat.length) {
+      h += '<p class="rapor-kepala">Kartu menolong yang kamu tinggalkan</p>' +
+           '<ul class="rapor-daftar">' +
+           lewat.map(function (x) { return barisRapor(x, false); }).join("") + '</ul>';
+    }
+    return h + '</div>';
+  }
+
   function tampilHasil(pilihan, rantai, luka, pulih) {
     var habis = S.hp <= 0;
     var mentok = S.giliran >= GILIRAN_MAKS;
@@ -749,12 +926,16 @@
     }
 
     if (habis) {
+      var naik = TINGKAT[tingkat.nomor];   // tingkat berikutnya, kalau ada
       h += '<div class="tamat menang"><p class="tamat-judul">Hujan turun.</p>' +
-           '<p>Si Kemarau padam di giliran ke-' + S.giliran + '.' +
+           '<p>Si Kemarau padam di giliran ke-' + S.giliran +
+           ', rank ' + aman(tingkat.nama) + '.' +
            (S.salah ? ' Kamu sempat memainkan ' + S.salah +
                       ' kartu yang malah menyehatkan dia.'
                     : ' Dan tidak sekali pun kamu salah pilih kartu.') +
-           '</p></div>';
+           (naik ? ' Sekarang naik rank jadi ' + aman(naik.nama) + '. ' +
+                   aman(naik.jelas) : '') +
+           '</p></div>' + rapor();
     } else if (mentok) {
       h += '<div class="tamat kalah"><p class="tamat-judul">Tujuh giliran habis.</p>' +
            '<p>Si Kemarau masih menyala, sisa ' + S.hp + ' HP.' +
@@ -764,7 +945,7 @@
                     : ' Kartu pilihanmu sudah benar semua, tinggal kurang tenaga. ' +
                       'Coba cari rantai sebabnya, fenomena bareng parameter yang ' +
                       'memang dia yang bikin, pukulannya jadi 1,6 kali.') +
-           '</p></div>';
+           '</p></div>' + rapor();
     }
 
     el.hasil.innerHTML = h;
@@ -779,14 +960,27 @@
        yang terjadi di layar tamat, isinya paling panjang dan tombol Main
        Lagi tidak pernah kelihatan. Dilaporkan pemilik, "setelah menang atau
        kalah gada tombol reset". */
+    var bolehNaik = habis && TINGKAT[tingkat.nomor];
     el["aksi-hasil"].innerHTML = (habis || mentok)
-      ? '<button class="pil" id="ulang" type="button">Main lagi</button>' +
+      ? (bolehNaik ? '<button class="pil" id="naik" type="button">Naik jadi ' +
+                     aman(TINGKAT[tingkat.nomor].nama) + '</button>' : '') +
+        '<button class="pil' + (bolehNaik ? " pil-garis" : "") +
+          '" id="ulang" type="button">Main lagi</button>' +
         '<a class="pil pil-garis" href="../">Ke beranda</a>'
       : '<button class="pil" id="lanjut" type="button">Giliran berikutnya</button>';
     el["aksi-hasil"].hidden = false;
 
     if (habis || mentok) {
       S.fase = "tamat";
+      /* DIGULIRKAN KE RAPOR. Panel ini tingginya dibatasi dan bisa
+         digulir, dan di layar tamat isinya paling panjang, jadi rapornya
+         jatuh di bawah lipatan. Padahal justru itu yang paling ingin
+         dibaca orang di detik itu. Hasil giliran terakhirnya tetap ada,
+         tinggal digulir balik ke atas. */
+      var rp = el.hasil.querySelector(".rapor");
+      if (rp) setTimeout(function () {
+        el.hasil.scrollTop = rp.offsetTop - el.hasil.offsetTop - 12;
+      }, DIAM ? 0 : 700);
       /* Tempatnya ikut berubah. Bos padam, hujan kembali dan padangnya
          menghijau. Bos menang, padangnya hangus. Latar penutupnya ditumpuk
          di atas latar kemarau lalu dipudarkan masuk, jadi perubahannya
@@ -800,6 +994,12 @@
       setTimeout(function () { bunyi(habis ? "menang" : "kalah"); }, 420);
       document.getElementById("ulang").addEventListener("click", function () {
         bunyi("tombol"); mulai();
+      });
+      /* Naik tingkat DISIMPAN dulu baru mulai, sebab mulai() membaca
+         tingkatnya dari simpanan. */
+      var tn = document.getElementById("naik");
+      if (tn) tn.addEventListener("click", function () {
+        bunyi("tombol"); simpanTingkat(tingkat.nomor + 1); mulai();
       });
     } else {
       document.getElementById("lanjut").addEventListener("click", function () {
@@ -827,10 +1027,13 @@
     el.serang.textContent = "Serang";
     gambarTangan(true);
     pasangBos();
+    setelSisiTombol();
   }
 
   function mulai() {
-    S = { hp: HP_AWAL, giliran: 1, fase: "pilih", dipilih: [], tangan: undiTangan(), salah: 0 };
+    bacaTingkat();
+    S = { hp: HP_AWAL, giliran: 1, fase: "pilih", dipilih: [],
+          tangan: undiTangan(), salah: 0, catatan: [] };
     /* Sisa awan, hujan, atau api dari giliran terakhir dibersihkan. Tanpa
        ini, main lagi sesudah kalah dimulai dengan naga yang masih terbakar. */
     var sisaEfek = el.efek.querySelectorAll("*");
@@ -861,6 +1064,8 @@
     el.serang.textContent = "Serang";
     gambarTangan(true);
     pasangBos();
+    if (el["tingkat-nama"]) el["tingkat-nama"].textContent = tingkat.nama;
+    setelSisiTombol();
   }
 
   /* ============================ TUTORIAL ============================
@@ -917,6 +1122,31 @@
         '<h3 class="lore-lemah-judul">Titik lemahnya</h3>' +
         '<p class="lore-lemah">' + aman(LORE_LEMAH) + '</p>' +
       '</div>';
+    el.lore.hidden = false;
+    requestAnimationFrame(function () { el.lore.classList.add("tampil"); });
+  }
+
+  /* Pemilih tingkat. Memakai lapisan yang sama dengan cerita bos, sebab
+     dua duanya panel tengah layar yang menutup seluruh permainan, dan
+     membangun lapisan kedua cuma untuk ini pemborosan. */
+  function bukaTingkat() {
+    el.lore.innerHTML =
+      '<div class="lore-panel">' +
+        '<button class="sorot-tutup" type="button" aria-label="Tutup">&times;</button>' +
+        '<h2 class="lore-judul">Pilih rank</h2>' +
+        '<p class="lore-gelar">Nyawa Si Kemarau tetap 1400 dan gilirannya ' +
+          'tetap tujuh di semua rank. Yang berubah cuma kartu di tanganmu.</p>' +
+        '<ul class="tingkat-daftar">' +
+        TINGKAT.map(function (t) {
+          return '<li class="tingkat-baris' +
+            (t.nomor === tingkat.nomor ? " tingkat-kini" : "") + '">' +
+            '<button class="tingkat-tombol" data-tingkat="' + t.nomor + '" type="button">' +
+              '<span class="tingkat-gelar">' + aman(t.nama) + '</span>' +
+              '<span class="tingkat-kartu">' + t.kartu + ' kartu</span>' +
+            '</button>' +
+            '<p class="tingkat-jelas">' + aman(t.jelas) + '</p></li>';
+        }).join("") +
+        '</ul></div>';
     el.lore.hidden = false;
     requestAnimationFrame(function () { el.lore.classList.add("tampil"); });
   }
@@ -1025,11 +1255,25 @@
     })
     .then(function (d) {
       DEK = d;
+      SEMUA_KARTU = d.slice();
       FEN_BAIK = d.filter(function (k) { return k.menolong && k.jenis === "fenomena"; });
       PAR_BAIK = d.filter(function (k) { return k.menolong && k.jenis === "parameter"; });
       CELAKA = d.filter(function (k) { return !k.menolong; });
       el.serang.addEventListener("click", serang);
       el.lewati.addEventListener("click", function () { bunyi("tombol"); lewati(); });
+      if (el["tingkat-pilih"]) el["tingkat-pilih"].addEventListener("click", function () {
+        bunyi("tombol"); bukaTingkat();
+      });
+      /* Satu pendengar di lapisannya, bukan satu per tombol, sebab isinya
+         ditulis ulang tiap kali dibuka. */
+      el.lore.addEventListener("click", function (e) {
+        var b = e.target.closest && e.target.closest(".tingkat-tombol");
+        if (!b) return;
+        bunyi("tombol");
+        simpanTingkat(parseInt(b.getAttribute("data-tingkat"), 10));
+        tutupLore();
+        mulai();
+      });
 
       /* DICOBA LANGSUNG begitu halaman siap, diminta pemilik, "musiknya di
          play langsung ketika sudah ada di page game ini".
