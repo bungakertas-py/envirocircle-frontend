@@ -723,6 +723,9 @@ html, body {
   opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 2000;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* Toast yang membawa tawaran bisa diketuk. Yang biasa tetap tembus klik,
+   supaya tidak menghalangi peta di bawahnya. Lihat toast() di app.js. */
+.toast.tawar { pointer-events: auto; cursor: pointer; text-decoration: underline; }
 
 /* Siklon: ikon berputar di pusat pusaran + banner catatan indikasi. */
 .cyc-mark { display: grid; place-items: center; }

@@ -116,6 +116,9 @@ let DATA_BASE = MODEL.base;
    supaya nilainya sudah ada sebelum katalog diambil, bukan menunggu DOM. */
 let SUMBER_DEKAT = true;
 let SUMBER_CADANGAN = false;
+/* Kiriman cirrus sudah mendarat SESUDAH halaman ini dibuka, selagi kita
+   berdiri di cadangan. Diisi intaiCirrus(), dibaca tandaiSumber(). */
+let cirrusSiap = false;
 
 /* CADANGAN GITHUB ACTIONS. Dipasang 5 Oktober 2026 atas permintaan pemilik,
    sebab kiriman server cirrus beberapa kali berhenti berhari hari tanpa kabar.
@@ -143,9 +146,21 @@ const MODEL_GLOBAL = "gfs";
    ditanya titik segar cuma kapan berkasnya sampai di path kita. */
 let katalogMendarat = null;
 
-async function cobaKatalog(base) {
-  try { return await fetch(base + "catalog.json", { cache: "no-store" }); }
-  catch (e) { return null; }        // jaringan mati
+/* SATU PENGULANGAN kalau yang gugur itu jaringannya, bukan jawaban server.
+   Dipasang 13 Oktober 2026. Tanpa ini satu permintaan yang gagal, misalnya
+   sambungan direset hostingan waktu dia sedang sibuk mengunggah, sudah cukup
+   untuk menurunkan SELURUH halaman ke cadangan sampai orangnya menekan F5
+   sendiri. Pola yang sama sudah dipakai fetchUlang untuk point_meta.json dan
+   potongan Range, jadi catalog.json ikut memakainya. Jawaban HTTP apa pun
+   TIDAK diulang, 404 dan 500 itu bukan soal jaringan.
+
+   kepala = true meminta HEAD saja, header tanpa badan. Dipakai intaiCirrus()
+   yang cuma butuh Last-Modified, bukan isi katalognya yang 80 KB. */
+async function cobaKatalog(base, kepala) {
+  const opt = { cache: "no-store" };
+  if (kepala) opt.method = "HEAD";
+  try { return await fetchUlang(base + "catalog.json", opt); }
+  catch (e) { return null; }        // jaringan mati, dua kali
 }
 /* Umur dibaca dari header Last-Modified, yaitu KAPAN BERKASNYA MENDARAT di
    sumber itu, bukan kapan modelnya di-run. Patokan yang sama dengan titik
@@ -171,7 +186,31 @@ function umurKatalog(res) {
    3. Baru kalau yang dekat hilang atau basi, cadangan ditanya.
    4. Cadangan dipakai HANYA kalau dia benar benar lebih segar. Pindah ke
       sumber yang sama basinya atau lebih basi cuma menukar satu masalah
-      dengan masalah lain, sambil menyembunyikan bahwa cirrus yang bermasalah. */
+      dengan masalah lain, sambil menyembunyikan bahwa cirrus yang bermasalah.
+   5. "Lebih segar" sekarang ada ukurannya, lihat AMBANG_PINDAH_MS. */
+
+/* SELISIH MINIMAL UNTUK PINDAH KE CADANGAN. 13 Oktober 2026.
+
+   Dulu cukup lebih muda sedetik. Itu jadi mahal sejak 12 Oktober, sebab
+   cadangan GitHub Pages masih format lama tanpa kunci "cells", jadi pindah
+   ke sana membuat klik titik kembali mengunduh kisi utuh 22 MB. Lihat
+   ambilTitik dan point_cells.bin.
+
+   Pagi 13 Oktober itu betul terjadi. Folder GFS di cirrus belum ditukar
+   sehingga katalognya berumur 26 jam, cadangan berumur 24,5 jam, dan situs
+   pindah ke cadangan demi data yang cuma 1,5 jam lebih segar. Jalur cepat
+   panel titik hilang, dan titik segarnya tetap merah sebab dua duanya sudah
+   lewat 24 jam.
+
+   Kalau selisihnya tipis, lebih baik tetap di cirrus. Chip cirrus plus titik
+   merah itu pesan yang benar, yaitu kiriman ITERA yang terlambat. Pindah ke
+   cadangan yang sama basinya cuma menyamarkan itu sambil ikut membuang jalur
+   cepatnya. CAMS tidak terpengaruh, selisihnya di sana puluhan jam.
+
+   umurDekat bisa Infinity, yaitu katalog dekat 404 atau jaringannya mati.
+   Infinity tetap kalah berapa pun ambangnya, jadi cadangan tetap menolong
+   di keadaan itu. */
+const AMBANG_PINDAH_MS = 6 * 60 * 60 * 1000;
 async function ambilKatalog() {
   const bolehCadangan = !!DATA_CADANGAN && MODEL_ID === MODEL_GLOBAL;
   const pakai = (base, res) => {
@@ -189,9 +228,50 @@ async function ambilKatalog() {
   }
 
   const jauh = await cobaKatalog(DATA_CADANGAN);
-  if (jauh && jauh.ok && umurKatalog(jauh) < umurDekat) return pakai(DATA_CADANGAN, jauh);
+  if (jauh && jauh.ok && umurKatalog(jauh) + AMBANG_PINDAH_MS < umurDekat) {
+    return pakai(DATA_CADANGAN, jauh);
+  }
   if (dekatBaik) return pakai(MODEL.base, dekat);
   return null;
+}
+
+/* INTAI CIRRUS SELAGI BERDIRI DI CADANGAN. 13 Oktober 2026.
+
+   Sumber dipilih SEKALI, waktu halaman dibuka. Akibatnya tab yang dibuka
+   pagi, selagi folder cirrus belum ditukar, terpaku di cadangan sepanjang
+   hari walau kiriman barunya mendarat sepuluh menit kemudian. Itu yang
+   dilaporkan 13 Oktober pagi, GFS masih GitAction padahal datanya sudah
+   masuk, sedangkan WRF sudah cirrus sebab WRF tidak punya cadangan.
+
+   Jadi selagi kita di cadangan, catalog.json cirrus diketuk tiap lima menit
+   dengan HEAD, nol bita badan. Begitu dia sehat dan umurnya di bawah 24 jam,
+   muat ulang DITAWARKAN, bukan dikerjakan sendiri. Halaman yang memuat ulang
+   sendiri waktu orang sedang menggeser slider itu kasar, dan hash sudah
+   menyimpan layer, waktu, titik, serta tombol lapisan, jadi sesudah muat
+   ulang orangnya mendarat di tempat yang sama.
+
+   Ambangnya SENGAJA sama dengan aturan nomor 2 di ambilKatalog, yaitu segar
+   di bawah 24 jam. Jadi tawaran ini tidak pernah bohong, muat ulang yang
+   ditawarkan pasti betul berpindah ke cirrus, bukan balik lagi ke cadangan.
+
+   TIDAK jalan di mode sematan, sebab kartu peta hidup di landing memasang
+   app ini di iframe dan tiap pengunjung landing akan ikut mengetuk hostingan.
+   TIDAK mengetuk selagi tabnya tersembunyi. BERHENTI sesudah menawarkan
+   sekali, biar tidak jadi gangguan yang berulang. */
+const INTAI_MS = 5 * 60 * 1000;
+let intaiTimer = null;
+function intaiCirrus() {
+  if (EMBED || !SUMBER_CADANGAN || intaiTimer) return;
+  intaiTimer = setInterval(async () => {
+    if (document.hidden) return;
+    const r = await cobaKatalog(MODEL.base, true);
+    if (!r || !r.ok || umurKatalog(r) > SEGAR_MAKS_MS) return;
+    clearInterval(intaiTimer);
+    intaiTimer = null;
+    cirrusSiap = true;
+    tandaiSumber();
+    toast("Kiriman cirrus sudah masuk, ketuk untuk memuat ulang", () => location.reload());
+  }, INTAI_MS);
 }
 
 function pakaiSumber(base) {
@@ -2307,12 +2387,22 @@ const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep"
    berbohong ke arah sebaliknya, sebab tidak ada yang rusak di layar. */
 function tandaiSumber() {
   const el = $("fresh-src-text"); if (!el) return;
-  el.textContent = SUMBER_CADANGAN ? "GitAction" : "cirrus";
+  /* Keadaan KETIGA sejak 13 Oktober 2026, "cirrus siap". Kita masih memakai
+     data cadangan, tapi kiriman cirrus sudah mendarat dan tinggal dimuat
+     ulang. Chipnya jadi tombol, sebab toast cuma lewat sekejap sedangkan
+     chip ini tinggal di bilah bawah. Lihat intaiCirrus(). */
+  el.textContent = cirrusSiap ? "cirrus siap" : SUMBER_CADANGAN ? "GitAction" : "cirrus";
   const wadah = $("fresh-src");
   if (wadah) {
-    wadah.title = SUMBER_CADANGAN
-      ? "Kiriman server cirrus belum masuk lebih dari 24 jam, jadi situs memakai cadangan yang dimasak GitHub Actions"
-      : "Data dari server cirrus, lewat hostingan ini sendiri";
+    if (cirrusSiap) {
+      wadah.title = "Kiriman baru dari server cirrus sudah mendarat. Klik untuk memuat ulang halaman.";
+      wadah.style.cursor = "pointer";
+      wadah.onclick = () => location.reload();
+    } else {
+      wadah.title = SUMBER_CADANGAN
+        ? "Kiriman server cirrus belum masuk lebih dari 24 jam, jadi situs memakai cadangan yang dimasak GitHub Actions"
+        : "Data dari server cirrus, lewat hostingan ini sendiri";
+    }
   }
   const badge = $("data-fresh");
   if (badge) badge.dataset.sumber = SUMBER_CADANGAN ? "cadangan" : "cirrus";
@@ -2605,11 +2695,18 @@ function updateAkurasi() {
 }
 
 let toastTimer = null;
-function toast(msg) {
+/* aksi opsional, dipasang 13 Oktober 2026 untuk tawaran muat ulang dari
+   intaiCirrus(). Toast bertawaran bisa diketuk dan hidup 12 detik, sebab 2,2
+   detik tidak cukup untuk disadari lalu diklik. Yang tanpa aksi tidak berubah
+   sama sekali, tetap 2,2 detik dan tetap tembus klik, lihat .toast di CSS
+   yang memakai pointer-events none. */
+function toast(msg, aksi) {
   const el = $("toast"); if (!el) return;
   el.textContent = msg; el.classList.add("show");
+  el.classList.toggle("tawar", !!aksi);
+  el.onclick = aksi || null;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+  toastTimer = setTimeout(() => el.classList.remove("show"), aksi ? 12000 : 2200);
 }
 
 // Hash saat halaman dibuka (sebelum showFrame/updateHash menimpanya) — sumber
@@ -5022,6 +5119,7 @@ async function init() {
     await whenHeatmapReady();          // reveal setelah frame pertama tergambar
     hideSkeleton();
     setTimeout(prefetchTitik, 2500);   // ancang ancang panel titik, lihat prefetchTitik
+    intaiCirrus();                     // kalau kita di cadangan, tunggu cirrus mendarat
   } catch (err) {
     showLoadMsg("Gagal memuat data: " + err.message);
     console.error(err);

@@ -18,6 +18,9 @@ const SEGAR_MAKS_MS = 24 * 60 * 60 * 1000;
 
 let DATA_BASE = DATA_DEKAT;
 let SUMBER_CADANGAN = false;
+/* Kiriman cirrus sudah mendarat SESUDAH halaman ini dibuka, selagi kita
+   berdiri di cadangan. Diisi intaiCirrus(), dibaca tandaiSumber(). */
+let cirrusSiap = false;
 let manifesMendarat = null;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const MONTHS_FULL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -1070,7 +1073,20 @@ $("zones-btn").addEventListener("click", () => setZones(!zonesOn));
 $("share-btn").addEventListener("click", async () => {
   try { if (navigator.share) await navigator.share({ title: "Kertas Fenomena", url: location.href }); else { await navigator.clipboard.writeText(location.href); toast("Link disalin"); } } catch (_) {}
 });
-function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1800); }
+/* aksi opsional, dipasang 13 Oktober 2026 untuk tawaran muat ulang dari
+   intaiCirrus(). Toast bertawaran bisa diketuk dan hidup 12 detik, sebab 1,8
+   detik tidak cukup untuk disadari lalu diklik. Yang tanpa aksi tidak berubah,
+   tetap 1,8 detik dan tetap tembus klik, lihat .toast di CSS yang memakai
+   pointer-events none. */
+let toastTimer = null;
+function toast(m, aksi) {
+  const t = $("toast"); if (!t) return;
+  t.textContent = m; t.classList.add("show");
+  t.classList.toggle("tawar", !!aksi);
+  t.onclick = aksi || null;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), aksi ? 12000 : 1800);
+}
 $("ctrl-toggle").addEventListener("click", (e) => e.currentTarget.parentElement.classList.toggle("ctrl-open"));
 $("param-toggle").addEventListener("click", (e) => e.currentTarget.parentElement.classList.toggle("param-open"));
 
@@ -1132,9 +1148,41 @@ $("brief-close").addEventListener("click", () => { $("climate-brief").hidden = t
    2. Yang dekat sehat DAN mendarat dalam 24 jam, selesai. Cadangan tidak
       disentuh, nol permintaan tambahan.
    3. Baru kalau yang dekat hilang atau basi, cadangan ditanya.
-   4. Cadangan dipakai HANYA kalau benar benar lebih segar. */
-async function cobaManifes(base) {
-  try { return await fetch(base + MANIFES, { cache: "no-store" }); }
+   4. Cadangan dipakai HANYA kalau benar benar lebih segar, dan "lebih segar"
+      itu ada ukurannya, lihat AMBANG_PINDAH_MS. */
+
+/* SELISIH MINIMAL UNTUK PINDAH KE CADANGAN. 13 Oktober 2026.
+
+   Dulu cukup lebih muda sedetik, dan itu membuat situs pindah ke cadangan
+   demi data yang cuma sejam lebih segar. Kalau selisihnya tipis, lebih baik
+   tetap di cirrus, sebab chip cirrus plus titik merah itu pesan yang benar,
+   yaitu kiriman ITERA yang terlambat. Pindah ke cadangan yang sama basinya
+   cuma menyamarkan itu. Angkanya sama dengan Atmosight dan Smokewatch.
+
+   umurDekat bisa Infinity, yaitu manifes dekat 404 atau jaringannya mati.
+   Infinity tetap kalah berapa pun ambangnya, jadi cadangan tetap menolong
+   di keadaan itu. */
+const AMBANG_PINDAH_MS = 6 * 60 * 60 * 1000;
+/* SATU PENGULANGAN kalau yang gugur itu jaringannya, bukan jawaban server.
+   Dipasang 13 Oktober 2026, sama dengan dua app lain. Tanpa ini satu
+   permintaan yang gagal, misalnya sambungan direset hostingan waktu dia
+   sedang sibuk, sudah cukup untuk menurunkan seluruh halaman ke cadangan
+   sampai orangnya menekan F5 sendiri. Jawaban HTTP apa pun TIDAK diulang,
+   404 dan 500 itu bukan soal jaringan.
+
+   kepala = true meminta HEAD saja, header tanpa badan, dipakai intaiCirrus(). */
+async function fetchUlang(url, opt) {
+  try { return await fetch(url, opt); }
+  catch (e) {
+    if (!(e instanceof TypeError)) throw e;
+    await new Promise((r) => setTimeout(r, 400));
+    return fetch(url, opt);
+  }
+}
+async function cobaManifes(base, kepala) {
+  const opt = { cache: "no-store" };
+  if (kepala) opt.method = "HEAD";
+  try { return await fetchUlang(base + MANIFES, opt); }
   catch (e) { return null; }
 }
 function umurManifes(res) {
@@ -1155,12 +1203,22 @@ function pakaiSumber(base) {
    datanya memang segar tapi bukan dari tempat yang seharusnya. */
 function tandaiSumber() {
   const el = $("fresh-src-text"); if (!el) return;
-  el.textContent = SUMBER_CADANGAN ? "GitAction" : "cirrus";
+  /* Keadaan KETIGA sejak 13 Oktober 2026, "cirrus siap". Kita masih memakai
+     data cadangan, tapi kiriman cirrus sudah mendarat dan tinggal dimuat
+     ulang. Chipnya jadi tombol, sebab toast cuma lewat sekejap sedangkan
+     chip ini tinggal di bilah bawah. Lihat intaiCirrus(). */
+  el.textContent = cirrusSiap ? "cirrus siap" : SUMBER_CADANGAN ? "GitAction" : "cirrus";
   const wadah = $("fresh-src");
   if (wadah) {
-    wadah.title = SUMBER_CADANGAN
-      ? "Kiriman server cirrus belum masuk lebih dari 24 jam, jadi situs memakai cadangan yang dimasak GitHub Actions"
-      : "Data dari server cirrus, lewat hostingan ini sendiri";
+    if (cirrusSiap) {
+      wadah.title = "Kiriman baru dari server cirrus sudah mendarat. Klik untuk memuat ulang halaman.";
+      wadah.style.cursor = "pointer";
+      wadah.onclick = () => location.reload();
+    } else {
+      wadah.title = SUMBER_CADANGAN
+        ? "Kiriman server cirrus belum masuk lebih dari 24 jam, jadi situs memakai cadangan yang dimasak GitHub Actions"
+        : "Data dari server cirrus, lewat hostingan ini sendiri";
+    }
   }
   const badge = $("data-fresh");
   if (badge) {
@@ -1172,6 +1230,35 @@ function tandaiSumber() {
     badge.dataset.segar = segar ? "ya" : "tidak";
   }
 }
+/* INTAI CIRRUS SELAGI BERDIRI DI CADANGAN. 13 Oktober 2026.
+
+   Sumber dipilih SEKALI, waktu halaman dibuka. Akibatnya tab yang dibuka
+   selagi folder cirrus belum ditukar akan terpaku di cadangan sepanjang hari
+   walau kiriman barunya mendarat sepuluh menit kemudian. Jadi selagi kita di
+   cadangan, climate.json cirrus diketuk tiap lima menit dengan HEAD, nol bita
+   badan. Begitu dia sehat dan umurnya di bawah 24 jam, muat ulang DITAWARKAN,
+   bukan dikerjakan sendiri.
+
+   Ambangnya SENGAJA sama dengan aturan nomor 2 di ambilManifes, yaitu segar
+   di bawah 24 jam, supaya muat ulang yang ditawarkan pasti betul berpindah ke
+   cirrus. TIDAK mengetuk selagi tabnya tersembunyi, dan BERHENTI sesudah
+   menawarkan sekali. Penjelasan panjangnya di atmosight/app.js. */
+const INTAI_MS = 5 * 60 * 1000;
+let intaiTimer = null;
+function intaiCirrus() {
+  if (!SUMBER_CADANGAN || intaiTimer) return;
+  intaiTimer = setInterval(async () => {
+    if (document.hidden) return;
+    const r = await cobaManifes(DATA_DEKAT, true);
+    if (!r || !r.ok || umurManifes(r) > SEGAR_MAKS_MS) return;
+    clearInterval(intaiTimer);
+    intaiTimer = null;
+    cirrusSiap = true;
+    tandaiSumber();
+    toast("Kiriman cirrus sudah masuk, ketuk untuk memuat ulang", () => location.reload());
+  }, INTAI_MS);
+}
+
 async function ambilManifes() {
   /* manifesMendarat DIISI DULU, baru pakaiSumber. Urutannya penting, sebab
      pakaiSumber memanggil tandaiSumber yang membaca variabel itu untuk
@@ -1188,7 +1275,9 @@ async function ambilManifes() {
   const umurDekat = dekatBaik ? umurManifes(dekat) : Infinity;
   if (dekatBaik && umurDekat <= SEGAR_MAKS_MS) return pakai(DATA_DEKAT, dekat);
   const jauh = await cobaManifes(DATA_CADANGAN);
-  if (jauh && jauh.ok && umurManifes(jauh) < umurDekat) return pakai(DATA_CADANGAN, jauh);
+  if (jauh && jauh.ok && umurManifes(jauh) + AMBANG_PINDAH_MS < umurDekat) {
+    return pakai(DATA_CADANGAN, jauh);
+  }
   if (dekatBaik) return pakai(DATA_DEKAT, dekat);
   return null;
 }
@@ -1212,6 +1301,7 @@ ambilManifes().then((res) => {
   map.on("resize", frameRegion);
   if (state.run) { const w = toWIB(state.run); $("fresh-text").textContent = `Update: ${String(w.getUTCHours()).padStart(2, "0")}:00 WIB, ${w.getUTCDate()} ${MONTHS[w.getUTCMonth()]}`; }
   $("loading").style.display = "none";
+  intaiCirrus();     // kalau kita di cadangan, tunggu cirrus mendarat
 }).catch((err) => { hideSkeleton(); $("loading").style.display = "block"; $("loading").textContent = "Gagal memuat data: " + err; console.error(err); });
 
 // Seksi bilah bawah HP. `sel` = pemilih tombol ASLI yang diwakili.
