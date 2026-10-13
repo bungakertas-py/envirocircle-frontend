@@ -1139,7 +1139,10 @@ a.sc-kartu:hover .sc-kartu-gambar img { opacity: 1; }
 #project {
   background: var(--sisi); color: var(--sisi-teks);
   padding: 80px 0 88px;
-  position: relative; z-index: 3;
+  /* Di atas seluruh tumpukan makalah. #publication sendiri z-index 3 dan dia
+     membentuk konteks tumpukan, jadi angka di dalamnya tidak bocor ke sini,
+     cukup satu tingkat di atasnya. Latarnya sudah pekat. */
+  position: relative; z-index: 4;
 }
 .prj { border-top: var(--rambut) solid var(--sisi-20); }
 .bag-head + .prj { border-top: 0; }
@@ -1594,21 +1597,171 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
 /* ---- Publikasi, versi halaman penuh ----
    Tanpa lipatan. Di landing dia harus dilipat supaya tidak memakan satu
    layar, di sini justru itu isi halamannya. */
-.pub2 { display: flex; flex-direction: column; gap: 34px; }
+/* SEBELAS MAKALAH DISUSUN KE BAWAH, SELANG SELING.
+   Yang ganjil keterangannya di kiri gambarnya di kanan, yang genap dibalik.
+   Pembalikannya lewat order, bukan direction, sebab direction ikut membalik
+   arah baca di dalamnya dan tanda baca di ujung kalimat jadi pindah tempat.
+
+   Satu makalah satu petak di peta halaman. Garis rambut di atas tiap makalah
+   jadi pemisahnya, dan yang pertama tidak diberi garis supaya tidak dobel
+   dengan kepala bagian di atasnya. */
+.pub2 {
+  display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr);
+  gap: 34px 60px; align-items: start;
+}
+
+/* ---- Tiap makalah satu lapisan yang saling menutupi ----
+   Makalah berikutnya naik menutupi yang sebelumnya waktu digulir, dan di
+   ujungnya bagian Project menutupi seluruh tumpukan ini. Diminta pemilik.
+
+   TANGGA z-index DITULIS TEGAS lewat --lap di tiap lapisan. Elemen berposisi
+   selalu digambar di atas elemen biasa tanpa peduli urutan HTML, jadi tanpa
+   tangga ini makalah pertama yang lengket justru akan menutupi yang di
+   bawahnya. Aturan yang sama sudah dipakai di tumpukan landing.
+
+   LATARNYA WAJIB PEKAT dan selebar halaman, bukan selebar wrap, kalau tidak
+   yang di belakangnya mengintip di tepi kiri kanan.
+
+   top-nya NEGATIF, bukan nol, dan itu kuncinya. Satu makalah bisa lebih
+   tinggi dari layar, dan untuk kasus itu bottom: 0 TIDAK menahan apa apa di
+   Chrome, sudah diuji sendiri waktu membuat tumpukan landing. Yang benar top
+   senilai min(0, tinggi layar - tinggi lapisan), dihitung skrip dan ditaruh
+   di --lekat. Tanpa skrip nilainya auto, artinya tidak menumpuk tapi juga
+   tidak ada yang rusak. */
+.pub-lap {
+  position: sticky; top: var(--lekat, auto); z-index: var(--lap, 1);
+  background: var(--paper);
+  border-top: var(--rambut) solid var(--sisi-20);
+  padding: 52px 0 60px;
+}
+.pub-lap:first-of-type { border-top: 0; padding-top: 14px; }
+/* RUANG BAGI PROJECT UNTUK MENUTUPI, DAN KENAPA BUKAN PADDING.
+   Lapisan lengket dikurung oleh wadahnya, dan kurungan itu berhenti di KOTAK
+   ISI, bukan kotak padding. Sudah diukur sendiri. Dengan padding bawah 92vh
+   di #publication, ketiga lapisan terakhir tetap terdorong naik tepat di
+   garis kotak isi dan Project tidak menutupi apa apa. Jadi ruangnya dibuat
+   sebagai PETAK KOSONG di dalam bagiannya, dan padding bawahnya dinolkan. */
+.hal-karya #publication { padding-bottom: 0; }
+.pub-tutup { height: 92vh; }
+/* Dan Project DITARIK NAIK setinggi petak itu. Tanpa ini petaknya cuma jadi
+   ruang kosong yang digulir, sebab kurungan lapisan lengket ikut memanjang
+   bersamanya sehingga makalah terakhir tetap terdorong keluar tepat waktu
+   Project datang. Ditarik naik, makalah terakhir diam di tempat dan
+   Project yang bergerak menutupinya. Tinggi dokumen tidak berubah. */
+.hal-karya #project { margin-top: -92vh; }
+/* Selang selingnya ditulis TEGAS lewat kelas, bukan :nth-of-type. of-type
+   menghitung per NAMA TAG, dan di dalam bagian ini anak div bukan cuma
+   lapisan, ada pembungkus kepala bagian dan petak penutup. Nomornya meleset
+   satu dan makalah pertama ikut terbalik. Sudah kejadian. */
+.pub-lap--balik .pub2-teks  { order: 2; }
+.pub-lap--balik .pub2-bento { order: 1; }
+
+.pub2-teks { display: flex; flex-direction: column; gap: 28px; }
 .pub2-kepala { display: flex; flex-direction: column; gap: 10px; }
-.pub2 .pub-judul { max-width: 40ch; }
-.pub2-figur { margin: 0; }
-.pub2-figur img {
-  width: 100%; height: auto; display: block;
-  border: var(--rambut) solid var(--ink-20);
+.pub2 .pub-judul { max-width: 32ch; }
+.pub-no {
+  font-size: 12px; letter-spacing: .18em; font-weight: 200;
+  color: var(--ink-50);
 }
-.pub2-figur figcaption {
-  padding-top: 10px; font-size: 12px; letter-spacing: .06em;
-  font-weight: 200; color: var(--ink-50);
+
+/* ---- Bento gambar ----
+   Dua figur dan satu petak kata kunci. Petak lebarnya penuh di atas, lalu
+   dua petak kecil berdampingan di bawahnya, jadi tidak ada lagi satu gambar
+   besar yang berdiri sendiri di tengah halaman.
+
+   object-fit CONTAIN, bukan cover. Isinya peta dan grafik berskala, memotong
+   tepinya berarti membuang sumbu dan legendanya. Jadi gambarnya dimuatkan
+   utuh ke dalam petak dan sisa ruangnya diisi warna kertas. */
+.pub2-bento {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px; align-content: start;
 }
-.pub2-isi { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px 48px; align-items: start; }
-.pub2-kolom { display: flex; flex-direction: column; gap: 26px; }
-.pub2 .pub-abstrak, .pub2 .pub-aksi { max-width: 74ch; }
+.bnt {
+  margin: 0; min-width: 0;
+  border: var(--rambut) solid var(--ink-20); background: var(--paper);
+  display: flex; flex-direction: column;
+}
+.bnt-utama { grid-column: 1 / -1; }
+.bnt-gbr { display: block; width: 100%; background: var(--paper); overflow: hidden; }
+.bnt-utama .bnt-gbr { aspect-ratio: 16 / 10; }
+.bnt-kecil .bnt-gbr { aspect-ratio: 5 / 4; }
+.bnt-gbr img {
+  width: 100%; height: 100%; display: block;
+  object-fit: contain; object-position: center;
+}
+/* Figur yang jauh lebih lebar daripada petaknya kalau dimuatkan utuh cuma
+   jadi pita tipis di tengah petak, dan sisa petaknya kosong. Yang seperti
+   itu DIPOTONG supaya tinggi petaknya terpakai, diminta pemilik. Penandanya
+   dipasang waktu halaman dibangun, dari perbandingan asli tiap gambar, jadi
+   yang bentuknya sudah pas tidak ikut terpotong. */
+.bnt-gbr--potong img { object-fit: cover; }
+.bnt-sampul--gbr .bnt-gbr { background: var(--paper); }
+.bnt figcaption {
+  margin-top: auto;          /* petak yang lebih pendek dari barisnya, keterangan tetap menempel di dasar */
+  padding: 10px 12px 12px; font-size: 11.5px; line-height: 17px;
+  letter-spacing: .05em; font-weight: 200; color: var(--ink-50);
+  border-top: var(--rambut) solid var(--sisi-20);
+}
+/* Petak ketiga isinya SAMPUL JURNAL tempat makalahnya terbit, diminta
+   pemilik. Tegak seperti sampul cetak, dan contain lagi sebab sampul yang
+   dipotong kehilangan judulnya sendiri. Dua jurnal terbit daring tanpa
+   sampul, petaknya diisi kartu teks dengan bingkai yang sama supaya
+   barisnya tetap rata. */
+/* TINGGI SAMPUL IKUT PETAK SEBELAHNYA, bukan sebaliknya. Diminta pemilik.
+   Dulu petak sampul yang memegang perbandingan 3 banding 4, dan karena dia
+   tegak dialah yang paling tinggi, jadi barisnya memanjang mengikuti sampul
+   dan figur kecil di sebelahnya menyisakan ruang kosong di bawahnya.
+
+   Sekarang yang memegang tinggi baris cuma .bnt-kecil lewat aspect-ratio-nya
+   sendiri. Petak sampul tidak punya perbandingan, bidang gambarnya cuma
+   mengambil sisa tinggi yang ada, dan sampulnya dimuatkan utuh di dalamnya.
+   min-height 0 itu perlu, tanpa itu bidang flex menolak menyusut di bawah
+   tinggi asli gambarnya. */
+.bnt-sampul .bnt-gbr {
+  /* basis NOL, bukan auto. Dengan auto, tinggi dasarnya masih diambil dari
+     tinggi asli sampulnya, jadi dia tetap yang paling tinggi dan barisnya
+     tetap ikut dia. Terukur bidang sampul 390 lawan figur kecil 221. */
+  flex: 1 1 0; min-height: 0; aspect-ratio: auto;
+  background: var(--sisi-5, #f4f6f8);
+}
+.bnt-sampul--teks .bnt-gbr {
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px; background: var(--ink); text-align: center;
+}
+.smp-kartu { display: flex; flex-direction: column; gap: 10px; }
+.smp-nama {
+  font-size: 15px; line-height: 21px; letter-spacing: .02em;
+  font-weight: 200; color: var(--paper);
+}
+.smp-vol {
+  font-size: 10.5px; letter-spacing: .14em; font-weight: 200;
+  color: rgba(255, 255, 255, .62);
+}
+.pub-kunci .chips { gap: 7px; }
+.pub-kunci .chip { font-size: 10.5px; padding: 4px 10px; }
+
+/* Angka pada rumus pencemar ditulis turun, PM10, NO2, SO2, dan kawan kawan.
+   Diminta pemilik. Ukuran bawaan sub terlalu kecil untuk huruf tipis di sini,
+   dan spasi hurufnya diwarisi dari induknya sehingga angka turun jadi
+   renggang sendiri, jadi dua duanya disetel. */
+.hal-karya sub {
+  font-size: .72em; letter-spacing: 0; bottom: -.22em;
+}
+.hal-karya .pub-judul sub, .hal-karya .kry-kerja-nama sub { font-size: .62em; }
+
+.pub2 .pub-abstrak, .pub2 .pub-aksi { max-width: none; }
+.pub2 .pub-teks { font-size: 14.5px; line-height: 25px; }
+
+@media (max-width: 1040px) {
+  .pub2 { grid-template-columns: minmax(0, 1fr); gap: 30px; padding: 46px 0; }
+  /* Satu lajur, jadi selang selingnya tidak berlaku lagi. Gambarnya selalu
+     di bawah keterangannya, kalau tidak yang genap akan membuka dengan
+     gambar tanpa judul di atasnya. */
+  .pub-lap--balik .pub2-teks  { order: 0; }
+  .pub-lap--balik .pub2-bento { order: 0; }
+  .pub-lap { padding: 40px 0 46px; }
+  .pub2 .pub-judul { max-width: none; }
+}
 
 /* ---- Kelompok proyek ---- */
 .kry-grup { padding: 56px 0 8px; border-top: var(--rambut) solid var(--sisi-20); }
@@ -1752,7 +1905,6 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
 .kry-main.jalan .kry-main-tanda { display: none; }
 
 @media (max-width: 900px) {
-  .pub2-isi { grid-template-columns: 1fr; gap: 26px; }
   .kry-kerja { margin: 22px 0 0; padding: 18px 16px 20px; }
   /* Di layar sentuh tidak ada sorot, jadi angkatnya tidak pernah terpakai.
      Dibiarkan saja, tidak mengganggu, dan tetap hidup di tablet bermouse. */

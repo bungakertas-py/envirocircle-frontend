@@ -36,6 +36,46 @@
     });
   }
 
+  /* ---- 1b. TUMPUKAN MAKALAH ----
+
+     Tiap makalah menempel lalu ditutupi makalah berikutnya, dan di ujungnya
+     bagian Project menutupi semuanya. Yang mengerjakan CSS, skrip ini cuma
+     menghitung satu angka, seberapa dalam lapisan boleh menempel.
+
+     JEBAKANNYA, untuk lapisan yang LEBIH TINGGI dari layar, top: 0 mengunci
+     dasarnya di luar layar sehingga ujung bawah makalah tidak akan pernah
+     bisa dibaca, sedangkan bottom: 0 di Chrome tidak menahan apa apa. Sudah
+     diuji sendiri waktu membuat tumpukan di landing. Yang benar top NEGATIF
+     setinggi kelebihannya, jadi lapisannya berhenti tepat waktu dasarnya
+     menyentuh dasar layar.
+
+     Diukur ulang waktu jendela berubah, waktu abstraknya dibuka, dan lewat
+     ResizeObserver untuk perubahan lain seperti teks yang melipat ulang. */
+  (function () {
+    var lap = document.querySelectorAll(".pub-lap");
+    if (!lap.length) return;
+    function ukurLekat() {
+      for (var i = 0; i < lap.length; i++) {
+        var sisa = window.innerHeight - lap[i].offsetHeight;
+        lap[i].style.setProperty("--lekat", Math.min(0, sisa) + "px");
+      }
+    }
+    ukurLekat();
+    var tunda = null;
+    window.addEventListener("resize", function () {
+      clearTimeout(tunda); tunda = setTimeout(ukurLekat, 120);
+    });
+    var gbr = document.querySelectorAll(".pub-lap img");
+    for (var g = 0; g < gbr.length; g++) {
+      if (!gbr[g].complete) gbr[g].addEventListener("load", ukurLekat, { once: true });
+    }
+    if (window.ResizeObserver) {
+      var mata = new ResizeObserver(function () { ukurLekat(); });
+      for (var m = 0; m < lap.length; m++) mata.observe(lap[m]);
+    }
+    window.addEventListener("load", ukurLekat);
+  })();
+
   /* ---- 2. ADEGAN PER BAGIAN ----
 
      Bukan satu resep untuk semua. Kalau tiap butir cuma dipudarkan sambil
@@ -111,16 +151,29 @@
   })();
 
   /* --- Publication, makalah dibuka --- */
-  (function () {
-    var art = document.querySelector(".pub2");
-    if (!art) return;
+  /* SEBELAS MAKALAH, BUKAN SATU. Dulu di sini querySelector tunggal sebab
+     makalahnya memang cuma satu. Begitu slider masuk, sepuluh makalah lain
+     ikut membawa [data-kry] yang opacity awalnya 0 di CSS, dan tanpa tween
+     yang menyalakannya mereka tidak akan pernah terlihat biarpun slidenya
+     digeser. Jadi tiap makalah sekarang punya garis waktunya sendiri.
+
+     Pemicunya tetap tegak, ScrollTrigger membaca posisi vertikal, dan
+     sebelas slide itu bertumpuk di ketinggian yang sama. Jadi begitu bagian
+     Publication masuk layar, semuanya ikut dijalankan sekali. Itu disengaja,
+     yang digeser kemudian langsung utuh tanpa menunggu apa apa. */
+  var daftarPub = document.querySelectorAll(".pub2");
+  for (var ip = 0; ip < daftarPub.length; ip++) (function (art) {
     var kepala = art.querySelector(".pub2-kepala");
-    var besar  = art.querySelector(".pub2-figur");
-    var kecil  = art.querySelector(".pub2-figur--kecil");
+    var besar  = art.querySelector(".bnt-utama");
+    var kecil  = art.querySelector(".bnt-kecil");
+    /* Petak ketiga, sampul jurnalnya. WAJIB ikut dinyalakan di sini. Dia
+       membawa [data-kry] yang opacity awalnya 0 di CSS, dan apa pun yang
+       tidak disentuh satu pun tween akan tinggal tembus pandang selamanya.
+       Sudah kejadian, sampulnya hilang semua padahal gambarnya termuat. */
+    var sampul = art.querySelector(".bnt-sampul");
     var blok   = art.querySelectorAll(".pub-blok");
     var temuan = art.querySelectorAll(".pub-temuan li");
     var chip   = art.querySelectorAll(".chips .chip");
-    var abst   = art.querySelector(".pub-abstrak");
     var aksi   = art.querySelector(".pub-aksi");
 
     var tl = garis(art, "80%");
@@ -143,10 +196,13 @@
       tl.set(kecil, { opacity: 1 }, 0.66);
       tl.from(kecil, { scale: 0.94, duration: 0.8, ease: "power3.out" }, 0.66);
     }
+    if (sampul) {
+      tl.set(sampul, { opacity: 1 }, 0.74);
+      tl.from(sampul, { scale: 0.94, duration: 0.8, ease: "power3.out" }, 0.74);
+    }
     if (chip.length) tl.from(chip, { opacity: 0, scale: 0.6, duration: 0.4, stagger: 0.05, ease: "back.out(2.2)" }, 1.12);
-    if (abst) tl.fromTo(abst, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 1.2);
     if (aksi) tl.fromTo(aksi, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 1.32);
-  })();
+  })(daftarPub[ip]);
 
   /* --- Project, peta demi peta --- */
   (function () {
