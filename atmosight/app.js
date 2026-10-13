@@ -1278,6 +1278,11 @@ async function loadAdmin() {
       }).addTo(map);
     }
     if (prov) provLayer = L.geoJSON(prov, { pane: "admin", renderer, style: styleProv }).addTo(map);
+    /* GeoJSON MENTAHNYA disimpan, bukan cuma layernya. Satu layer Leaflet
+       tidak bisa dipasang di dua peta, dan peta sisipan di panel titik perlu
+       batas yang sama. Menyimpan datanya jauh lebih murah daripada
+       mengunduhnya dua kali. */
+    adminGeo = { world, prov };
     applyTheme(); // warna batas sesuai layer aktif saat ini
   } catch (e) {
     console.warn("Batas administrasi gagal dimuat:", e);
@@ -1447,7 +1452,16 @@ async function showFrame(i) {
   const vt = $("valid-time");
   if (vt) vt.textContent = layerHarian(activeLayer) ? fmtDay(frame.valid_time) : fmtValid(frame.valid_time);
   const ts = $("time-slider"); if (ts) ts.value = String(current);
+  /* Isian silinder dan letak label waktu. Dua duanya dari satu angka yang
+     sama, persen posisi slider, ditaruh di variabel CSS supaya CSS yang
+     mengurus gambarnya dan JS cuma mengabari. Jempol slider lebarnya 13 px,
+     jadi letaknya dikoreksi sedikit di CSS lewat calc supaya label betul
+     betul duduk di atas titiknya, bukan bergeser di dua ujung. */
+  const tm = document.querySelector(".tl-main");
+  if (tm) tm.style.setProperty("--tl-isi", (frames.length > 1 ? current / (frames.length - 1) * 100 : 0).toFixed(2) + "%");
   refreshCityIcons();                    // label kota (+ikon bila aktif) ikut waktu aktif
+  tandaiJamAktif();                      // kolom jam di panel bawah ikut slider
+  gambarFenomena();                      // siklon dan penanda AUSMI ikut jam juga
   if (cyclonesOn) refreshCyclones();     // siklon + jalur ikut waktu aktif
   if (itczOn) refreshItcz();             // zona ITCZ ikut waktu aktif
   if (mjoOn) { refreshMjo(); mjoIsiNote(); }   // amplop MJO ikut waktu aktif
@@ -2099,11 +2113,93 @@ function chartLegend(color) {
     `<span class="chl-key">${line(true)}<i>Forecast</i></span></div>`;
 }
 
+/* =====================================================================
+   GELEMBUNG NILAI, LANGKAH PERTAMA SESUDAH KLIK. 13 Oktober 2026.
+
+   Diminta pemilik. Dulu satu klik langsung menaikkan panel bawah setinggi
+   separuh layar, dan itu kasar untuk orang yang cuma ingin tahu "di sini
+   berapa". Sekarang klik memunculkan gelembung kecil berisi SATU angka,
+   yaitu parameter yang sedang dia pilih sendiri di kartu Parameter, lalu
+   di dalamnya ada lencana Detail yang baru menaikkan panelnya.
+
+   Angkanya dari sel titik lewat Range, sekitar 2 KB, jadi gelembung ini
+   murah. Kalau titiknya salah satu kota di city_data, angkanya malah sudah
+   di memori dan gelembungnya tampil tanpa menyentuh jaringan sama sekali.
+   ===================================================================== */
+const LAYER_SAMPEL = {
+  wind_surface: ["Angin", "kt", (pd, la, lo) => {
+    const u = sampleVar(pd, "u", la, lo), v = sampleVar(pd, "v", la, lo);
+    if (u && v) return u.map((uu, i) => windAt(uu, v[i]).spd);
+    return sampleVar(pd, "wind", la, lo);
+  }],
+  rain_surface: ["Hujan", "mm/jam", (pd, la, lo) => sampleVar(pd, "rain", la, lo)],
+  rain_accum_surface: ["Hujan", "mm/jam", (pd, la, lo) => sampleVar(pd, "rain", la, lo)],
+  temp_surface: ["Suhu", "°C", (pd, la, lo) => sampleVar(pd, "temp", la, lo)],
+  humidity_surface: ["Kelembapan", "%", (pd, la, lo) => sampleVar(pd, "humidity", la, lo)],
+  cloud_surface: ["Tutupan awan", "%", (pd, la, lo) => sampleVar(pd, "cloud", la, lo)],
+  pressure_surface: ["Tekanan", "hPa", (pd, la, lo) => sampleVar(pd, "pressure", la, lo)],
+  storm_potential: ["CAPE", "J/kg", (pd, la, lo) => sampleVar(pd, "cape", la, lo)],
+  cin_surface: ["CIN", "J/kg", (pd, la, lo) => sampleVar(pd, "cin", la, lo)],
+};
+
+let gelembung = null, gelembungTitik = null;
+function tutupGelembung() {
+  if (gelembung) { map.closePopup(gelembung); gelembung = null; }
+  gelembungTitik = null;
+}
+
+async function bukaGelembung(lat, lon, label, isMe) {
+  /* Panel yang sedang terbuka DITUTUP dulu. Dua tempat menampilkan titik
+     yang berbeda sekaligus itu membingungkan, dan panelnya memang baru
+     pantas naik kalau diminta lewat lencana Detail. */
+  if ($("meteo-bar")?.classList.contains("open")) closePoint();
+  gelembungTitik = { lat, lon, label, isMe };
+  const isi = (dalam) => `<div class="gb">` +
+    `<div class="gb-nama">${label || fmtCoord(lat, lon)}</div>${dalam}` +
+    `<button type="button" class="gb-detail" id="gb-detail">` +
+    `<span class="material-symbols-outlined">expand_less</span>Detail</button></div>`;
+
+  gelembung = L.popup({ className: "gb-popup", closeButton: true, autoPan: false,
+    offset: [0, -6], maxWidth: 220 })
+    .setLatLng([lat, lon])
+    .setContent(isi(`<div class="gb-angka gb-tunggu">···</div>`))
+    .openOn(map);
+  sambungDetail();
+
+  const def = LAYER_SAMPEL[activeLayer];
+  if (!def) { tulisGelembung(isi(`<div class="gb-angka">–</div>`)); return; }
+  try {
+    const cepat = deretKota(label);
+    const pd = cepat || await ambilTitik(lat, lon);
+    if (!gelembungTitik || gelembungTitik.lat !== lat || gelembungTitik.lon !== lon) return;
+    const deret = def[2](pd, lat, lon);
+    const i = Math.max(0, (pd.meta.times || []).indexOf(frames[current] && frames[current].valid_time));
+    const v = deret && deret[i];
+    const angka = isFinite(v) ? (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(1)) : "–";
+    tulisGelembung(isi(`<div class="gb-par">${def[0]}</div>` +
+      `<div class="gb-angka">${angka}<span>${def[1]}</span></div>`));
+  } catch (e) {
+    tulisGelembung(isi(`<div class="gb-angka">–</div>`));
+  }
+}
+function tulisGelembung(html) {
+  if (!gelembung) return;
+  gelembung.setContent(html);
+  sambungDetail();
+}
+function sambungDetail() {
+  const b = document.getElementById("gb-detail");
+  if (!b || !gelembungTitik) return;
+  const t = gelembungTitik;
+  b.addEventListener("click", () => { tutupGelembung(); openPoint(t.lat, t.lon, t.label, t.isMe); });
+}
+
 async function openPoint(lat, lon, label, isMe) {
   ++pointToken; // titik baru → batalkan reverse-geocode titik sebelumnya
-  const pp = $("point-panel");
+  const pp = $("meteo-bar");
   if (pp) { pp.classList.add("open"); pp.classList.remove("hidden"); }
   $("pt-reopen")?.classList.remove("show");
+  ukurPanelBawah();
   // Marker: ikon "orang" (kamu di sini) utk geolokasi, belah-ketupat utk titik lain.
   if (pointMarker) map.removeLayer(pointMarker);
   const html = isMe
@@ -2117,7 +2213,8 @@ async function openPoint(lat, lon, label, isMe) {
   setPointLabel(label || fmtCoord(lat, lon), label ? "addr" : "coord");
   sharedPoint = { lat, lon, name: label || null };
   updateHash();
-  const body = $("pt-body"); if (body) body.innerHTML = pointSkeleton();
+  const body = $("mb-body"); if (body) body.innerHTML = pointSkeleton();
+  fenomenaSkeleton();
   const tokenKu = pointToken;
 
   /* DUA LANGKAH, dan langkah pertamanya tanpa jaringan sama sekali.
@@ -2143,7 +2240,7 @@ async function openPoint(lat, lon, label, isMe) {
     /* Kalau langkah cepatnya sudah menggambar, kegagalan di sini JANGAN
        menimpanya dengan pesan galat. Yang hilang cuma arah anginnya, dan
        panel berisi lebih berguna daripada panel berisi kabar buruk. */
-    if (!cepat && body) body.innerHTML = '<div class="pt-loading">Gagal memuat data titik.</div>';
+    if (!cepat && body) body.innerHTML = '<div class="mb-gagal">Gagal memuat data titik.</div>';
     console.error(e);
   }
 }
@@ -2169,18 +2266,55 @@ function prefetchTitik() {
 
 // Skeleton panel titik: tulang shimmer per-kontainer (ringkasan, chip, kartu
 // 3-hari, grafik, tabel) meniru layout renderPoint — dipakai saat data dimuat.
+/* TULANG SHIMMER BERBENTUK, bukan tulisan "memuat data".
+
+   Ukurannya DISAMAKAN dengan tabel sungguhan, kolom label 88 piksel dengan
+   padding 10, kolom data 38 piksel, dua baris kepala lalu sembilan baris
+   parameter. Versi pertama cuma mirip kira kira dan tata letaknya melompat
+   waktu isi aslinya mendarat, dan itu justru yang mau dihindari tulang
+   shimmer. Angka angkanya ikut .mb-label dan .mb-tabel di CSS, kalau salah
+   satunya diubah ubah juga yang di sini. */
 function pointSkeleton() {
-  const bar = (cls, w) => `<span class="sk-bar${cls ? " " + cls : ""}"${w ? ` style="width:${w}"` : ""}></span>`;
-  return '<div class="pt-skel">' +
-    `<div class="pt-skel-lines">${bar("", "100%")}${bar("", "94%")}${bar("", "60%")}</div>` +
-    `<div class="pt-skel-chips">${bar()}${bar()}</div>` +
-    bar("pt-skel-sec") +
-    `<div class="pt-skel-cards">${bar()}${bar()}${bar()}</div>` +
-    bar("pt-skel-sec") +
-    bar("pt-skel-chart") +
-    bar("pt-skel-sec") +
-    `<div class="pt-skel-rows">${bar("", "100%")}${bar("", "100%")}${bar("", "100%")}${bar("", "100%")}${bar("", "100%")}</div>` +
-    '</div>';
+  const KOL = 24;                                   // kira kira selebar layar
+  const bar = (w, h) => `<span class="sk-bar" style="width:${w};height:${h}"></span>`;
+  let jam = "";
+  for (let i = 0; i < KOL; i++) jam += `<span class="sk-sel">${bar("20px", "9px")}</span>`;
+  let hari = "";
+  for (let i = 0; i < 4; i++) hari += `<span class="sk-hari">${bar("86px", "11px")}</span>`;
+  let baris = "";
+  for (let i = 0; i < 9; i++) {
+    let sel = "";
+    for (let k = 0; k < KOL; k++) sel += `<span class="sk-sel">${bar("22px", "10px")}</span>`;
+    baris += `<div class="sk-baris"><span class="sk-label">${bar("54px", "10px")}</span>${sel}</div>`;
+  }
+  return '<div class="mb-skel">' +
+    `<div class="sk-baris sk-baris-hari"><span class="sk-label"></span>${hari}</div>` +
+    `<div class="sk-baris"><span class="sk-label">${bar("30px", "9px")}</span>${jam}</div>` +
+    baris + '</div>';
+}
+
+/* Tulang untuk panel kanan, dipasang bersamaan dengan tulang tabel.
+
+   PANEL BERPETA TIDAK BOLEH DITIMPA. Versi pertama menulis innerHTML ke
+   kelima panel, dan itu membongkar wadah Leaflet di panel AUSMI dan ITCZ,
+   jadi dua panel itu kosong selamanya sesudah tulangnya dilepas. Yang
+   diberi tulang di sana cuma baris keterangannya, petanya dibiarkan, dan
+   latar abu .mb-mini sudah cukup jadi tulang buat dirinya sendiri. */
+function fenomenaSkeleton() {
+  const judul = '<span class="sk-bar" style="width:78px;height:8px"></span>';
+  const peraga = (d) => `<div class="mb-sel-peraga"><span class="sk-bar sk-bulat" style="width:${d}px;height:${d}px"></span></div>`;
+  const penuh = { "mb-mjo": judul + peraga(84), "mb-siklon": judul + peraga(66), "mb-kondisi": judul + peraga(38) };
+  Object.keys(penuh).forEach((id) => {
+    const el = $(id); if (!el) return;
+    el.classList.add("mb-sel-skel");
+    el.innerHTML = penuh[id];
+  });
+  ["mb-ausmi-isi", "mb-itcz-isi"].forEach((id) => {
+    const el = $(id); if (el) el.innerHTML = '<span class="sk-bar" style="width:72%;height:11px"></span>';
+  });
+}
+function fenomenaSkeletonLepas() {
+  document.querySelectorAll("#mb-fenomena .mb-sel-skel").forEach((e) => e.classList.remove("mb-sel-skel"));
 }
 
 // ---- Ringkasan awam untuk panel titik --------------------------------
@@ -2287,6 +2421,381 @@ function dailyCards(times, temp, rain, cloud, ci) {
   }).join("");
 }
 
+/* =====================================================================
+   PANEL TITIK PINDAH KE BAWAH, METEOGRAM TABEL. 13 Oktober 2026.
+
+   Diminta pemilik, bentuknya meniru tabel bawah Windy. Panel tepi kanan
+   dibuang seluruhnya, jadi peta tidak lagi terpotong 380 px, dan deret
+   waktunya dibaca MENDATAR, satu kolom satu langkah waktu.
+
+   Yang pindah ke sini apa adanya, tabel per jam, dan tombol CSV yang
+   sekarang cuma ikon di kepala panel.
+
+   Yang DIBUANG beserta alasannya, supaya tidak dikira kelalaian.
+   Grafik SVG satu variabel dibuang, sebab seluruh barisnya kini tampil
+   sekaligus dan berwarna, jadi grafik satu variabel justru lebih miskin.
+   Kartu tiga hari dibuang, sebab angkanya pindah ke kepala tiap hari di
+   meteogram, maksimum, minimum, dan hujan sehari.
+   Ringkasan dan saran dibuang dari sini, digantikan chip konteks yang
+   lebih spesifik ke titiknya.
+
+   Yang BARU, chip konteks. Empat fenomena yang datanya sudah lama ada di
+   app tapi belum pernah dikaitkan ke satu titik, ITCZ, MJO, monsun, dan
+   siklon terdekat lengkap jarak serta arah mata anginnya.
+
+   Kolom jamnya BISA DIKLIK dan menggeser waktu peta, dan kolom yang
+   sedang aktif ditandai mengikuti slider. Lihat tandaiJamAktif().
+   ===================================================================== */
+
+/* Skala warna latar sel. Berhenti di angka yang lazim di Indonesia, bukan
+   rentang global, kalau tidak seluruh kolom suhu akan sewarna. Warnanya
+   muda semua supaya tulisan tinta tetap terbaca di atasnya. */
+const SK_SUHU  = [[18, "rgb(200,226,246)"], [24, "rgb(233,245,233)"], [28, "rgb(255,249,196)"],
+                  [32, "rgb(255,204,128)"], [36, "rgb(240,138,110)"]];
+const SK_HUJAN = [[0, "rgb(255,255,255)"], [0.5, "rgb(222,241,252)"], [2, "rgb(148,203,249)"],
+                  [10, "rgb(74,144,226)"], [20, "rgb(150,86,190)"]];
+const SK_ANGIN = [[0, "rgb(255,255,255)"], [5, "rgb(205,240,243)"], [10, "rgb(150,216,250)"],
+                  [20, "rgb(146,228,170)"], [30, "rgb(255,216,102)"], [40, "rgb(240,138,110)"]];
+const SK_RH    = [[30, "rgb(255,255,255)"], [70, "rgb(226,241,236)"], [95, "rgb(150,210,190)"]];
+const SK_CAPE  = [[0, "rgb(255,255,255)"], [1000, "rgb(255,249,196)"], [2500, "rgb(255,196,120)"],
+                  [4000, "rgb(240,130,100)"]];
+
+function campurWarna(a, b, f) {
+  const pa = a.match(/\d+/g).map(Number), pb = b.match(/\d+/g).map(Number);
+  return "rgb(" + pa.map((x, i) => Math.round(x + (pb[i] - x) * f)).join(",") + ")";
+}
+function skalaWarna(v, stops) {
+  if (v === null || v === undefined || !isFinite(v)) return "";
+  if (v <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i++) {
+    const [a, ca] = stops[i - 1], [b, cb] = stops[i];
+    if (v <= b) return campurWarna(ca, cb, (v - a) / (b - a));
+  }
+  return stops[stops.length - 1][1];
+}
+
+/* TERASA SEPERTI. Heat Index Rothfusz, rumus yang dipakai NOAA, dihitung
+   dari suhu dan kelembapan. Di bawah 27 derajat rumus itu tidak berlaku
+   dan suhu aslinya yang dipakai. Ini angka TURUNAN, bukan keluaran model,
+   jadi barisnya diberi judul yang menyebutkan itu. */
+function terasaSeperti(tc, rh) {
+  if (!isFinite(tc) || !isFinite(rh) || tc < 27) return tc;
+  const t = tc * 9 / 5 + 32, r = rh;
+  let hi = -42.379 + 2.04901523 * t + 10.14333127 * r - 0.22475541 * t * r
+    - 0.00683783 * t * t - 0.05481717 * r * r + 0.00122874 * t * t * r
+    + 0.00085282 * t * r * r - 0.00000199 * t * t * r * r;
+  return (hi - 32) * 5 / 9;
+}
+
+// Arah angin dalam derajat, arah DATANG, sama patokan dengan windAt().
+function arahDerajat(u, v) { return (Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360; }
+
+/* Jarak lingkaran besar dan arah mata angin dari titik ke sasaran.
+   Dipakai chip siklon terdekat. */
+function jarakArah(lat1, lon1, lat2, lon2) {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+  const km = 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+  const y = Math.sin(dLon) * Math.cos(lat2 * rad);
+  const x = Math.cos(lat1 * rad) * Math.sin(lat2 * rad) -
+    Math.sin(lat1 * rad) * Math.cos(lat2 * rad) * Math.cos(dLon);
+  const brg = (Math.atan2(y, x) / rad + 360) % 360;
+  return { km, brg, arah: DIRS[Math.round(brg / 45) % 8] };
+}
+
+/* Titik poros ITCZ pada bujur tertentu, [bujur, poros, utara, selatan].
+   Dipisah jadi helper sebab dipakai dua tempat, chip jaraknya dan penentu
+   zoom peta sisipan. */
+function itczPorosDi(lon) {
+  if (!itcz || !itcz.frames || !frames[current]) return null;
+  const ti = itcz.times ? itcz.times.indexOf(frames[current].valid_time) : -1;
+  const fr = itcz.frames[ti < 0 ? 0 : ti];
+  if (!fr) return null;
+  let best = null, bd = 9e9;
+  for (const ruas of fr) for (const p of ruas) {
+    const d = Math.abs(p[0] - lon);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best && bd <= 2 ? best : null;
+}
+
+/* Berkas fenomena dimuat MALAS dan TIDAK menahan meteogram tampil. Kelimanya
+   punya pemuat sendiri yang ber-cache, jadi klik titik kedua tidak mengetuk
+   jaringan lagi. Token menjaga agar hasil yang datang telat tidak mendarat
+   di titik yang sudah berganti.
+
+   Ikut terhapus waktu baris chip dibuang, dan halamannya langsung berbunyi
+   "Gagal memuat data titik" sebab renderPoint memanggilnya di baris terakhir.
+   Ketahuan dari console.error yang ditangkap pengintip, bukan dari layar. */
+function muatKonteks(lat, lon, nama) {
+  const tokenKu = pointToken;
+  gambarFenomena(lat, lon, nama);
+  Promise.all([loadItcz(), loadMjo(), loadMonsoon(), loadCyclones(), muatAusmi()])
+    .then(() => { if (pointToken === tokenKu) gambarFenomena(lat, lon, nama); })
+    .catch(() => { /* panel memang boleh kosong */ });
+}
+
+/* PANEL 1, OKTAGON MJO. Gambarnya TIDAK ditulis ulang di sini.
+
+   Sempat kutulis fungsi kedua bernama sama, dan itu dua kesalahan sekaligus.
+   Pekerjaan dobel, dan lebih parah, dua deklarasi function bernama sama di
+   lingkup yang sama saling menimpa, jadi yang belakangan menang dan panel
+   MJO yang lama ikut rusak. Dipergoki pemilik, "bukannya ada di fitur mjo
+   ya". Yang dipakai mjoOktagon() milik panel keterangan MJO.
+
+   DUA JURING diwarnai, dan ini inti panelnya.
+   MERAH, wilayah tempat TITIK ini berada, ditentukan bujurnya.
+   HIJAU, fase tempat MJO sedang berada sekarang, ditentukan indeks global.
+   Kalau dua duanya juring yang sama, pusat konveksi MJO memang sedang di
+   atas titik itu. */
+function mjoSel(lon) {
+  if (!mjo || mjo.kosong || !mjo.indeks)
+    return `<div class="mb-sel-judul">Wheeler-Hendon Diagram</div>` +
+           `<div class="mb-sel-kosong">MJO belum ada</div>`;
+  const ix = mjo.indeks, fb = mjoFaseBujur(lon), lemah = !(ix.amplitudo >= 1);
+  return `<div class="mb-sel-judul">Wheeler-Hendon Diagram</div>` +
+    `<div class="mb-sel-peraga">${mjoOktagon(ix, mjo.jejak, fb && fb.fase, lemah ? null : ix.fase)}</div>` +
+    `<div class="mb-sel-isi">MJO ${lemah ? "lemah" : "Fase " + ix.fase}</div>`;
+}
+
+/* PANEL 2, INDEKS AUSMI. Di atas cuplikan kotak wilayahnya, di bawah
+   angkanya. Cuplikan itu peta DIAM, tanpa parameter dan tanpa partikel,
+   gunanya cuma satu, memberi tahu kotak AUSMI itu di sebelah mana. Jadi dia
+   dibangun sekali dan tidak pernah disegarkan lagi. */
+function ausmiIsi() {
+  const el = $("mb-ausmi-isi"); if (!el) return;
+  if (!ausmiData || !ausmiData.kini) { el.innerHTML = '<span class="mb-sel-kosong">AUSMI belum ada</span>'; return; }
+  const k = ausmiData.kini;
+  const fase = monsoon && monsoon.phase ? monsoon.phase.label : "Monsun";
+  el.innerHTML = `<div class="au-angka">${k.nilai > 0 ? "+" : ""}${k.nilai.toFixed(1)}<span>m/s</span></div>` +
+    `<div class="au-arah">${fase} (${k.arah})</div>`;
+}
+
+let petaAusmi = null;
+function petaAusmiSiap() {
+  if (petaAusmi || !ausmiData || !ausmiData.kotak) return;
+  const el = $("mb-peta-ausmi"); if (!el || !el.clientWidth) return;
+  const kt = ausmiData.kotak;
+  petaAusmi = L.map(el, {
+    zoomControl: false, attributionControl: false, zoomSnap: 0.1,
+    dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+    boxZoom: false, keyboard: false, touchZoom: false, fadeAnimation: false,
+  });
+  /* Alas POLOS dan daratnya abu, diminta pemilik. World_Light_Gray_Base
+     memang itu, dan kotak AUSMI jadi satu satunya yang berwarna. */
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 16, crossOrigin: true }).addTo(petaAusmi);
+  L.rectangle([[kt.latS, kt.lonW], [kt.latN, kt.lonE]], {
+    color: "#b26a00", weight: 1.4, dashArray: "4 3", fillColor: "#b26a00",
+    fillOpacity: 0.22, interactive: false,
+  }).addTo(petaAusmi);
+  petaAusmi.fitBounds(L.latLngBounds([kt.latS - 11, kt.lonW - 17], [kt.latN + 11, kt.lonE + 17]),
+    { animate: false, padding: [0, 0] });
+}
+
+/* PANEL 3, JARAK KE SIKLON. Kalau pada jam aktif ada lebih dari satu sistem,
+   kartunya BERGANTIAN tiap empat detik, bukan ditumpuk. Urutannya dari yang
+   terdekat. Ikonnya diputar pelan, berlawanan jarum jam di belahan utara dan
+   searah di selatan, seperti siklon sungguhan. */
+let siklonPutar = null, siklonDaftar = [], siklonKe = 0;
+function siklonKumpul(lat, lon) {
+  const t = frames[current] && frames[current].valid_time;
+  const out = [];
+  if (!cyclones || !cyclones.tracks || !t) return out;
+  for (const tr of cyclones.tracks) {
+    const p = tr.points.find((q) => q.t === t);
+    if (!p) continue;
+    out.push({ p, tr, d: jarakArah(lat, lon, p.lat, p.lon) });
+  }
+  return out.sort((a, b) => a.d.km - b.d.km);
+}
+function siklonGambar() {
+  const el = $("mb-siklon"); if (!el) return;
+  const judul = `<div class="mb-sel-judul">Jarak ke Siklon</div>`;
+  if (!siklonDaftar.length) {
+    el.innerHTML = judul + `<div class="mb-sel-kosong">Tidak ada sistem siklonik di jam ini</div>`;
+    return;
+  }
+  const n = siklonDaftar.length, c = siklonDaftar[siklonKe % n];
+  const warna = cycloneColor(c.p.tier, c.p.cat);
+  const putar = c.p.lat >= 0 ? "sik-utara" : "sik-selatan";
+  el.innerHTML = judul +
+    `<div class="mb-sel-peraga"><div class="sik-ikon ${putar}" style="color:${warna}" title="${c.tr.name}">` +
+    `<span class="material-symbols-outlined">cyclone</span></div></div>` +
+    `<div class="mb-sel-isi"><div class="sik-kat" style="color:${warna}">${c.p.label || c.tr.peak_label || "Sistem siklonik"}</div>` +
+    `<div class="sik-jarak">Terjadi pada <b>${Math.round(c.d.km)} km</b><br>arah ${c.d.arah} (${Math.round(c.d.brg)}°)</div></div>` +
+    (n > 1 ? `<div class="sik-cacah">${(siklonKe % n) + 1} dari ${n}</div>` : "");
+}
+function siklonSel(lat, lon) {
+  clearInterval(siklonPutar); siklonPutar = null;
+  siklonDaftar = siklonKumpul(lat, lon); siklonKe = 0;
+  siklonGambar();
+  if (siklonDaftar.length > 1)
+    siklonPutar = setInterval(() => { siklonKe++; siklonGambar(); }, 4000);
+}
+
+/* PANEL 4, KONDISI SAAT INI. Isi tabel yang sedang jadi sorotan, satu
+   parameter sekali tayang, bergantian tiap tiga detik. Angkanya SELALU jam
+   yang sedang ditampilkan peta, jadi menggeser slider mengubah isinya juga.
+
+   Barisnya TIDAK disusun ulang di sini, dia meminjam susunan yang sama
+   dengan meteogram lewat barisTitik, supaya nama, ikon, satuan, dan cara
+   membulatkannya tidak pernah berbeda antara tabel dan panel ini. */
+let kondisiPutar = null, kondisiKe = 0;
+function kondisiGambar() {
+  const el = $("mb-kondisi"); if (!el) return;
+  const judul = `<div class="mb-sel-judul">Kondisi saat ini</div>`;
+  const b = barisTitik.filter((x) => x.ikon);
+  if (!b.length || !lastPoint) { el.innerHTML = judul + `<div class="mb-sel-kosong">Belum ada data</div>`; return; }
+  const i = indeksJamTitik();
+  if (i < 0) { el.innerHTML = judul + `<div class="mb-sel-kosong">Jam ini di luar deret titik</div>`; return; }
+  const p = b[kondisiKe % b.length];
+  const [teks] = p.sel(i);
+  const k = p.kondisi ? p.kondisi(i) : null;
+  /* Satuan menempel ke ANGKANYA, bukan ke namanya. Di nama dia terbaca
+     seperti bagian dari nama parameternya, "Badai CAPE", dan itu memang
+     sempat terjadi. */
+  el.innerHTML = judul +
+    `<div class="kon-nama">${p.label}</div>` +
+    `<div class="mb-sel-peraga"><span class="kon-ikon material-symbols-outlined">${k ? k.ikon : p.ikon}</span></div>` +
+    /* Satuan DILEWATI kalau angkanya sudah membawanya sendiri. Suhu di tabel
+       ditulis "37°", dan menambahkan satuan "°C" di belakangnya
+       menghasilkan "37°°C". */
+    `<div class="kon-nilai">${k ? `<span class="kon-kata">${k.nilai}</span>`
+      : teks + (p.satuan && !(String(teks).endsWith("°") && p.satuan.startsWith("°"))
+        ? `<span>${p.satuan}</span>` : "")}</div>` +
+    `<div class="sik-cacah">${(kondisiKe % b.length) + 1} dari ${b.length}</div>`;
+}
+/* Langkah ke berapa di deret titik yang sepadan dengan jam peta sekarang.
+   Dicocokkan lewat valid_time, bukan nomor urut, sebab bingkai peta bisa
+   mulai lebih awal daripada deret titiknya. */
+function indeksJamTitik() {
+  if (!lastPoint || !frames[current]) return -1;
+  return lastPoint.times.indexOf(frames[current].valid_time);
+}
+function kondisiSel() {
+  clearInterval(kondisiPutar);
+  kondisiKe = 0;
+  kondisiGambar();
+  kondisiPutar = setInterval(() => { kondisiKe++; kondisiGambar(); }, 3000);
+}
+
+/* PANEL 5, ITCZ. Peta ini SENGAJA polos, tanpa parameter dan tanpa partikel,
+   diminta pemilik. Yang hidup cuma pitanya, dan dia ikut jam aktif. Dengan
+   latar sepolos itu pita ITCZ jadi satu satunya yang menarik mata, dan itu
+   memang maksudnya. */
+let petaItcz = null, petaItczGrup = null, petaItczTitik = null;
+function petaItczSiap() {
+  if (petaItcz) return petaItcz;
+  const el = $("mb-peta-itcz"); if (!el || !el.clientWidth) return null;
+  petaItcz = L.map(el, {
+    zoomControl: false, attributionControl: false, zoomSnap: 0.1,
+    dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+    boxZoom: false, keyboard: false, touchZoom: false, fadeAnimation: false,
+  });
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 16, crossOrigin: true }).addTo(petaItcz);
+  petaItczGrup = L.layerGroup().addTo(petaItcz);
+  petaItcz.setView([-2, 118], 2);
+  return petaItcz;
+}
+function itczSel(lat, lon, nama) {
+  const m = petaItczSiap();
+  if (m) {
+    m.invalidateSize(false);
+    const pz = itczPorosDi(lon);
+    let jarak = 6;
+    if (pz) {
+      const tepi = lat < pz[1] ? pz[2] : pz[3];
+      jarak = Math.max(Math.abs(lat - pz[1]), Math.abs(lat - tepi));
+    }
+    const rentang = Math.max(4, jarak * 1.2);
+    let z = Math.log2((m.getSize().y || 120) * 360 / (512 * rentang));
+    m.setView([lat, lon], Math.max(2.4, Math.min(6, Math.round(z * 10) / 10)), { animate: false });
+    if (petaItczTitik) petaItczTitik.remove();
+    petaItczTitik = L.circleMarker([lat, lon], { radius: 4, color: "#ffffff", weight: 2,
+      fillColor: "#C8553D", fillOpacity: 1, interactive: false }).addTo(m);
+    petaItczGrup.clearLayers();
+    itczGambarKe(petaItczGrup, null, true);
+  }
+  const el = $("mb-itcz-isi"); if (!el) return;
+  const pz = itczPorosDi(lon);
+  const di = pz && lat <= pz[2] && lat >= pz[3];
+  el.innerHTML = `<b>${nama || fmtCoord(lat, lon)}</b> ` +
+    (di ? "sedang dilalui ITCZ" : "tidak sedang dilalui ITCZ");
+}
+
+/* LENCANA "BUKA FITUR". Muncul waktu panel disorot, lalu mengantar ke fitur
+   yang sama di peta utama. Panel Kondisi saat ini SENGAJA tidak punya, sebab
+   isinya memang tidak punya fitur sendiri di peta. */
+const FITUR_PANEL = {
+  mjo: ["Buka fitur MJO", () => { if (!mjoOn) toggleMjo(); }],
+  ausmi: ["Buka fitur AUSMI", () => { if (!ausmiOn) toggleAusmi(); }],
+  siklon: ["Buka fitur Siklon", () => { if (!cyclonesOn) toggleCyclones(); }],
+  itcz: ["Buka fitur ITCZ", () => { if (!itczOn) toggleItcz(); }],
+};
+
+/* Satu ketukan, tiga akibat. Panel bawah turun supaya petanya lega, kartu
+   Fitur di tepi kanan terbuka supaya orang tahu saklarnya ada di sana, dan
+   fiturnya sendiri dinyalakan. Urutannya begitu, bukan sebaliknya, sebab
+   fitur yang menyala di balik panel yang masih menutupi peta itu percuma. */
+function bukaFitur(kunci) {
+  const f = FITUR_PANEL[kunci]; if (!f) return;
+  hidePoint();
+  const kartu = $("sisi-fitur");
+  if (kartu && !kartu.classList.contains("terbuka")) $("spine-fitur")?.click();
+  f[1]();
+}
+function pasangLencana() {
+  document.querySelectorAll("#mb-fenomena .mb-sel[data-fitur]").forEach((sel) => {
+    if (sel.querySelector(".mb-lencana")) return;
+    const f = FITUR_PANEL[sel.dataset.fitur]; if (!f) return;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "mb-lencana";
+    b.innerHTML = `<span class="material-symbols-outlined">open_in_new</span>${f[0]}`;
+    b.addEventListener("click", (e) => { e.stopPropagation(); bukaFitur(sel.dataset.fitur); });
+    sel.appendChild(b);
+  });
+}
+
+/* Blok fenomena digambar ulang tiap titik berganti dan tiap jam berganti,
+   sebab siklon, kondisi, dan pita ITCZ memang ikut waktu. */
+let fenTitik = null;
+let barisTitik = [];     // baris meteogram berikut ikonnya, dipakai panel Kondisi
+function gambarFenomena(lat, lon, nama) {
+  if (lat === undefined && fenTitik) { lat = fenTitik.lat; lon = fenTitik.lon; nama = fenTitik.nama; }
+  if (lat === undefined) return;
+  fenomenaSkeletonLepas();
+  const titikBaru = !fenTitik || fenTitik.lat !== lat || fenTitik.lon !== lon;
+  fenTitik = { lat, lon, nama };
+  const m = $("mb-mjo"); if (m) m.innerHTML = mjoSel(lon);
+  petaAusmiSiap(); ausmiIsi();
+  if (titikBaru) { siklonSel(lat, lon); kondisiSel(); }
+  else { siklonDaftar = siklonKumpul(lat, lon); siklonGambar(); kondisiGambar(); }
+  itczSel(lat, lon, nama);
+  pasangLencana();
+}
+
+/* Kolom mana yang sedang ditampilkan peta. Dipanggil ulang dari showFrame
+   supaya penanda di meteogram ikut slider. */
+function tandaiJamAktif() {
+  const body = $("mb-body"); if (!body || !frames[current]) return;
+  const t = frames[current].valid_time;
+  body.querySelectorAll(".mb-aktif").forEach((el) => el.classList.remove("mb-aktif"));
+  const sel = body.querySelectorAll(`[data-t="${t}"]`);
+  sel.forEach((el) => el.classList.add("mb-aktif"));
+  if (sel.length) {
+    const kol = sel[0], wrap = $("mb-body");
+    if (wrap) {
+      const kiri = kol.offsetLeft - wrap.scrollLeft;
+      if (kiri < 90 || kiri > wrap.clientWidth - 60)
+        wrap.scrollTo({ left: kol.offsetLeft - wrap.clientWidth / 2, behavior: "smooth" });
+    }
+  }
+}
+
 function renderPoint(pd, lat, lon) {
   const times = pd.meta.times;
   const u = sampleVar(pd, "u", lat, lon), v = sampleVar(pd, "v", lat, lon);
@@ -2295,50 +2804,138 @@ function renderPoint(pd, lat, lon) {
   const pres = sampleVar(pd, "pressure", lat, lon), cape = sampleVar(pd, "cape", lat, lon);
   let wind = u && v ? u.map((uu, i) => windAt(uu, v[i])) : null;
   /* Dari city_data yang ada cuma KECEPATANNYA, arahnya tidak disampel di
-     sana. Kolomnya tetap dipasang dengan arah kosong, bukan dibuang, supaya
-     waktu point_data mendarat beberapa detik kemudian dan panelnya digambar
-     ulang, jumlah kolomnya tidak berubah dan tabelnya tidak melompat. */
+     sana. Barisnya tetap dipasang dengan arah kosong, bukan dibuang, supaya
+     waktu sel titiknya mendarat sedetik kemudian dan panelnya digambar
+     ulang, jumlah barisnya tidak berubah dan tabelnya tidak melompat. */
   if (!wind) {
     const kec = sampleVar(pd, "wind", lat, lon);     // city_data: sudah knot
     if (kec) wind = kec.map((k) => ({ spd: k, dir: "" }));
   }
   lastPoint = { lat, lon, times, temp, rain, wind, rh, cloud, pres };
 
-  // Kolom disusun dari variabel yang MEMANG ada. Model WRF tak punya tutupan
-  // awan, dan kolom berisi "–" dari atas sampai bawah cuma memakan lebar.
-  const kolom = [
-    ["Tgl/Jam", (i) => fmtHour(times[i])],
-    temp && ["°C", (i) => temp[i].toFixed(1)],
-    wind && ["Angin", (i) => (Math.round(wind[i].spd) + " " + wind[i].dir).trim()],
-    rain && ["mm/j", (i) => rain[i].toFixed(1)],
-    rh && ["RH%", (i) => Math.round(rh[i])],
-    cloud && ["Awan%", (i) => Math.round(cloud[i])],
-    pres && ["hPa", (i) => Math.round(pres[i])],
+  /* Baris disusun dari variabel yang MEMANG ada. Model WRF tidak punya
+     tutupan awan, dan baris berisi tanda pisah dari ujung ke ujung cuma
+     memakan tinggi layar. Tiap sel memulangkan [teks, warna latar, judul]. */
+  const baris = [
+    /* Unsur kelima khusus baris ini, dipakai panel "Kondisi saat ini".
+       Cuaca tidak punya angka, jadi di panel itu yang ditayangkan ikon
+       keadaannya yang BERUBAH ikut jam, bukan ikon tetap, dan di bawahnya
+       kata keadaannya, Cerah, Hujan, dan seterusnya. */
+    ["Cuaca", "", "partly_cloudy_day", (i) => {
+      const c = cityCondition(rain ? rain[i] : 0, cloud ? cloud[i] : null);
+      return [`<span class="mb-ico ${c.cls}"><span class="material-symbols-outlined">${c.icon}</span></span>`, "", c.label];
+    }, (i) => {
+      const c = cityCondition(rain ? rain[i] : 0, cloud ? cloud[i] : null);
+      return { ikon: c.icon, nilai: c.label.charAt(0).toUpperCase() + c.label.slice(1) };
+    }],
+    temp && ["Suhu", "°C", "device_thermostat", (i) =>
+      [Math.round(temp[i]) + "°", skalaWarna(temp[i], SK_SUHU), temp[i].toFixed(1) + " °C"]],
+    temp && rh && ["Terasa", "°C", "thermostat", (i) => {
+      const ts = terasaSeperti(temp[i], rh[i]);
+      return [Math.round(ts) + "°", skalaWarna(ts, SK_SUHU),
+        "Terasa seperti " + ts.toFixed(1) + " °C, hitungan Heat Index dari suhu dan kelembapan, bukan keluaran model"];
+    }],
+    rain && ["Hujan", "mm/j", "rainy", (i) =>
+      [rain[i] >= 0.1 ? rain[i].toFixed(1) : "·", skalaWarna(rain[i], SK_HUJAN), rain[i].toFixed(2) + " mm per jam"]],
+    wind && ["Angin", "kt", "air", (i) =>
+      [String(Math.round(wind[i].spd)), skalaWarna(wind[i].spd, SK_ANGIN), wind[i].spd.toFixed(1) + " knot"]],
+    u && v && ["Arah", "", "explore", (i) => {
+      const d = arahDerajat(u[i], v[i]);
+      /* Panah menunjuk ke arah angin BERTIUP, hurufnya arah DATANG, patokan
+         yang sama dengan seluruh app ini. Dua duanya ditulis supaya tidak
+         ada yang salah baca. */
+      return [`<span class="mb-panah" style="transform:rotate(${(d + 180) % 360}deg)">↑</span>`,
+        "", "Datang dari " + wind[i].dir + ", " + Math.round(d) + " derajat"];
+    }],
+    rh && ["Lembap", "%", "humidity_percentage", (i) =>
+      [String(Math.round(rh[i])), skalaWarna(rh[i], SK_RH), Math.round(rh[i]) + " persen"]],
+    cloud && ["Awan", "%", "cloud", (i) =>
+      [String(Math.round(cloud[i])), "", Math.round(cloud[i]) + " persen tertutup awan"]],
+    pres && ["Tekanan", "hPa", "compress", (i) =>
+      [String(Math.round(pres[i])), "", pres[i].toFixed(1) + " hPa"]],
+    cape && ["CAPE", "J/kg", "bolt", (i) =>
+      [String(Math.round(cape[i])), skalaWarna(cape[i], SK_CAPE), Math.round(cape[i]) + " J/kg, makin tinggi makin besar potensi badai"]],
   ].filter(Boolean);
-  let rows = "";
+
+  /* Kepala hari, NAMA HARI SAJA. Sempat membawa ringkasan tertinggi,
+     terendah, dan hujan sehari, dan pemilik memintanya dibuang. Deret
+     lengkapnya memang sudah ada di baris di bawahnya, jadi ringkasan itu
+     cuma mengulang dengan cara yang lebih sulit dibaca. */
+  const hari = [];
   for (let i = 0; i < times.length; i++) {
-    rows += "<tr>" + kolom.map(([, f]) => `<td>${f(i)}</td>`).join("") + "</tr>";
+    const w = toWIB(times[i]), kunci = w.toISOString().slice(0, 10);
+    let h = hari[hari.length - 1];
+    if (!h || h.kunci !== kunci) { h = { kunci, w, n: 0 }; hari.push(h); }
+    h.n++;
   }
-  const ci = currentTimeIndex(pd);
-  const extras =
-    `<div class="pt-summary">${pointSummary(times, temp, rain, cloud, wind, rh, ci)}</div>` +
-    `<div class="pt-advice">${pointAdvice(times, rain, cloud, wind, ci)}</div>` +
-    stormChip(cape, ci) +
-    `<div class="pt-sec">PRAKIRAAN 3 HARI</div><div class="fc-cards">${dailyCards(times, temp, rain, cloud, ci)}</div>`;
-  const spec = chartSeries(pd, lat, lon);
-  $("pt-body").innerHTML = extras +
-    `<div class="pt-sec">${spec.label.toUpperCase()} <span>${spec.unit}</span></div>${chartSVG(spec)}${chartLegend(warnaDeret())}` +
-    `<div class="pt-sec">DATA PER-JAM (WIB)</div>` +
-    `<div class="pt-table-wrap"><table class="pt-table"><thead><tr>` +
-    kolom.map(([h]) => `<th>${h}</th>`).join("") +
-    `</tr></thead><tbody>${rows}</tbody></table></div>` +
-    // KARTU LIPAT SKEW-T DIBUANG DARI SINI 4 Oktober 2026, diminta user.
-    // Dulu dia duduk di kaki panel ini, jadi orang harus mengklik peta dulu,
-    // menggulir sampai dasar, baru menemukannya. Sekarang dia alat sendiri di
-    // kartu Fitur, dipilih dulu lalu titiknya ditunjuk, dan hasilnya tampil
-    // di kartu tengah layar. Cari MODE SKEW-T di bawah.
-    "";
+  const kepalaHari = hari.map((h) => {
+    const nama = h.w.toLocaleDateString("id-ID", { weekday: "long", timeZone: "UTC" });
+    return `<th class="mb-hari" colspan="${h.n}"><b>${nama} ${h.w.getUTCDate()}</b></th>`;
+  }).join("");
+
+  /* MASA LALU, SEKARANG, RAMALAN. Patokannya JAM NYATA, bukan posisi slider.
+     Slider sudah punya penandanya sendiri, garis tinta dua sisi, dan kalau
+     dua duanya dipatok ke hal yang sama penanda itu kehilangan gunanya.
+
+     Kolom "sekarang" itu langkah waktu yang paling dekat dengan jam ini,
+     ditandai satu garis terakota di tepi kirinya. Yang sebelum dia
+     diredupkan, sebab isinya analisis, bukan ramalan.
+
+     IKUT TERHAPUS sekali waktu ringkasan harian dibuang, sebab letaknya
+     bertetangga, dan panelnya langsung berbunyi "Gagal memuat data titik".
+     Ditaruh di sini, di atas pemakainya, supaya tidak ikut terbawa lagi. */
+  const kiniMs = Date.now();
+  let iKini = -1, bedaKini = Infinity;
+  times.forEach((t, i) => {
+    const d = Math.abs(Date.parse(t) - kiniMs);
+    if (d < bedaKini) { bedaKini = d; iKini = i; }
+  });
+  const kelasWaktu = (i) => (i < iKini ? " mb-lalu" : i === iKini ? " mb-kini" : "");
+
+  const jamTh = times.map((t, i) => {
+    const w = toWIB(t);
+    return `<th class="mb-jam${kelasWaktu(i)}" data-t="${t}">${String(w.getUTCHours()).padStart(2, "0")}</th>`;
+  }).join("");
+
+  /* Baris DISIMPAN berikut ikonnya. Panel "Kondisi saat ini" menayangkan
+     baris yang sama satu per satu, dan dia harus memakai nama, satuan, dan
+     cara membulatkan yang persis sama dengan tabelnya. */
+  barisTitik = baris.map(([label, satuan, ikon, sel, kondisi]) => ({ label, satuan, ikon, sel, kondisi }));
+
+  const tbody = baris.map(([label, satuan, , f]) => {
+    const sel = times.map((t, i) => {
+      const [teks, warna, judul] = f(i);
+      return `<td class="${kelasWaktu(i).trim()}" data-t="${t}"${warna ? ` style="background:${warna}"` : ""}` +
+        `${judul ? ` title="${String(judul).replace(/"/g, "&quot;")}"` : ""}>${teks}</td>`;
+    }).join("");
+    return `<tr><th class="mb-label">${label}<span>${satuan}</span></th>${sel}</tr>`;
+  }).join("");
+
+  $("mb-body").innerHTML =
+    `<table class="mb-tabel"><thead>` +
+    `<tr><th class="mb-label mb-pojok"></th>${kepalaHari}</tr>` +
+    `<tr><th class="mb-label">Jam<span>WIB</span></th>${jamTh}</tr>` +
+    `</thead><tbody>${tbody}</tbody></table>`;
+
+  /* Diukur SESUDAH isinya ada, bukan waktu panelnya dibuka. Tingginya baru
+     ketahuan sesudah barisnya terpasang, dan jumlah barisnya ikut variabel
+     yang dipunyai model. */
+  ukurPanelBawah();
+  tandaiJamAktif();
+  muatKonteks(lat, lon, sharedPoint && sharedPoint.name);
 }
+
+
+/* KLIK KOLOM JAM MENGGESER WAKTU PETA. Dipasang sekali, bukan tiap gambar
+   ulang, sebab isi tabelnya ditukar terus. Patokan kolomnya atribut data-t
+   berisi valid_time, jadi tidak bergantung pada nomor urut yang bisa beda
+   antara deret city_data dan bingkai peta. */
+$("mb-body")?.addEventListener("click", (e) => {
+  const sel = e.target.closest("[data-t]");
+  if (!sel) return;
+  const i = frames.findIndex((f) => f.valid_time === sel.dataset.t);
+  if (i >= 0 && i !== current) showFrame(i);
+});
 
 function exportCSV() {
   if (!lastPoint) return;
@@ -2359,20 +2956,75 @@ function exportCSV() {
   URL.revokeObjectURL(a.href);
 }
 
+
+/* TINGGI PANEL BAWAH DIUMUMKAN KE CSS. 13 Oktober 2026.
+
+   #ui memakai justify-content space-between dengan padding 20 px, jadi
+   menambah padding bawahnya otomatis mendorong slider dan legenda naik.
+   Tanpa ini meteogram menimbun slider, dan slider itu justru yang paling
+   sering dipakai bersamaan dengan panel ini. Tingginya tidak tetap, sebab
+   jumlah barisnya ikut variabel yang dipunyai model. */
+let mbTinggiLama = -1;
+function ukurPanelBawah() {
+  const bar = $("meteo-bar");
+  const buka = bar && bar.classList.contains("open") && !bar.classList.contains("hidden");
+  const h = buka ? Math.round(bar.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty("--mb-h", h + "px");
+  document.documentElement.classList.toggle("mb-buka", !!buka);
+  /* PETANYA IKUT MENGECIL, bukan cuma tertutup panel. Dulu #map tetap setinggi
+     layar dan panel ini menimbunnya, jadi separuh peta ada tapi tak terlihat,
+     dan geser peta terasa mentok sebab kunci pan dihitung untuk peta yang
+     tingginya penuh. Sekarang kotak petanya betul betul memendek, Leaflet
+     diberi tahu, lalu bingkai dan kunci pannya dihitung ulang untuk tinggi
+     yang baru. Hasilnya geser bebas di dalam domain.
+
+     Dihitung ulang HANYA kalau tingginya berubah. Tanpa penjaga ini tiap
+     klik titik akan mengembalikan peta ke tengah domain, dan orang kehilangan
+     tempat yang sedang dilihatnya. */
+  if (h === mbTinggiLama) return;
+  mbTinggiLama = h;
+  /* SEKETIKA, dan TANPA membingkai ulang.
+
+     Dua duanya sempat salah. Menundanya 270 milidetik membuat Leaflet
+     menggambar ulang jauh sesudah kotaknya berubah, jadi ada pita gelap
+     menganga di bawah peta selama itu. Dan memanggil bingkaiUlang() menata
+     ulang seluruh bingkai, jadi domainnya terdorong tiap kali panel buka
+     tutup, padahal orangnya sedang melihat tempat tertentu.
+
+     invalidateSize dengan pan false cukup, dia memberi tahu Leaflet ukuran
+     barunya tanpa menggeser pusat peta. Zoom minimum yang sudah dihitung
+     untuk layar penuh tetap berlaku, dan di kotak yang lebih pendek itu
+     justru menyisakan ruang geser, bukan mengurangi. */
+  try { map.invalidateSize({ pan: false }); } catch (e) { /* peta belum siap */ }
+}
+window.addEventListener("resize", ukurPanelBawah);
+
 function closePoint() {
-  $("point-panel")?.classList.remove("open", "hidden");
+  $("meteo-bar")?.classList.remove("open", "hidden");
+  clearInterval(siklonPutar); siklonPutar = null;
+  clearInterval(kondisiPutar); kondisiPutar = null;
+  fenTitik = null;
+  ukurPanelBawah();
   $("pt-reopen")?.classList.remove("show");
   if (pointMarker) { map.removeLayer(pointMarker); pointMarker = null; }
   sharedPoint = null;
   updateHash();
 }
+/* Panel disembunyikan ke bawah, datanya TIDAK dibuang. Tombol balik cuma
+   muncul di keadaan ini, jadi orang yang belum pernah mengklik titik tidak
+   melihat tombol yang tidak ada gunanya. Sempat ada laporan panelnya tidak
+   bisa dikembalikan, dan memang tombolnya tenggelam di bawah panel yang
+   z-index-nya sama. Sekarang dia di atas, berlabel, dan di pojok kanan
+   supaya tidak bertabrakan dengan gagang bilah bawah di telepon. */
 function hidePoint() {           // sembunyikan panel, marker & data tetap
-  $("point-panel")?.classList.add("hidden");
+  $("meteo-bar")?.classList.add("hidden");
   $("pt-reopen")?.classList.add("show");
+  ukurPanelBawah();
 }
 function reopenPoint() {
-  $("point-panel")?.classList.remove("hidden");
+  $("meteo-bar")?.classList.remove("hidden");
   $("pt-reopen")?.classList.remove("show");
+  ukurPanelBawah();
 }
 
 // ================= FRESHNESS · SHARE · TOAST =================
@@ -2767,7 +3419,13 @@ function restoreFromHash() {
     const [la, lo] = pt.split(",").map(parseFloat);
     if (isFinite(la) && isFinite(lo) && (!dataBounds || dataBounds.contains([la, lo]))) {
       map.setView([la, lo], 8, { animate: false });
-      openPoint(la, lo, p.get("n") || null);
+      /* GELEMBUNG, bukan panel. Hash ini ditulis updateHash() tiap kali orang
+         memilih titik, jadi dia bertahan di alamat tab dan ikut terbaca waktu
+         halaman sekadar dimuat ulang. Dulu di situ panel bawah langsung naik,
+         dan pemilik mengiranya alamat Atmosight biasa yang kelakuannya aneh.
+         Sekarang jalurnya sama dengan klik biasa, gelembung dulu, panel kalau
+         Detail diketuk. */
+      bukaGelembung(la, lo, p.get("n") || null);
     }
   }
 }
@@ -2865,7 +3523,7 @@ function renderSearch(q) {
 }
 function pickPlace(lat, lon, name) {
   map.setView([lat, lon], 8, { animate: true });
-  openPoint(lat, lon, name);
+  bukaGelembung(lat, lon, name);
   $("search-box")?.classList.remove("open");
 }
 
@@ -3209,7 +3867,7 @@ async function refreshCityIcons() {
               `<span class="cc-lbl"><b>${escHtml(cityShortName(c.p.n))}</b>` +
               (c.val ? `<i>${escHtml(c.val)}</i>` : "") + `</span>` }),
     });
-    m.on("click", (e) => { L.DomEvent.stopPropagation(e); openPoint(c.p.lat, c.p.lon, c.p.n); });
+    m.on("click", (e) => { L.DomEvent.stopPropagation(e); bukaGelembung(c.p.lat, c.p.lon, c.p.n); });
     cityGroup.addLayer(m);
   }
   cityPlacedPts = placed;
@@ -3355,23 +4013,60 @@ async function loadItcz() {
 function refreshItcz() {
   if (!itczGroup) return;
   itczGroup.clearLayers();
-  if (!itczOn || !itcz || !itcz.times || !frames[current]) return;
+  if (!itczOn) return;
+  itczGambarKe(itczGroup, "itcz");
+}
+
+/* Gambar ITCZ DIPISAH dari toggle-nya 13 Oktober 2026, sebab sekarang ada
+   dua peta yang menggambarnya, peta utama dan peta sisipan di panel titik.
+   pane boleh kosong untuk peta yang tidak punya pane khusus. */
+function itczGambarKe(grup, pane, kecil) {
+  if (!grup || !itcz || !itcz.times || !frames[current]) return;
   const ti = itcz.times.indexOf(frames[current].valid_time);
   if (ti < 0) return;                         // waktu lampau → tak ada garis
+  const po = pane ? { pane } : {};
+  /* Di peta sisipan garisnya ditipiskan setengah. Ketebalan yang pas di
+     peta selebar layar jadi pita raksasa di kotak 467 x 170. */
+  const w = kecil ? 0.5 : 1;
   for (const sg of itcz.frames[ti] || []) {
     if (sg.length < 2) continue;
     // Pita zona: tepi utara (maju) + tepi selatan (mundur) → poligon terisi.
     const ring = [];
     for (const p of sg) ring.push([p[2], p[0]]);                // [latN, lon]
     for (let i = sg.length - 1; i >= 0; i--) ring.push([sg[i][3], sg[i][0]]); // [latS, lon]
-    L.polygon(ring, { pane: "itcz", color: ITCZ_COLOR, weight: 1, opacity: 0.35,
-      fillColor: ITCZ_COLOR, fillOpacity: 0.2, interactive: false }).addTo(itczGroup);
+    L.polygon(ring, Object.assign({ color: ITCZ_COLOR, weight: 1, opacity: 0.35,
+      fillColor: ITCZ_COLOR, fillOpacity: 0.2, interactive: false }, po)).addTo(grup);
     // Garis sumbu: casing putih (kontras di latar gelap/terang) + garis teal putus.
     const axis = sg.map((p) => [p[1], p[0]]);
-    L.polyline(axis, { pane: "itcz", color: "#ffffff", weight: 6, opacity: 0.35,
-      interactive: false, lineCap: "round", lineJoin: "round" }).addTo(itczGroup);
-    L.polyline(axis, { pane: "itcz", color: ITCZ_COLOR, weight: 3, opacity: 0.95,
-      dashArray: "7 5", interactive: false, lineCap: "round", lineJoin: "round" }).addTo(itczGroup);
+    L.polyline(axis, Object.assign({ color: "#ffffff", weight: 6 * w, opacity: 0.35,
+      interactive: false, lineCap: "round", lineJoin: "round" }, po)).addTo(grup);
+    L.polyline(axis, Object.assign({ color: ITCZ_COLOR, weight: 3 * w, opacity: 0.95,
+      dashArray: kecil ? "5 4" : "7 5", interactive: false, lineCap: "round", lineJoin: "round" }, po)).addTo(grup);
+
+    /* NAMA DITULIS DI PITANYA, bukan di keterangan pojok. Diminta pemilik,
+       dan memang lebih jelas, orang tidak perlu mencocokkan warna dengan
+       kotak legenda. Ditaruh berkala tiap 20 derajat bujur supaya di peta
+       sekecil apa pun selalu ada satu yang kebetulan terlihat, dan tiap
+       label dimiringkan mengikuti kemiringan poros di titik itu.
+
+       Kemiringannya dihitung dari derajat langsung, bukan dari piksel.
+       Di sekitar khatulistiwa Mercator hampir sebangun, dan poros ITCZ
+       memang tinggalnya di situ, jadi bedanya tak terlihat. */
+    if (kecil) {
+      for (let i = 1; i < sg.length - 1; i++) {
+        if (Math.round(sg[i][0]) % 20 !== 0) continue;
+        const a = sg[i - 1], b2 = sg[i + 1];
+        const sudut = Math.atan2(-(b2[1] - a[1]), b2[0] - a[0]) * 180 / Math.PI;
+        L.marker([sg[i][1], sg[i][0]], {
+          interactive: false, keyboard: false,
+          icon: L.divIcon({
+            className: "itcz-nama",
+            html: `<span style="transform:rotate(${sudut.toFixed(1)}deg)">Zona ITCZ</span>`,
+            iconSize: [0, 0], iconAnchor: [0, 0],
+          }),
+        }).addTo(grup);
+      }
+    }
   }
 }
 function toggleItcz() {
@@ -3633,6 +4328,25 @@ const MJO_ZONA = [
 ];
 const ZONA_LINTANG = 17;
 
+/* BUJUR SEBUAH TITIK MASUK FASE MJO YANG MANA. 13 Oktober 2026.
+
+   Dipakai menandai juring di oktagon panel titik. Patokannya MJO_ZONA di
+   atas, daftar yang sama yang mewarnai zona di peta, jadi juring yang
+   merah di oktagon dan zona yang menyala di peta TIDAK MUNGKIN berbeda.
+
+   Rentangnya ditulis 50 sampai 410 derajat, jadi bujur negatif atau yang
+   sudah lewat 180 digeser dulu ke jendela itu. */
+function mjoFaseBujur(lon) {
+  let b = Number(lon);
+  if (!isFinite(b)) return null;
+  while (b < 50) b += 360;
+  while (b >= 410) b -= 360;
+  for (const z of MJO_ZONA)
+    for (const [f, a, c] of z.fase)
+      if (b >= a && b < c) return { fase: f, zona: z.nama };
+  return null;
+}
+
 /* Kotak data kita, dipakai memotong zona yang menjulur keluar. Diambil dari
    katalog kalau ada, bukan dipatok, sebab domain backend pernah berubah. */
 function zonaBatasDomain() {
@@ -3834,7 +4548,10 @@ const MJO_TAHAP = [
    bersumbu -4 sampai 4, empat garis putus menyilang di tengah, lingkaran
    satuan, nomor fase besar di pojok tiap juring, dan nama wilayah di empat
    sisi. Yang diganti cuma paletnya, jadi palet kita. */
-function mjoOktagon(ix, jejak) {
+/* faseTitik DITAMBAHKAN 13 Oktober 2026, dipakai panel titik di bawah.
+   Panel keterangan MJO memanggil tanpa argumen ketiga dan gambarnya tidak
+   berubah sedikit pun. */
+function mjoOktagon(ix, jejak, faseTitik, faseMjo) {
   const X0 = 56, Y0 = 24, SISI = 264;            // kotak gambar
   const CX = X0 + SISI / 2, CY = Y0 + SISI / 2;  // 188, 156
   const S = SISI / 8;                            // 33 piksel per satuan, skala -4..4
@@ -3856,6 +4573,33 @@ function mjoOktagon(ix, jejak) {
      + "M" + n2([CX, Y0]) + "V" + (Y0 + SISI).toFixed(1)
      + "M" + n2([X0, Y0]) + "L" + n2([X0 + SISI, Y0 + SISI])
      + "M" + n2([X0, Y0 + SISI]) + "L" + n2([X0 + SISI, Y0]) + '"/>';
+  /* JURING FASE TITIK TERPILIH. Satu lokasi TIDAK punya RMM sendiri, RMM
+     itu indeks global, jadi menaruh noktah di koordinat RMM untuk sebuah
+     kota akan mengarang angka. Yang benar menandai JURINGNYA, yaitu fase
+     yang rentang bujurnya memuat titik itu.
+
+     Batas juring selalu kelipatan 45 derajat, dan sinar dari pusat pada
+     sudut kelipatan 45 selalu mendarat tepat di sudut kotak atau di tengah
+     sisi. Dua duanya ada di sisi yang sama, jadi juringnya segitiga biasa,
+     tidak perlu busur. */
+  if (faseTitik || faseMjo) {
+    const tepi = (deg) => {
+      const t = rad(deg), c = Math.cos(t), sn = Math.sin(t), h = SISI / 2;
+      const k = Math.min(Math.abs(c) < 1e-9 ? Infinity : h / Math.abs(c),
+                         Math.abs(sn) < 1e-9 ? Infinity : h / Math.abs(sn));
+      return [CX + k * c, CY - k * sn];
+    };
+    const juring = (f, kelas) => {
+      const a0 = (f - 5) * 45;
+      return '<path class="' + kelas + '" d="M' + n2([CX, CY]) + "L" + n2(tepi(a0))
+           + "L" + n2(tepi(a0 + 45)) + 'Z"/>';
+    };
+    /* HIJAU dulu baru MERAH, supaya kalau dua duanya jatuh di juring yang
+       sama yang terlihat merahnya, yaitu wilayah titik ini. Noktah penanda
+       dibuang atas permintaan pemilik, juring berwarna sudah cukup. */
+    if (faseMjo) o += juring(faseMjo, "okt-juring-mjo");
+    if (faseTitik) o += juring(faseTitik, "okt-juring");
+  }
   o += '<circle class="okt-satuan" cx="' + CX + '" cy="' + CY + '" r="' + S + '"/>';
   o += '<rect class="okt-bingkai" x="' + X0 + '" y="' + Y0 + '" width="' + SISI
      + '" height="' + SISI + '"/>';
@@ -4983,7 +5727,7 @@ async function init() {
        itu dia membuka panel titik seperti biasa. */
     map.on("click", (e) => {
       if (skewtMode) { setSkewtMode(false); bukaSkewT(e.latlng.lat, e.latlng.lng); }
-      else openPoint(e.latlng.lat, e.latlng.lng);
+      else bukaGelembung(e.latlng.lat, e.latlng.lng);
     });
     $("skewt-toggle")?.addEventListener("click", () => setSkewtMode(!skewtMode));
     $("hov-buka")?.addEventListener("click", bukaHovmoller);

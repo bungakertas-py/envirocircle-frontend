@@ -471,6 +471,11 @@
 
         <!-- legenda — bawah kanan (legenda ikon kondisi di atas, muncul saat toggle) -->
         <div class="legend-col">
+          <!-- Tombol memunculkan lagi panel titik, DI ATAS bar legenda dan
+               rata kanan, diminta pemilik. Sebelumnya mengambang bebas di
+               pojok kanan bawah dan tertimpa bar legenda ini, jadi tidak
+               pernah ketemu. Hanya tampil sesudah ada titik dipilih. -->
+          <button id="pt-reopen" title="Tampilkan lagi panel titik"><span class="material-symbols-outlined">expand_less</span>Panel titik</button>
           <div class="legend-panel">
             <div class="legend-head mono" id="legend-head">KNOTS</div>
             <div class="legend" id="legend-cells"></div>
@@ -684,24 +689,71 @@
     <div id="klik-petunjuk" class="klik-petunjuk" aria-hidden="true">Click Here</div>
 
 
-    <!-- Panel detail titik (muncul saat klik peta) -->
-    <aside id="point-panel">
-      <div class="pt-head">
-        <div class="pt-head-top">
+    <!-- ============ PANEL TITIK, PINDAH KE BAWAH 13 Oktober 2026 ============
+
+         Dulu panel ini menempel di tepi KANAN dan isinya tegak, ringkasan,
+         saran, kartu tiga hari, grafik, lalu tabel per jam yang digulir ke
+         bawah. Diganti meteogram mendatar ala Windy atas permintaan pemilik,
+         sebab membaca deret waktu itu memang lebih enak mendatar, dan peta
+         tidak lagi terpotong 380 px di kanan.
+
+         Isinya sekarang TIGA lapis.
+         1. Kepala, nama titik dan tombol.
+         2. Chip konteks, fenomena yang sedang lewat di atas titik itu,
+            ITCZ, MJO, monsun, dan siklon terdekat. Datanya sudah ada di app,
+            cuma belum pernah dikaitkan ke satu titik.
+         3. Meteogram, satu kolom per langkah waktu, digulir mendatar.
+
+         id lama `pt-coords`, `pt-export`, `pt-close`, `pt-hide`, `pt-reopen`
+         SENGAJA DIPERTAHANKAN, app.js masih memasang pendengar di sana dan
+         setPointLabel masih menulis ke pt-coords. -->
+    <section id="meteo-bar" aria-label="Detail titik terpilih">
+      <div class="mb-head">
+        <div class="mb-judul">
           <span class="badge badge-lime">TITIK TERPILIH</span>
-          <div class="pt-head-btns">
-            <button id="pt-hide" class="pt-close" title="Sembunyikan"><span class="material-symbols-outlined">chevron_right</span></button>
-            <button id="pt-close" class="pt-close" title="Tutup"><span class="material-symbols-outlined">close</span></button>
-          </div>
+          <span class="mb-nama mono" id="pt-coords">—</span>
         </div>
-        <div class="pt-coords mono" id="pt-coords">—</div>
+        <div class="mb-btns">
+          <button id="pt-export" class="mb-btn" title="Unduh data titik ini sebagai CSV"><span class="material-symbols-outlined">download</span><span class="mb-btn-t">CSV</span></button>
+          <button id="pt-hide" class="mb-btn" title="Kecilkan"><span class="material-symbols-outlined">expand_more</span></button>
+          <button id="pt-close" class="mb-btn" title="Tutup"><span class="material-symbols-outlined">close</span></button>
+        </div>
       </div>
-      <div class="pt-body" id="pt-body"></div>
-      <div class="pt-foot">
-        <button id="pt-export" class="pt-export"><span class="material-symbols-outlined">download</span> EXPORT CSV</button>
+      <!-- Badan panel dibelah dua. Blok fenomena BERDIRI SENDIRI di markup,
+           bukan ditulis ulang oleh renderPoint, sebab di dalamnya ada peta
+           Leaflet sungguhan. Kalau innerHTML-nya ditimpa tiap titik diganti,
+           peta itu ikut dibongkar dan harus dibangun ulang tiap klik. -->
+      <div class="mb-body">
+        <div class="mb-scroll" id="mb-body"></div>
+        <!-- Blok fenomena di KANAN, diminta pemilik. Dia mengisi ruang yang
+             tersisa di samping meteogram, dan dengan model berkolom sedikit
+             seperti GFS ruang itu memang menganga di sebelah kanan. -->
+        <aside class="mb-fenomena" id="mb-fenomena">
+          <!-- ENAM PANEL, susunan 3 x 2, mengikuti sketsa pemilik.
+               Wadah peta dan isi dipisah di tiap panel yang punya peta, sebab
+               isi ditulis ulang tiap titik berganti sedangkan peta Leaflet
+               tidak boleh ikut dibongkar.
+               data-fitur menyalakan lencana "buka fitur" waktu disorot. -->
+          <div class="mb-sel" id="mb-mjo" data-fitur="mjo"></div>
+
+          <div class="mb-sel" id="mb-ausmi" data-fitur="ausmi">
+            <div class="mb-sel-judul">Indeks AUSMI</div>
+            <div class="mb-mini" id="mb-peta-ausmi"></div>
+            <div class="mb-sel-isi" id="mb-ausmi-isi"></div>
+          </div>
+
+          <div class="mb-sel" id="mb-siklon" data-fitur="siklon"></div>
+
+          <div class="mb-sel" id="mb-kondisi"></div>
+
+          <div class="mb-sel" id="mb-itcz" data-fitur="itcz">
+            <div class="mb-sel-judul">Intertropical Convergence Zone</div>
+            <div class="mb-mini" id="mb-peta-itcz"></div>
+            <div class="mb-sel-isi" id="mb-itcz-isi"></div>
+          </div>
+        </aside>
       </div>
-    </aside>
-    <button id="pt-reopen" title="Tampilkan detail titik"><span class="material-symbols-outlined">chevron_left</span></button>
+    </section>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

@@ -114,13 +114,31 @@ html, body {
 
 /* ===================== MAP STAGE ===================== */
 #stage { position: fixed; inset: 0; }
-#map { position: absolute; inset: 0; background: #04131F; }
+/* Tingginya IKUT panel titik bawah, lihat ukurPanelBawah() di app.js. Dulu
+   petanya tetap setinggi layar dan panel menimbunnya, jadi separuh peta ada
+   tapi tak terlihat dan geser peta terasa mentok, sebab kunci pan dihitung
+   untuk peta setinggi penuh.
+
+   TANPA TRANSISI, disengaja. Waktu tingginya dianimasikan, tepi bawah peta
+   merayap selama dua ratus milidetik sementara Leaflet belum menggambar
+   ulang ubinnya, dan yang terlihat di belakang tepi itu pita gelap. Dengan
+   perubahan seketika, tepinya tidak pernah ada di tengah jalan, dan
+   invalidateSize dipanggil di frame yang sama. */
+#map {
+  position: absolute; top: 0; left: 0; right: 0; bottom: var(--mb-h, 0px);
+  background: #04131F;
+}
 .leaflet-container { background: #04131F; font-family: var(--font-ui); }
 .velocity-overlay { pointer-events: none; }
 
 /* Overlay wrapper */
 #ui {
+  /* padding bawah IKUT TINGGI PANEL BAWAH, lihat ukurPanelBawah() di app.js.
+     #ui memakai space-between, jadi menambah padding bawahnya mendorong
+     slider dan legenda naik, bukan menimbunnya di balik meteogram. */
   position: absolute; inset: 0; padding: 20px;
+  padding-bottom: calc(20px + var(--mb-h, 0px));
+  transition: padding-bottom .25s ease;
   display: flex; flex-direction: column; justify-content: space-between;
   pointer-events: none; z-index: 500;
 }
@@ -395,7 +413,7 @@ html, body {
 .tl-tick.day .tl-tick-mark { height: 10px; background: var(--ink); }
 .tl-tick-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--variant); margin-top: 2px; white-space: nowrap; }
 .tl-tick.day .tl-tick-lbl { color: var(--ink); font-weight: 700; }
-.tl-btns { display: flex; gap: 10px; }
+.tl-btns { display: flex; align-items: center; gap: 10px; }
 .tl-btn {
   width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
   border: var(--bw) solid var(--ink); background: var(--surface);
@@ -1150,13 +1168,320 @@ html, body {
 /* Point panel: hide/reopen */
 .pt-head-btns { display: flex; gap: 8px; }
 #point-panel.hidden { transform: translateX(101%); }
+/* Pindah dari tepi kanan ke bawah tengah 13 Oktober 2026, mengikuti
+   panelnya yang juga pindah. */
+/* Tombol mengembalikan panel titik. Mengambang TEPAT DI ATAS bar legenda,
+   rata kanan, dan hurufnya putih sebab yang ada di belakangnya peta.
+   Sebelumnya dia bebas di pojok kanan bawah dan tertimpa bar legenda itu
+   sendiri, jadi tidak pernah ketemu. Hanya tampil sesudah ada titik. */
 #pt-reopen {
-  position: absolute; top: 50%; right: 0; transform: translateY(-50%);
-  width: 30px; height: 56px; border: var(--bw) solid var(--ink); border-right: none;
-  background: var(--primary); color: #fff; cursor: pointer; z-index: 1100;
-  display: none; align-items: center; justify-content: center;
+  /* SEJAJAR dengan kepala legenda, yaitu baris "ANGIN · KNOTS" yang
+     duduk di atas pita warnanya. Dipatok ke tepi atas .legend-col, dan
+     kepala legenda memang baris pertama di dalamnya, jadi dua duanya
+     berdiri di garis yang sama tanpa angka ajaib. */
+  position: absolute; right: 0; top: 0; z-index: 20;
+  display: none; align-items: center; gap: 5px; white-space: nowrap;
+  height: 22px; padding: 0 11px 0 7px; border-radius: 999px; cursor: pointer;
+  /* PUTIH SELURUHNYA, huruf, panah, dan garis tepinya. Tanpa latar berwarna.
+     Sempat kupakai tinta tembus pandang dan di layar tetap terbaca biru,
+     lalu garis tepinya masih 60 persen putih sehingga terlihat kelabu.
+     Sekarang tiga duanya #fff penuh, dengan bayangan tipis supaya tetap
+     terbaca kalau kebetulan lewat di atas daerah peta yang terang. */
+  background: transparent; border: 1px solid #ffffff;
+  color: #ffffff; font-family: var(--font-ui); font-size: 10.5px; letter-spacing: .06em;
+  text-shadow: 0 0 4px rgba(0, 0, 0, .75);
 }
-#pt-reopen.show { display: flex; }
+#pt-reopen .material-symbols-outlined { font-size: 17px; color: #ffffff; }
+#pt-reopen.show { display: inline-flex; }
+#pt-reopen:hover { background: rgba(255, 255, 255, .18); border-color: #fff; }
+
+
+/* =====================================================================
+   PANEL TITIK BAWAH, METEOGRAM. 13 Oktober 2026.
+
+   Menggantikan #point-panel yang dulu menempel di tepi kanan. Lebarnya
+   penuh, tingginya ikut jumlah baris, dan isinya digulir MENDATAR.
+
+   Kolom labelnya sticky di kiri, kalau tidak orang yang sudah menggulir
+   ke hari ketiga tidak tahu lagi baris mana yang sedang dilihatnya.
+   ===================================================================== */
+#meteo-bar {
+  /* TANPA tepi atas. Garis itu jatuh cuma 13 piksel di bawah label waktu
+     yang mengambang, dan dua duanya terbaca seperti satu benda yang
+     mengganggu. Panel ini sudah berlatar putih di atas peta, batasnya
+     terbaca sendiri tanpa perlu digaris. */
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 1100;
+  background: var(--surface); border-top: 0;
+  max-height: 58vh; display: flex; flex-direction: column;
+  /* PUDAR MASUK DAN KELUAR, bukan menggeser dari bawah. Geseran menuntut
+     tepi panel dan tepi peta bergerak serempak sempurna, dan selisih
+     sekejap saja sudah terbaca sebagai pita menganga. Dengan pudar, yang
+     berubah cuma kepekatannya, dan tepi petanya boleh menyesuaikan sendiri.
+
+     visibility ikut dianimasikan dengan tunda, bukan dimatikan seketika,
+     supaya panel yang sedang memudar masih tergambar sampai pudarnya
+     selesai, lalu benar benar hilang dari jangkauan penunjuk. */
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .22s ease, visibility 0s linear .22s;
+}
+#meteo-bar.open {
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transition: opacity .22s ease, visibility 0s linear 0s;
+}
+#meteo-bar.open.hidden {
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .22s ease, visibility 0s linear .22s;
+}
+
+.mb-head {
+  display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+  border-bottom: var(--bw) solid var(--ink); flex-wrap: wrap;
+}
+.mb-judul { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.mb-nama { font-size: 12.5px; color: var(--ink); }
+.mb-btns { display: flex; gap: 6px; margin-left: auto; }
+.mb-btn {
+  height: 30px; padding: 0 9px; border: var(--bw) solid var(--ink); background: var(--surface);
+  color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-ui); font-size: 11px; letter-spacing: .06em;
+}
+.mb-btn:hover { background: var(--accent-soft, #5DEBD7); }
+.mb-btn .material-symbols-outlined { font-size: 18px; }
+
+.mb-body { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; }
+/* Tabelnya SELEBAR ISINYA, bukan selebar sisa ruang. Dulu dia flex:1 dan
+   akibatnya ada celah putih antara kolom terakhir dan blok fenomena, sebab
+   kotak gulirnya lebih lebar daripada tabel di dalamnya. Sekarang kotaknya
+   menyusut mengikuti tabel, dan blok fenomena yang memakan sisanya. Kalau
+   tabelnya memang lebih lebar dari layar, seperti WRF yang 67 kolom, dia
+   boleh menyusut dan digulir, dan blok fenomena berhenti di lebar minimumnya. */
+.mb-scroll { overflow: auto; flex: 0 1 auto; min-width: 0; }
+
+/* ---------------------- METEOGRAM, TABELNYA ----------------------
+   Ikut terbuang sekali waktu blok fenomena dipotong, dan akibatnya satuan
+   di kolom label menempel ke namanya, "SuhuC", serta kepala harinya
+   melipat. Ditulis balik di sini, terpisah dari blok fenomena, supaya
+   kejadian yang sama tidak terulang. */
+.mb-tabel { table-layout: fixed; border-collapse: collapse; font-family: var(--font-ui); font-size: 11.5px; }
+.mb-tabel th, .mb-tabel td {
+  padding: 1px 0; text-align: center; width: 38px; white-space: nowrap;
+  line-height: 1.5; border-left: 1px solid rgba(7, 65, 115, .07);
+  overflow: hidden;
+}
+/* Kolom label tetap terlihat walau digulir jauh ke kanan. */
+.mb-label {
+  position: sticky; left: 0; z-index: 3; background: var(--surface);
+  text-align: left !important; padding: 2px 10px !important; width: 88px;
+  border-right: var(--bw) solid var(--ink); font-weight: 500; font-size: 11px;
+}
+.mb-label span { display: block; font-size: 9px; opacity: .5; letter-spacing: .05em; }
+.mb-pojok { border-bottom: var(--bw) solid var(--ink); }
+.mb-hari {
+  border-bottom: var(--bw) solid var(--ink); border-left: var(--bw) solid var(--ink);
+  padding: 5px 10px !important; text-align: left !important; width: auto;
+}
+.mb-hari b { font-weight: 700; font-size: 12px; }
+
+.mb-jam { font-size: 10.5px; opacity: .7; padding-bottom: 4px !important; cursor: pointer; }
+.mb-tabel td { cursor: pointer; }
+.mb-ico { display: inline-flex; }
+.mb-ico .material-symbols-outlined { font-size: 16px; display: block; }
+.mb-panah { display: inline-block; font-size: 13px; line-height: 1; }
+/* Kolom yang sedang ditampilkan peta. Dua garis tegak, bukan bidang
+   berwarna, sebab selnya sendiri sudah berwarna menurut nilainya. */
+.mb-tabel .mb-aktif { box-shadow: inset 1.6px 0 0 var(--ink), inset -1.6px 0 0 var(--ink); }
+.mb-tabel th.mb-aktif { font-weight: 700; opacity: 1; }
+/* TIGA KEADAAN WAKTU, dibedakan bentuk dan kepekatan, bukan tiga warna yang
+   harus dihafal. Masa lalu diredupkan sebab isinya analisis. Jam sekarang
+   dapat satu garis terakota di tepi kiri. Ramalan dibiarkan apa adanya.
+   Penanda slider tetap garis tinta DUA sisi, jadi tidak pernah tertukar. */
+.mb-tabel .mb-lalu { opacity: .5; }
+.mb-tabel th.mb-lalu { opacity: .38; }
+.mb-tabel .mb-kini { box-shadow: inset 2.2px 0 0 #C8553D; }
+.mb-tabel th.mb-kini { font-weight: 700; color: #C8553D; opacity: 1; }
+.mb-tabel .mb-aktif.mb-kini { box-shadow: inset 2.2px 0 0 #C8553D, inset -1.6px 0 0 var(--ink); }
+.mb-gagal { padding: 18px; font-size: 12.5px; }
+/* Tulang shimmer, ukurannya DISAMAKAN dengan tabel sungguhan supaya tata
+   letaknya tidak melompat waktu isi aslinya mendarat. Lihat pointSkeleton(). */
+.mb-skel { display: flex; flex-direction: column; }
+.sk-baris { display: flex; align-items: center; height: 26px; }
+.sk-baris-hari { height: 32px; }
+.sk-label {
+  width: 88px; flex: none; padding: 0 10px; display: flex; align-items: center;
+  border-right: var(--bw) solid var(--ink);
+}
+.sk-sel { width: 38px; flex: none; display: flex; justify-content: center; align-items: center; }
+.sk-hari { width: 228px; flex: none; padding-left: 10px; display: flex; align-items: center; }
+.sk-bulat { border-radius: 50%; }
+.mb-sel-skel .mb-sel-peraga { width: 100%; }
+
+/* =====================================================================
+   BLOK FENOMENA, mengisi ruang di samping meteogram.
+
+   LEBARNYA LENTUR. Tabel mengambil selebar isinya, blok ini memakan sisanya,
+   jadi tidak ada celah putih di antaranya. Dengan model berkolom banyak
+   seperti WRF, tabelnya yang menyusut dan digulir sampai blok ini mentok di
+   lebar minimumnya.
+
+   Susunannya TIGA kolom DUA baris, mengikuti sketsa pemilik. Baris bawah
+   cuma dua panel, jadi panel ITCZ melebar dua kolom.
+   ===================================================================== */
+.mb-fenomena {
+  flex: 1 1 auto; min-width: 360px; display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 1fr 1fr;
+  border-left: var(--bw) solid var(--ink);
+}
+.mb-sel {
+  position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  padding: 7px 9px 8px; text-align: center;
+  display: flex; flex-direction: column; align-items: stretch;
+  border-left: var(--bw) solid var(--ink); border-top: var(--bw) solid var(--ink);
+}
+.mb-sel:nth-child(-n+3) { border-top: 0; }
+.mb-sel:nth-child(3n+1) { border-left: 0; }
+#mb-itcz { grid-column: span 2; }
+.mb-sel-judul {
+  font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink); opacity: .55; margin-bottom: 4px; line-height: 1.3;
+}
+/* Bagian bergambar MEMAKAN SISA tinggi, jadi oktagon, ikon siklon, dan peta
+   kecil sama sama membesar mengikuti panelnya, bukan dipatok piksel. */
+.mb-sel-peraga {
+  flex: 1 1 auto; min-height: 0; display: flex;
+  align-items: center; justify-content: center;
+}
+.mb-sel-peraga .mjo-okt { max-height: 100%; width: auto; margin: 0; }
+.mb-sel-isi { font-size: 10.5px; line-height: 1.4; padding-top: 4px; }
+.mb-sel-kosong { font-size: 10.5px; opacity: .5; margin: auto 0; line-height: 1.5; }
+.mb-mini { flex: 1 1 auto; min-height: 60px; background: #eef1f3; }
+.mb-mini .leaflet-container { background: #eef1f3; }
+
+/* Lencana "buka fitur", muncul waktu panelnya disorot. */
+.mb-lencana {
+  position: absolute; right: 6px; top: 5px; z-index: 5;
+  display: none; align-items: center; gap: 4px;
+  border: var(--bw) solid var(--ink); background: var(--surface); color: var(--ink);
+  font-family: var(--font-ui); font-size: 9.5px; letter-spacing: .05em;
+  padding: 2px 7px; cursor: pointer;
+}
+.mb-lencana .material-symbols-outlined { font-size: 13px; }
+.mb-sel:hover .mb-lencana, .mb-lencana:focus-visible { display: flex; }
+.mb-lencana:hover { background: #5DEBD7; }
+
+/* Oktagon MJO. Juring MERAH wilayah titik, juring HIJAU fase MJO sekarang. */
+.mb-sel .mjo-okt { margin: 0; }
+/* Oktagon yang sama dipakai di dua ukuran. Di panel bawah dia dikecilkan
+   sampai sekitar sepertiga, dan huruf yang pas di panel besar jadi tidak
+   terbaca di sini. Jadi khusus di panel ini sumbu RMM1 dan RMM2 serta skala
+   angkanya dibesarkan, dalam satuan viewBox jadi ikut mengecil bersamanya. */
+.mb-sel .okt-sumbu { font-size: 17px; letter-spacing: .06em; fill: var(--ink); opacity: .75; }
+.mb-sel .okt-skala { font-size: 13px; }
+.mb-sel .okt-no { font-size: 19px; font-weight: 700; fill: var(--ink); opacity: .7; }
+/* Garis pemisah juring diberi warna emas dan sedikit ditebalkan, diminta
+   pemilik. Di ukuran sekecil ini garis putus putus abu nyaris lenyap di
+   antara dua juring berwarna, dan batas juring itu justru yang membuat
+   nomor fasenya punya arti. */
+.mb-sel .okt-bagi { stroke: #D4A017; stroke-width: 1.6; opacity: .9; }
+.okt-juring { fill: rgba(200, 85, 61, .25); stroke: #C8553D; stroke-width: 1; }
+.okt-juring-mjo { fill: rgba(27, 122, 61, .25); stroke: #1b7a3d; stroke-width: 1; }
+
+/* Indeks AUSMI */
+.au-angka { font-size: 20px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+.au-angka span { font-size: 9.5px; font-weight: 400; opacity: .55; margin-left: 3px; }
+.au-arah { font-size: 10px; opacity: .7; }
+
+/* Siklon, ikon berputar sesuai belahan bumi */
+.sik-ikon { line-height: 1; }
+.sik-ikon .material-symbols-outlined { font-size: 66px; }
+@keyframes sik-kiri { to { transform: rotate(-360deg); } }
+@keyframes sik-kanan { to { transform: rotate(360deg); } }
+.sik-utara .material-symbols-outlined { display: inline-block; animation: sik-kiri 9s linear infinite; }
+.sik-selatan .material-symbols-outlined { display: inline-block; animation: sik-kanan 9s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .sik-utara .material-symbols-outlined, .sik-selatan .material-symbols-outlined { animation: none; }
+}
+.sik-kat { font-size: 11px; font-weight: 700; line-height: 1.25; }
+.sik-jarak { font-size: 10px; opacity: .78; margin-top: 3px; line-height: 1.4; }
+.sik-cacah { font-size: 9px; opacity: .45; letter-spacing: .06em; padding-top: 3px; }
+
+/* Kondisi saat ini, parameter bergantian */
+.kon-nama { font-size: 11.5px; font-weight: 700; color: var(--ink); }
+.kon-ikon { font-size: 62px; color: var(--primary); }
+.kon-nilai { font-size: 24px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+.kon-nilai span { font-weight: 400; opacity: .5; font-size: 10px; margin-left: 3px; }
+/* Kata keadaan cuaca, bukan angka, jadi ukurannya diturunkan supaya muat. */
+.kon-nilai .kon-kata { font-size: 14px; font-weight: 700; opacity: 1; margin: 0; }
+.kon-nilai .mb-panah { font-size: 22px; }
+.kon-nilai .mb-ico .material-symbols-outlined { font-size: 30px; }
+
+/* Nama pita ITCZ, ditulis di atas pitanya sendiri di peta kecil. */
+.itcz-nama { pointer-events: none; }
+.itcz-nama span {
+  display: inline-block; white-space: nowrap; transform-origin: 0 50%;
+  font-family: var(--font-ui); font-size: 8.5px; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; color: #ffffff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, .85), 0 0 6px rgba(0, 0, 0, .6);
+  margin-left: -26px;
+}
+
+/* Layar sempit. Panelnya boleh lebih tinggi sebab petanya memang sudah
+   sempit, dan chip konteks digulir mendatar supaya kepala tidak menumpuk
+   jadi tiga baris. */
+@media (max-width: 720px) {
+  #meteo-bar { max-height: 72vh; }
+  /* Berdampingan tidak muat di lebar telepon. Blok fenomena naik ke atas
+     tabel, dan tiga selnya tetap bersebelahan sebab isinya memang pendek. */
+  .mb-body { flex-direction: column; }
+  /* Di layar sempit blok fenomena naik ke ATAS tabel, jadi urutan DOM yang
+     menaruhnya di belakang dibalik lagi lewat order. */
+  .mb-fenomena { order: -1; flex: 0 0 auto; max-width: none; border-left: 0;
+                 border-bottom: var(--bw) solid var(--ink); }
+  .mb-sel { padding: 6px 5px 7px; }
+  .sik-ikon .material-symbols-outlined { font-size: 46px; }
+  .sik-kat { font-size: 10px; }
+  .sik-jarak, .mb-sel-kaki { font-size: 9.5px; }
+  .au-angka { font-size: 21px; }
+  .mb-mini { min-height: 110px; }
+  .mb-head { flex-wrap: nowrap; gap: 8px; padding: 6px 10px; }
+  .mb-chips { flex-wrap: nowrap; overflow-x: auto; }
+  .mb-judul .badge { display: none; }
+  .mb-btn-t { display: none; }
+  .mb-label { min-width: 70px; }
+  .mb-tabel th, .mb-tabel td { min-width: 30px; }
+}
+
+/* =====================================================================
+   GELEMBUNG NILAI. Langkah pertama sesudah klik, panel bawah menyusul
+   kalau lencana Detail diketuk. Lihat bukaGelembung() di app.js.
+   ===================================================================== */
+.gb-popup .leaflet-popup-content-wrapper {
+  background: var(--paper); color: var(--ink);
+  border: 0.7px solid var(--ink); border-radius: 4px; box-shadow: none;
+}
+.gb-popup .leaflet-popup-content { margin: 0; }
+.gb-popup .leaflet-popup-tip { background: var(--paper); border: 0.7px solid var(--ink); box-shadow: none; }
+.gb-popup .leaflet-popup-close-button { color: var(--ink-50); }
+.gb { padding: 9px 12px 10px; text-align: center; min-width: 120px; }
+.gb-nama { font-size: 10.5px; letter-spacing: .06em; color: var(--ink-70); margin-bottom: 2px; }
+.gb-par { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-50); }
+.gb-angka { font-size: 26px; font-weight: 700; line-height: 1.15; color: var(--ink); }
+.gb-angka span { font-size: 10px; font-weight: 400; opacity: .55; margin-left: 3px; }
+.gb-tunggu { opacity: .35; letter-spacing: .15em; }
+.gb-detail {
+  margin-top: 7px; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  border: 0.7px solid var(--ink); background: var(--ink); color: var(--paper);
+  font-family: var(--font-ui); font-size: 10.5px; letter-spacing: .08em;
+  padding: 3px 10px; border-radius: 999px; cursor: pointer;
+}
+.gb-detail:hover { background: var(--primary); border-color: var(--primary); }
+.gb-detail .material-symbols-outlined { font-size: 15px; }
+
+/* Latar panggung disamakan dengan latar peta. Waktu panel titik naik, kotak
+   peta memendek dan panelnya butuh seperempat detik untuk sampai, dan di
+   sela itu sempat terlihat pita HITAM. Dengan latar yang sama warnanya,
+   sela itu tidak lagi terbaca sebagai lubang. */
+#stage { background: #04131F; }
 
 /* ===================== SEARCH KOTA/KABUPATEN ===================== */
 .search-wrap { position: relative; pointer-events: auto; }
@@ -1330,7 +1655,10 @@ html, body {
 
   /* panel detail titik = full-screen */
   #point-panel { width: 100vw; max-width: 100vw; border-left: none; }
-  #pt-reopen { top: auto; bottom: 128px; transform: none; }
+  /* Di layar sempit tombolnya tetap menempel di atas bar legenda, cuma
+     jaraknya dirapatkan. Aturan lama menaruhnya 128 px dari dasar layar,
+     peninggalan waktu dia masih mengambang bebas. */
+  #pt-reopen { font-size: 10px; height: 20px; }
 
   /* kotak pencarian = full-width di bawah bar atas */
   .search-box { position: fixed; top: 112px; left: 10px; right: 10px; width: auto; }
@@ -1397,7 +1725,11 @@ html, body {
   /* ---- gagang penarik, satu-satunya kontrol yang terlihat saat ciut ---- */
   .lowbar-handle {
     display: flex; align-items: center; justify-content: center;
-    position: fixed; left: 50%; bottom: 0; transform: translateX(-50%);
+    /* NAIK setinggi panel titik bawah. Gagang ini z-index 1400, jadi tanpa
+       ini dia duduk tepat di atas baris terakhir meteogram. Terlihat di uji
+       lebar 430 px, gagangnya menutupi baris CAPE. */
+    position: fixed; left: 50%; bottom: var(--mb-h, 0px); transform: translateX(-50%);
+    transition: bottom .25s ease;
     z-index: 1400; width: 76px; height: 30px; padding: 0;
     background: var(--surface); color: var(--ink);
     border: var(--bw) solid var(--ink); border-bottom: none;
@@ -1981,20 +2313,44 @@ body { font-weight: 200; }
 .tl-btn:hover { border-color: var(--ink); }
 .tl-btn .material-symbols-outlined { font-size: 18px; }
 
-.tl-main { flex: 1; min-width: 0; }
+/* =====================================================================
+   BATANG WAKTU JADI SILINDER. 13 Oktober 2026, diminta pemilik.
+
+   Alurnya pil membulat, bagian yang sudah terlewat terisi warna penunjuk,
+   sisanya abu. Isiannya digambar CSS dari satu variabel --tl-isi yang diisi
+   showFrame, sebab input range tidak bisa mewarnai separuh alurnya sendiri
+   dengan cara yang sama di semua peramban.
+
+   Label waktunya PINDAH ke atas gagangnya, bukan lagi sebaris di kiri.
+   Dengan peta yang jadi pipih waktu panel titik terbuka, baris label yang
+   berdiri sendiri itu memakan tinggi yang mahal. */
+.tl-main { flex: 1; min-width: 0; position: relative; padding-top: 18px; }
+/* TANPA latar dan TANPA garis tepi. Sempat kubuat pil berlatar kertas di
+   sini, dan sebab aturan yang MENANG ada di blok paling belakang dan cuma
+   mengatur letak, latar itu bertahan dan tampil sebagai garis putih kosong
+   di atas tulisan jamnya. Yang mengatur rupa label ini .tl-cur .mono di
+   blok peta, bukan di sini. */
 .tl-cur {
-  font-size: 12px; font-weight: 200; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--ink-50); margin-bottom: 6px;
+  position: absolute; top: 0; left: var(--tl-isi, 0%);
+  transform: translateX(-50%); white-space: nowrap;
+  background: transparent; border: 0; padding: 0; margin: 0;
+  text-transform: none; pointer-events: none;
 }
 /* Batang waktu. Alurnya garis rambut, gagangnya titik kecil berongga.
    Tidak ada kotak, tidak ada warna. */
 #time-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; }
-#time-slider::-webkit-slider-runnable-track { height: 1px; background: var(--ink-20); }
-#time-slider::-moz-range-track { height: 1px; background: var(--ink-20); }
+#time-slider::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(to right, var(--primary) 0 var(--tl-isi, 0%), var(--ink-20) var(--tl-isi, 0%) 100%);
+}
+#time-slider::-moz-range-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(to right, var(--primary) 0 var(--tl-isi, 0%), var(--ink-20) var(--tl-isi, 0%) 100%);
+}
 #time-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: 13px; height: 13px; margin-top: -6px; border-radius: 999px;
-  background: var(--paper); border: 1.4px solid var(--ink); cursor: pointer;
+  width: 14px; height: 14px; margin-top: -3px; border-radius: 999px;
+  background: var(--paper); border: 2px solid var(--primary); cursor: pointer;
 }
 #time-slider::-moz-range-thumb {
   width: 13px; height: 13px; border-radius: 999px;
@@ -2037,6 +2393,19 @@ body { font-weight: 200; }
   border: 0; border-right: 0.7px solid var(--ink-20);
 }
 .legend-cell:last-child { border-right: 0; }
+
+/* Waktu panel titik terbuka, petanya tinggal sepertiga layar. Bilah bawah
+   ini ikut diciutkan supaya tidak ikut memakan sisa itu, dan legendanya
+   mengecil bersamanya. Kelas mb-buka dipasang ukurPanelBawah(). */
+.mb-buka .ui-bottom { padding: 6px 20px; gap: 16px; }
+.mb-buka .ui-bottom .panel.timeline { gap: 12px; }
+.mb-buka .tl-btn { width: 28px; height: 28px; }
+.mb-buka .tl-btn .material-symbols-outlined { font-size: 16px; }
+.mb-buka .tl-main { padding-top: 15px; }
+.mb-buka .tl-cur { font-size: 10px; }
+.mb-buka .legend-cell { font-size: 9px; width: 30px; min-height: 22px; }
+.mb-buka .legend-head { font-size: 9px; letter-spacing: .1em; }
+.mb-buka #tl-ticks { display: none; }
 
 /* ---- Banner siklon dan ITCZ ---- */
 .cyc-note {
@@ -2230,12 +2599,25 @@ body { font-weight: 200; }
    Bahasa, pencarian, dan zoom. Dikeluarkan dari kartu Fitur sebab tiga ini
    dipakai terus menerus, bukan sesekali.
    ===================================================================== */
+/* WADAHNYA TEMBUS KLIK, isinya yang tidak. Diukur 13 Oktober 2026, kotak
+   .alat ini 225 piksel tinggi dan 807 lebar, dan selama dia menangkap
+   penunjuk, SELURUH sudut kanan atas peta tidak bisa digeser walau yang
+   terlihat di situ cuma peta. Pemilik melaporkannya, kursornya berubah dan
+   petanya susah digeser di dekat header.
+
+   Pola yang sama dengan #ui, wadah none lalu anak anaknya auto. Celah di
+   antara tombol jadi milik peta lagi. */
 .alat {
   position: absolute; top: 0; right: 0; z-index: 45;
   display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
-  pointer-events: auto;
+  pointer-events: none;
 }
-.alat-baris { display: flex; align-items: stretch; gap: 8px; }
+.alat-baris { display: flex; align-items: stretch; gap: 8px; pointer-events: none; }
+.alat > *, .alat-baris > * { pointer-events: auto; }
+/* DUA BARIS INI HARUS DI BAWAH yang di atasnya. .alat > * ikut mengenai
+   .alat-baris dan .alat-baris > * ikut mengenai .alat-nav, dan dua duanya
+   wadah, bukan tombol. Spesifisitasnya sama, jadi yang belakangan menang. */
+.alat-baris, .alat-nav { pointer-events: none; }
 
 /* Kotak cari LANGSUNG bisa diketik, tidak perlu ditekan dulu. Tombol lupanya
    disembunyikan, bukan dibuang, sebab app.js masih memasang pendengar di sana. */
@@ -2363,14 +2745,20 @@ body { font-weight: 200; }
   font-family: var(--font-ui); font-weight: 300; letter-spacing: .06em;
   text-transform: uppercase; color: var(--ink);
 }
-.pt-close, .pt-btn, .pt-tab, #pt-reopen {
+/* #pt-reopen DIKELUARKAN dari daftar ini 13 Oktober 2026. Dia sisa dari
+   zaman panel titik masih menempel di tepi kanan dan tombolnya sekeluarga
+   dengan .pt-close. Sekarang dia mengambang di atas peta dan harus putih,
+   sedangkan aturan ini memberinya warna tinta. Letaknya lebih belakang
+   daripada aturan #pt-reopen sendiri, jadi dia yang menang dan tombolnya
+   tetap biru walau sudah diputihkan dua kali. */
+.pt-close, .pt-btn, .pt-tab {
   background: transparent; color: var(--ink-70);
   border: 0.7px solid var(--ink-20); border-radius: 999px;
   box-shadow: none; font-family: var(--font-ui); font-weight: 200;
   font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
 }
 .pt-close { border-radius: 999px; }
-.pt-close:hover, .pt-btn:hover, .pt-tab:hover, #pt-reopen:hover {
+.pt-close:hover, .pt-btn:hover, .pt-tab:hover {
   background: var(--ink-5); color: var(--ink); border-color: var(--ink);
 }
 .pt-btn.active, .pt-tab.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
@@ -2818,7 +3206,10 @@ body { font-weight: 200; }
    semuanya berangkat dari satu ketinggian yang sama.
    ===================================================================== */
 .alat-baris { align-items: flex-start; }
-.alat-nav { display: flex; align-items: stretch; gap: 18px; margin-right: 10px; }
+/* Baris tautan juga tembus klik di celahnya, cuma hurufnya yang tidak.
+   Tanpa ini jarak 18 piksel antar tautan ikut menelan geseran peta. */
+.alat-nav { display: flex; align-items: stretch; gap: 18px; margin-right: 10px; pointer-events: none; }
+.alat-nav > * { pointer-events: auto; }
 .alat-nav a {
   display: block;
   font-family: var(--font-ui); font-size: 13px; font-weight: 200;
@@ -3007,20 +3398,33 @@ body { font-weight: 200; }
 /* ---- Kotak waktu ----
    Persegi panjang bergaris, tanpa isian, sudutnya membulat tipis seperti
    tulang punggung Parameter. Bukan pil, bukan siku. */
+/* KOTAKNYA DIBUANG 13 Oktober 2026. Garis putih di atas label waktu itu
+   tepi atas kotak ini, dan pemilik menanyakannya, "itu garis apa di atas
+   keterangan waktu". Dengan batang waktu yang sudah jadi silinder berisi,
+   kotak pembungkus itu tidak menambah apa apa selain satu garis yang
+   mengganggu di atas peta. */
 .ui-bottom .panel.timeline {
   position: relative;
   flex: 1; max-width: 760px;
   display: flex; align-items: center; gap: 16px;
-  border: 1px solid rgba(255, 255, 255, .45); border-radius: 4px;
-  background: transparent; box-shadow: none;
-  padding: 12px 16px;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  padding: 10px 0;
 }
 
 /* Jam berlaku DI LUAR kotak, mengambang tepat di atasnya. Diminta user.
-   Ditempel absolut supaya tidak ikut menambah tinggi kotaknya. */
+   Ditempel absolut supaya tidak ikut menambah tinggi kotaknya.
+
+   13 Oktober 2026, dia PINDAH IKUT GAGANG slider, bukan lagi mematok kiri.
+   Diminta pemilik, supaya jam yang sedang ditampilkan terbaca tepat di atas
+   titiknya. Letaknya dari --tl-isi yang diisi showFrame.
+
+   CATATAN BUAT YANG MENYUNTING NANTI, aturan .tl-cur ada tiga di berkas ini
+   dan yang MENANG yang di blok ini, paling belakang. Sempat kuubah yang di
+   tengah dan tidak terjadi apa apa. */
 .tl-cur {
-  position: absolute; left: 0; bottom: calc(100% + 8px);
-  margin: 0; display: block; white-space: nowrap;
+  position: absolute; left: var(--tl-isi, 0%); bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  margin: 0; display: block; white-space: nowrap; pointer-events: none;
 }
 .tl-cur .mono {
   font-family: var(--font-ui); font-size: 12px; font-weight: 300;
@@ -3032,8 +3436,18 @@ body { font-weight: 200; }
 }
 .tl-btn:hover:not(:disabled) { background: rgba(255, 255, 255, .18); border-color: #fff; }
 
-#time-slider::-webkit-slider-runnable-track { background: rgba(255, 255, 255, .38); }
-#time-slider::-moz-range-track { background: rgba(255, 255, 255, .38); }
+/* SILINDER TERISI. Bagian yang sudah terlewat putih pekat, sisanya putih
+   pudar. Input range tidak bisa mewarnai separuh alurnya sendiri dengan cara
+   yang sama di semua peramban, jadi dipakai gradien bertitik henti keras di
+   --tl-isi. */
+#time-slider::-webkit-slider-runnable-track {
+  height: 7px; border-radius: 999px;
+  background: linear-gradient(to right, #ffffff 0 var(--tl-isi, 0%), rgba(255, 255, 255, .3) var(--tl-isi, 0%) 100%);
+}
+#time-slider::-moz-range-track {
+  height: 7px; border-radius: 999px;
+  background: linear-gradient(to right, #ffffff 0 var(--tl-isi, 0%), rgba(255, 255, 255, .3) var(--tl-isi, 0%) 100%);
+}
 #time-slider::-webkit-slider-thumb { background: #fff; border-color: #fff; }
 #time-slider::-moz-range-thumb { background: #fff; border-color: #fff; }
 
