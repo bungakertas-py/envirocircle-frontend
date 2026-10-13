@@ -1418,16 +1418,24 @@ html, body {
   text-transform: none; cursor: help;
 }
 
-/* Pita miring di pojok kanan atas kotak fitur MJO dan AUSMI, muncul cuma
-   kalau model yang dibuka bukan model global. Lihat pasangPitaGlobal(). */
-.pita-induk { position: relative; }
+/* PITA SUDUT 45 DERAJAT di pojok kanan atas tombol MJO dan AUSMI, muncul
+   cuma kalau model yang dibuka bukan model global. Lihat pasangPitaGlobal().
+
+   Arah putarnya +45, bukan -45. Sudut kanan atas itu garis diagonalnya
+   turun ke kanan, dan putaran searah jarum jam memang membawa baris
+   hurufnya ke arah itu, jadi pitanya sejajar dengan sudutnya.
+
+   Tombolnya kecil, jadi pitanya SENGAJA menjorok keluar. overflow tidak
+   dipotong, dan z-index-nya di atas supaya tidak tertimbun tombol
+   tetangganya di daftar fitur. */
+.pita-induk { position: relative; overflow: visible; }
 .pita-global {
-  position: absolute; top: 3px; right: 3px; z-index: 4;
-  transform: rotate(-9deg); transform-origin: 100% 0;
+  position: absolute; top: 1px; right: -14px; z-index: 6;
+  transform: rotate(45deg); transform-origin: 50% 50%;
   background: #1b7a3d; color: #fff; white-space: nowrap; pointer-events: auto;
-  font-family: var(--font-ui); font-size: 8px; font-weight: 400;
-  letter-spacing: .07em; padding: 1px 7px; border-radius: 999px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .25); cursor: help;
+  font-family: var(--font-ui); font-size: 6.5px; font-weight: 400;
+  letter-spacing: .04em; padding: 0 5px; border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3); cursor: help; line-height: 1.6;
 }
 
 /* Oktagon MJO. Juring MERAH wilayah titik, juring HIJAU fase MJO sekarang. */

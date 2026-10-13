@@ -683,14 +683,15 @@ const FITUR_BERKAS = [
   ["itcz-toggle", "itcz.json"],
   ["mon-toggle", "monsoon.json"],
 ];
-async function berkasAda(nama) {
+async function berkasAdaDi(base, nama) {
   try {
-    const r = await fetch(DATA_BASE + nama, { method: "HEAD", cache: "no-store" });
+    const r = await fetchUlang(base + nama, { method: "HEAD", cache: "no-store" });
     return r.ok;
   } catch (e) {
     return false;
   }
 }
+async function berkasAda(nama) { return berkasAdaDi(DATA_BASE, nama); }
 function terapkanFiturModel() {
   /* Tombol Skew-T disetel DULUAN, sebelum cabang PUNYA_EKSTRA di bawah.
      Markupnya lahir hidden, dan model berekstra seperti GFS keluar lebih awal
@@ -709,6 +710,15 @@ function terapkanFiturModel() {
     wMjo.style.display = "none";
     (async function () {
       if (await berkasAda("mjo.json")) { wMjo.style.display = ""; return; }
+      /* FOLDER MODEL GLOBAL juga dihitung, sejak 13 Oktober 2026. RMM itu
+         indeks global dan zona MJO di peta cuma pita bujur, dua duanya
+         berlaku di atas domain mana pun. Sebelumnya tombol MJO hilang sama
+         sekali di WRF padahal panel titiknya sudah menampilkan oktagonnya,
+         dan pemilik menanyakannya. Asalnya ditandai pita "Basis GFS" di
+         pojok kotak ini, lihat pasangPitaGlobal(). */
+      if (MODEL_ID !== MODEL_GLOBAL && await berkasAdaDi(basisGlobal(), "mjo.json")) {
+        wMjo.style.display = ""; return;
+      }
       /* Tanpa mjo.json, fitur ini cuma masuk akal kalau profil modelnya LEBAR.
          Selubung MJO sendiri lebarnya 30 sampai 40 derajat bujur, jadi di
          domain seukuran Indonesia saja amplopnya pasti menyentuh kedua tepi
@@ -2589,8 +2599,10 @@ function namaModelGlobal() {
 function pasangPitaGlobal() {
   if (MODEL_ID === MODEL_GLOBAL) return;
   const nama = namaModelGlobal();
+  /* Ditempel di TOMBOLNYA, bukan di kotak pembungkusnya. Diminta pemilik,
+     pita sudut 45 derajat di pojok kanan atas tombol. */
   ["mjo-toggle", "ausmi-toggle"].forEach((id) => {
-    const w = $(id)?.closest(".fit-wrap");
+    const w = $(id);
     if (!w || w.querySelector(".pita-global")) return;
     w.classList.add("pita-induk");
     const p = document.createElement("span");
@@ -4250,7 +4262,11 @@ function basisGlobal() {
 async function loadMjo() {
   if (mjo) return mjo;
   if (!mjoLoading) {
-    const ambil = (base) => fetch(base + "mjo.json")
+    /* fetchUlang, bukan fetch telanjang. Berkas ini 66 KB dan sekali gugur di
+       jaringan panelnya berbunyi "MJO belum ada" sampai halaman dimuat ulang,
+       padahal datanya ada. Sudah kejadian sekali waktu diuji. Pola yang sama
+       dipakai point_meta.json dan catalog.json. */
+    const ambil = (base) => fetchUlang(base + "mjo.json")
       .then((r) => { if (!r.ok) return null; mjoBase = base; return r.json(); });
     mjoLoading = ambil(DATA_BASE)
       .then((j) => (j || (basisGlobal() !== DATA_BASE ? ambil(basisGlobal()) : null)))
@@ -6288,7 +6304,7 @@ function ausmiPunya() { return !!(ausmiData && ausmiData.kini); }
    diam berbeda dari chip di bilah bawah. */
 function cariAusmi() {
   if (ausmiCari) return ausmiCari;
-  const coba = (base) => fetch(base + "ausmi.json", { method: "HEAD", cache: "no-store" })
+  const coba = (base) => fetchUlang(base + "ausmi.json", { method: "HEAD", cache: "no-store" })
     .then((r) => (r.ok ? base : null)).catch(() => null);
   ausmiCari = coba(DATA_BASE).then((b) => {
     if (b) return b;
