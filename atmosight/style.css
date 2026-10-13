@@ -1403,6 +1403,15 @@ html, body {
 .mb-sel:hover .mb-lencana, .mb-lencana:focus-visible { display: flex; }
 .mb-lencana:hover { background: #5DEBD7; }
 
+/* Lencana sumber di judul panel. Dipakai waktu isi panelnya datang dari
+   folder model global sedangkan peta menampilkan model lokal. */
+.mb-sumber {
+  display: inline-block; margin-left: 6px; vertical-align: middle;
+  border: 0.7px solid var(--ink-20); border-radius: 999px;
+  padding: 0 6px; font-size: 8.5px; letter-spacing: .06em;
+  color: var(--ink-70); text-transform: none; cursor: help;
+}
+
 /* Oktagon MJO. Juring MERAH wilayah titik, juring HIJAU fase MJO sekarang. */
 .mb-sel .mjo-okt { margin: 0; }
 /* Oktagon yang sama dipakai di dua ukuran. Di panel bawah dia dikecilkan

@@ -2568,6 +2568,20 @@ function muatKonteks(lat, lon, nama) {
     .catch(() => { /* panel memang boleh kosong */ });
 }
 
+/* LENCANA SUMBER. Dipasang kalau isi panelnya datang dari folder model LAIN,
+   yaitu model global, sedangkan peta yang sedang dibuka model lokal. Diminta
+   pemilik, "tetap ada AUSMI dan MJO tapi di kontainernya dilabeli GFS Based,
+   jadi tetap terisi penuh semua fiturnya".
+
+   Lebih jujur begini daripada dua pilihan yang lain. Mengosongkan panelnya
+   membuang data yang memang berlaku, dan memajangnya tanpa keterangan
+   membuat orang mengira angka itu keluaran WRF. */
+function lencanaSumber(base) {
+  if (!base || base === DATA_BASE) return "";
+  const nama = (MODELS[MODEL_GLOBAL] && MODELS[MODEL_GLOBAL].label || "GFS").split(" ")[0];
+  return `<span class="mb-sumber" title="Indeks ini global, dihitung dari analisis ${nama}, bukan keluaran model yang sedang ditampilkan. Angkanya sama di model mana pun.">Basis ${nama}</span>`;
+}
+
 /* PANEL 1, OKTAGON MJO. Gambarnya TIDAK ditulis ulang di sini.
 
    Sempat kutulis fungsi kedua bernama sama, dan itu dua kesalahan sekaligus.
@@ -2586,7 +2600,7 @@ function mjoSel(lon) {
     return `<div class="mb-sel-judul">Wheeler-Hendon Diagram</div>` +
            `<div class="mb-sel-kosong">MJO belum ada</div>`;
   const ix = mjo.indeks, fb = mjoFaseBujur(lon), lemah = !(ix.amplitudo >= 1);
-  return `<div class="mb-sel-judul">Wheeler-Hendon Diagram</div>` +
+  return `<div class="mb-sel-judul">Wheeler-Hendon Diagram${lencanaSumber(mjoBase)}</div>` +
     `<div class="mb-sel-peraga">${mjoOktagon(ix, mjo.jejak, fb && fb.fase, lemah ? null : ix.fase)}</div>` +
     `<div class="mb-sel-isi">MJO ${lemah ? "lemah" : "Fase " + ix.fase}</div>`;
 }
@@ -2596,6 +2610,8 @@ function mjoSel(lon) {
    gunanya cuma satu, memberi tahu kotak AUSMI itu di sebelah mana. Jadi dia
    dibangun sekali dan tidak pernah disegarkan lagi. */
 function ausmiIsi() {
+  const lb = $("mb-ausmi-sumber");
+  if (lb) lb.innerHTML = lencanaSumber(ausmiBase);
   const el = $("mb-ausmi-isi"); if (!el) return;
   if (!ausmiData || !ausmiData.kini) { el.innerHTML = '<span class="mb-sel-kosong">AUSMI belum ada</span>'; return; }
   const k = ausmiData.kini;
@@ -4184,15 +4200,37 @@ const MJO_LEBAR_MIN = 60;       // domain lebih sempit dari ini, mode lokal MATI
 
 let mjoOn = false;
 let mjo = null, mjoLoading = null, mjoGroup = null;
+let mjoBase = null;   // folder yang akhirnya memuat mjo.json, untuk lencana sumber
 let mjoLokal = null;            // hasil hitung sendiri, per model, dihitung sekali
 let mjoSibuk = false;
 
+/* FOLDER MODEL GLOBAL, dipakai berkas yang isinya BUKAN keluaran model yang
+   sedang dilihat. 13 Oktober 2026.
+
+   MJO dan AUSMI itu indeks global. RMM dihitung dari OLR dan angin analisis,
+   AUSMI dari rerata kotak u850 di 110 sampai 130 BT, dan dua duanya tidak
+   berubah gara gara peta yang sedang dibuka WRF atau GFS. Backend cuma
+   menaruhnya di folder GFS, jadi waktu orang membuka WRF panel MJO dan AUSMI
+   berbunyi "belum ada" padahal datanya ada di sebelah.
+
+   Yang TIDAK ikut aturan ini, ITCZ dan siklon. Dua duanya memang dihitung
+   dari medan model yang sedang dilihat, jadi versi WRF-nya berbeda dengan
+   versi GFS dan memang harus dibaca dari foldernya sendiri. */
+function basisGlobal() {
+  const m = MODELS[MODEL_GLOBAL];
+  return m && m.base ? m.base : DATA_BASE;
+}
+
 async function loadMjo() {
   if (mjo) return mjo;
-  if (!mjoLoading) mjoLoading = fetch(DATA_BASE + "mjo.json")
-    .then((r) => (r.ok ? r.json() : null))
-    .then((j) => (mjo = j || { kosong: true }))
-    .catch(() => (mjo = { kosong: true }));
+  if (!mjoLoading) {
+    const ambil = (base) => fetch(base + "mjo.json")
+      .then((r) => { if (!r.ok) return null; mjoBase = base; return r.json(); });
+    mjoLoading = ambil(DATA_BASE)
+      .then((j) => (j || (basisGlobal() !== DATA_BASE ? ambil(basisGlobal()) : null)))
+      .then((j) => (mjo = j || { kosong: true }))
+      .catch(() => (mjo = { kosong: true }));
+  }
   return mjoLoading;
 }
 const mjoPunyaIndeks = () => !!(mjo && !mjo.kosong && mjo.indeks);
@@ -6226,6 +6264,12 @@ function cariAusmi() {
   const coba = (base) => fetch(base + "ausmi.json", { method: "HEAD", cache: "no-store" })
     .then((r) => (r.ok ? base : null)).catch(() => null);
   ausmiCari = coba(DATA_BASE).then((b) => {
+    if (b) return b;
+    /* Folder model global dulu, baru cadangan GitHub Pages. AUSMI indeks
+       global, jadi membacanya dari folder GFS selagi peta menampilkan WRF
+       itu benar, bukan tambal sulam. Lihat basisGlobal(). */
+    return basisGlobal() !== DATA_BASE ? coba(basisGlobal()) : null;
+  }).then((b) => {
     if (b) return b;
     const boleh = !!DATA_CADANGAN && MODEL_ID === MODEL_GLOBAL && DATA_BASE !== DATA_CADANGAN;
     return boleh ? coba(DATA_CADANGAN) : null;
