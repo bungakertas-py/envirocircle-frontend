@@ -1410,11 +1410,15 @@ html, body {
 
 /* Lencana sumber di judul panel. Dipakai waktu isi panelnya datang dari
    folder model global sedangkan peta menampilkan model lokal. */
+/* HIJAU PALET, var(--lime) #C5FF95, bukan hijau siklon yang gelap. Dan
+   hurufnya TINTA, bukan putih, sebab lime di palet ini perannya BIDANG,
+   kontrasnya cuma 1,3 di atas putih sehingga sebagai huruf dia tidak
+   terbaca. Aturan yang sama dipakai bidang aktif di seluruh app ini. */
 .mb-sumber {
   display: inline-block; margin-left: 6px; vertical-align: middle;
-  border: 0.7px solid #1b7a3d; border-radius: 999px;
+  border: 0.7px solid var(--ink); border-radius: 999px;
   padding: 0 6px; font-size: 8.5px; letter-spacing: .06em;
-  color: #1b7a3d; background: rgba(27, 122, 61, .1);
+  color: var(--ink); background: var(--lime);
   text-transform: none; cursor: help;
 }
 
@@ -1432,10 +1436,12 @@ html, body {
 .pita-global {
   position: absolute; top: 1px; right: -14px; z-index: 6;
   transform: rotate(45deg); transform-origin: 50% 50%;
-  background: #1b7a3d; color: #fff; white-space: nowrap; pointer-events: auto;
-  font-family: var(--font-ui); font-size: 6.5px; font-weight: 400;
+  /* Lime palet dengan huruf tinta, sama dengan lencana di panel titik. */
+  background: var(--lime); color: var(--ink); white-space: nowrap; pointer-events: auto;
+  font-family: var(--font-ui); font-size: 6.5px; font-weight: 700;
   letter-spacing: .04em; padding: 0 5px; border-radius: 2px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .3); cursor: help; line-height: 1.6;
+  border: 0.5px solid var(--ink);
+  box-shadow: 0 1px 2px rgba(7, 65, 115, .35); cursor: help; line-height: 1.6;
 }
 
 /* Oktagon MJO. Juring MERAH wilayah titik, juring HIJAU fase MJO sekarang. */
