@@ -1337,7 +1337,12 @@ html, body {
    cuma dua panel, jadi panel ITCZ melebar dua kolom.
    ===================================================================== */
 .mb-fenomena {
-  flex: 1 1 auto; min-width: 360px; display: grid;
+  /* LEBARNYA DIJAGA, bukan mengalah pada tabel. Dengan WRF yang 67 kolom,
+     tabelnya 2634 px dan blok ini terdesak ke lebar minimumnya sehingga
+     turun jadi dua kolom, padahal di GFS tiga. Tabelnya memang sudah bisa
+     digulir mendatar, jadi dia yang mengalah. 456 px itu tiga kali lebar
+     jalur minimum 148 px plus garis pemisahnya. */
+  flex: 1 1 auto; min-width: min(456px, 46vw); display: grid;
   /* JUMLAH KOLOM MENGHITUNG SENDIRI. auto-fit dengan lebar minimum 148 px,
      jadi di blok yang lebar dapat tiga kolom seperti sketsa, dan begitu
      sempit dia turun ke dua tanpa satu pun titik putus ditulis tangan. Panel
@@ -1407,9 +1412,22 @@ html, body {
    folder model global sedangkan peta menampilkan model lokal. */
 .mb-sumber {
   display: inline-block; margin-left: 6px; vertical-align: middle;
-  border: 0.7px solid var(--ink-20); border-radius: 999px;
+  border: 0.7px solid #1b7a3d; border-radius: 999px;
   padding: 0 6px; font-size: 8.5px; letter-spacing: .06em;
-  color: var(--ink-70); text-transform: none; cursor: help;
+  color: #1b7a3d; background: rgba(27, 122, 61, .1);
+  text-transform: none; cursor: help;
+}
+
+/* Pita miring di pojok kanan atas kotak fitur MJO dan AUSMI, muncul cuma
+   kalau model yang dibuka bukan model global. Lihat pasangPitaGlobal(). */
+.pita-induk { position: relative; }
+.pita-global {
+  position: absolute; top: 3px; right: 3px; z-index: 4;
+  transform: rotate(-9deg); transform-origin: 100% 0;
+  background: #1b7a3d; color: #fff; white-space: nowrap; pointer-events: auto;
+  font-family: var(--font-ui); font-size: 8px; font-weight: 400;
+  letter-spacing: .07em; padding: 1px 7px; border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25); cursor: help;
 }
 
 /* Oktagon MJO. Juring MERAH wilayah titik, juring HIJAU fase MJO sekarang. */

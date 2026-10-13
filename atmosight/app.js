@@ -2576,9 +2576,35 @@ function muatKonteks(lat, lon, nama) {
    Lebih jujur begini daripada dua pilihan yang lain. Mengosongkan panelnya
    membuang data yang memang berlaku, dan memajangnya tanpa keterangan
    membuat orang mengira angka itu keluaran WRF. */
+function namaModelGlobal() {
+  return (MODELS[MODEL_GLOBAL] && MODELS[MODEL_GLOBAL].label || "GFS").split(" ")[0];
+}
+
+/* PITA MIRING DI KARTU FITUR. Diminta pemilik, supaya orang yang menyalakan
+   MJO atau AUSMI dari kartu Fitur juga tahu angkanya dari model mana, bukan
+   cuma yang membuka panel titik.
+
+   Dipasang SEKALI waktu init, sebab model tidak berganti tanpa memuat ulang
+   halaman, MODEL_ID dibaca dari ?model= di alamat. */
+function pasangPitaGlobal() {
+  if (MODEL_ID === MODEL_GLOBAL) return;
+  const nama = namaModelGlobal();
+  ["mjo-toggle", "ausmi-toggle"].forEach((id) => {
+    const w = $(id)?.closest(".fit-wrap");
+    if (!w || w.querySelector(".pita-global")) return;
+    w.classList.add("pita-induk");
+    const p = document.createElement("span");
+    p.className = "pita-global";
+    p.textContent = "Basis " + nama;
+    p.title = "Indeks global, dihitung dari analisis " + nama +
+      ", bukan keluaran model yang sedang ditampilkan. Angkanya sama di model mana pun.";
+    w.appendChild(p);
+  });
+}
+
 function lencanaSumber(base) {
   if (!base || base === DATA_BASE) return "";
-  const nama = (MODELS[MODEL_GLOBAL] && MODELS[MODEL_GLOBAL].label || "GFS").split(" ")[0];
+  const nama = namaModelGlobal();
   return `<span class="mb-sumber" title="Indeks ini global, dihitung dari analisis ${nama}, bukan keluaran model yang sedang ditampilkan. Angkanya sama di model mana pun.">Basis ${nama}</span>`;
 }
 
@@ -5968,6 +5994,7 @@ async function init() {
     await whenHeatmapReady();          // reveal setelah frame pertama tergambar
     hideSkeleton();
     setTimeout(prefetchTitik, 2500);   // ancang ancang panel titik, lihat prefetchTitik
+    pasangPitaGlobal();                // pita "Basis GFS" di kartu Fitur, kalau model lokal
     intaiCirrus();                     // kalau kita di cadangan, tunggu cirrus mendarat
   } catch (err) {
     showLoadMsg("Gagal memuat data: " + err.message);
