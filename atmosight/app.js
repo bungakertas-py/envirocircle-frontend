@@ -2704,15 +2704,92 @@ function siklonGambar() {
     return;
   }
   const n = siklonDaftar.length, c = siklonDaftar[siklonKe % n];
-  const warna = cycloneColor(c.p.tier, c.p.cat);
+  /* WARNA DAN NAMA IKUT JALURNYA, sama dengan ikon di peta dan legenda di
+     kartu Fitur. Sebelumnya panel ini memakai tingkat pada JAM ITU
+     (c.p.tier) sedangkan peta memakai puncak sepanjang hidup sistemnya
+     (tr.tier), jadi satu sistem yang sama tampil UNGU di peta dan ORANYE di
+     panel. Dipergoki pemilik.
+
+     Keadaan jam ini tidak dibuang, dia ditulis di baris kecil di bawahnya
+     kalau memang berbeda, sebab itu kabar yang berguna. Sistem yang namanya
+     Siklon Lintang Tinggi tapi jam ini baru bibit memang belum sekuat
+     namanya. */
+  const warna = cycloneColor(c.tr.tier, c.tr.peak_cat);
   const putar = c.p.lat >= 0 ? "sik-utara" : "sik-selatan";
+  const nama = c.tr.peak_label || c.p.label || "Sistem siklonik";
+  const kini = c.p.label && c.p.label !== nama ? `<div class="sik-kini">saat ini ${c.p.label}</div>` : "";
   el.innerHTML = judul +
-    `<div class="mb-sel-peraga"><div class="sik-ikon ${putar}" style="color:${warna}" title="${c.tr.name}">` +
+    `<div class="mb-sel-peraga"><div class="sik-ikon ${putar}" style="color:${warna}" ` +
+    `data-lat="${c.p.lat}" data-lon="${c.p.lon}">` +
     `<span class="material-symbols-outlined">cyclone</span></div></div>` +
-    `<div class="mb-sel-isi"><div class="sik-kat" style="color:${warna}">${c.p.label || c.tr.peak_label || "Sistem siklonik"}</div>` +
+    `<div class="mb-sel-isi"><div class="sik-kat" style="color:${warna}">${nama}</div>${kini}` +
     `<div class="sik-jarak">Terjadi pada <b>${Math.round(c.d.km)} km</b><br>arah ${c.d.arah} (${Math.round(c.d.brg)}°)</div></div>` +
     (n > 1 ? `<div class="sik-cacah">${(siklonKe % n) + 1} dari ${n}</div>` : "");
 }
+/* SOROT IKONNYA, LENCANA IKUT KURSOR. DIKETUK, BARU PETANYA MENUJU.
+
+   Versi pertama langsung terbang waktu disorot, dan pemilik membetulkannya.
+   Memang benar, penunjuk yang cuma lewat tidak boleh menyeret peta orang.
+   Sekarang sorotan cuma memunculkan lencana kecil yang menempel di kursor,
+   dan ketukan yang mengerjakannya.
+
+   Diketuk, panel bawah TURUN DULU baru petanya terbang. Dua duanya penting
+   urutannya, sebab kotak peta memanjang waktu panel turun dan titik
+   tengahnya ikut bergeser. Kalau terbangnya duluan, sistemnya mendarat
+   melenceng ke atas.
+
+   ZOOMNYA DIHITUNG, bukan dipatok. Sistem di 29,8 LS itu cuma 3,2 derajat
+   dari tepi selatan domain, dan kunci pan di tepi domain menolak
+   menengahkannya kalau zoomnya terlalu renggang. Yang dipakai zoom terkecil
+   yang masih membuat setengah tinggi layar muat di sisa ruang itu, dijepit
+   di 4 sampai 8. */
+let lencanaKursor = null;
+function lencanaKursorTampil(teks, x, y) {
+  if (!lencanaKursor) {
+    lencanaKursor = document.createElement("div");
+    lencanaKursor.className = "lencana-kursor";
+    document.body.appendChild(lencanaKursor);
+  }
+  lencanaKursor.innerHTML = `<span class="material-symbols-outlined">my_location</span>${teks}`;
+  lencanaKursor.classList.add("show");
+  // Dipasang dulu baru diukur, lebarnya baru ada sesudah isinya masuk. Dekat
+  // tepi kanan jendela lencananya dibalik ke kiri kursor, kalau tidak dia
+  // menggantung keluar layar. Terukur menggantung 9 px di jendela 1440.
+  const lb = lencanaKursor.offsetWidth || 90;
+  lencanaKursor.style.left = (x + lb > innerWidth - 8 ? Math.max(4, x - lb - 28) : x) + "px";
+  lencanaKursor.style.top = Math.min(y, innerHeight - 28) + "px";
+}
+function lencanaKursorSembunyi() { lencanaKursor?.classList.remove("show"); }
+
+function terbangKeSiklon(lat, lon) {
+  if (!isFinite(lat) || !isFinite(lon)) return;
+  const h = map.getSize().y || 400;
+  let ruang = 6;
+  if (frameBounds) {
+    ruang = Math.max(0.6, Math.min(frameBounds.getNorth() - lat, lat - frameBounds.getSouth()) * 0.95);
+  }
+  let z = Math.log2(h * 360 / (512 * ruang));
+  z = Math.max(4, Math.min(8, Math.round(z * 10) / 10));
+  try { map.flyTo([lat, lon], z, { duration: 0.7 }); } catch (e) { /* peta belum siap */ }
+}
+
+$("mb-siklon")?.addEventListener("mousemove", (e) => {
+  const ik = e.target.closest(".sik-ikon");
+  if (ik) lencanaKursorTampil("Ke siklon", e.clientX + 14, e.clientY + 16);
+  else lencanaKursorSembunyi();
+});
+$("mb-siklon")?.addEventListener("mouseleave", lencanaKursorSembunyi);
+$("mb-siklon")?.addEventListener("click", (e) => {
+  const ik = e.target.closest(".sik-ikon"); if (!ik) return;
+  lencanaKursorSembunyi();
+  const la = +ik.dataset.lat, lo = +ik.dataset.lon;
+  hidePoint();                         // panel turun dulu, kotak peta memanjang
+  // Lapisan siklonnya DINYALAKAN sekalian. Menengahkan peta ke sistem yang
+  // ikonnya tidak digambar itu cuma memandangi laut kosong. Diminta pemilik.
+  if (!cyclonesOn) toggleCyclones();
+  setTimeout(() => terbangKeSiklon(la, lo), 0);
+});
+
 function siklonSel(lat, lon) {
   clearInterval(siklonPutar); siklonPutar = null;
   siklonDaftar = siklonKumpul(lat, lon); siklonKe = 0;
