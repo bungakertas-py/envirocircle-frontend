@@ -1484,6 +1484,7 @@ function togglePlay() {
 let pointData = null;      // { meta, vars: {name:{arr,scale,offset}} }
 let pointLoading = null;
 let pointMarker = null;
+let kotaTerpilih = null;   // nama kota yang sedang dipilih, labelnya dibuat berkedip
 let sharedPoint = null;    // {lat,lon,name} titik aktif → dipakai untuk link Bagikan
 let lastPoint = null;      // untuk export CSV
 let pdTerakhir = null;     // pd titik aktif (kisi kecil atau blob), untuk gambar ulang saat layer ganti
@@ -2149,16 +2150,19 @@ function tutupGelembung() {
 }
 
 async function bukaGelembung(lat, lon, label, isMe) {
-  /* Panel yang sedang terbuka DITUTUP dulu. Dua tempat menampilkan titik
-     yang berbeda sekaligus itu membingungkan, dan panelnya memang baru
-     pantas naik kalau diminta lewat lencana Detail. */
-  if ($("meteo-bar")?.classList.contains("open")) closePoint();
+  /* PANEL TIDAK DITUTUP waktu titik berganti. Dulu dia ditutup dulu, dan
+     orang yang sedang membandingkan Jakarta dengan Bandung harus menekan
+     Detail lagi tiap kali. Sekarang kalau panelnya sedang terbuka, isinya
+     yang diganti ke titik baru, dan gelembungnya tetap berdiri. */
+  const panelTerbuka = $("meteo-bar")?.classList.contains("open") &&
+                       !$("meteo-bar")?.classList.contains("hidden");
   gelembungTitik = { lat, lon, label, isMe };
   const isi = (dalam) => `<div class="gb">` +
     `<div class="gb-nama">${label || fmtCoord(lat, lon)}</div>${dalam}` +
     `<button type="button" class="gb-detail" id="gb-detail">` +
     `<span class="material-symbols-outlined">expand_less</span>Detail</button></div>`;
 
+  if (panelTerbuka) openPoint(lat, lon, label, isMe);
   gelembung = L.popup({ className: "gb-popup", closeButton: true, autoPan: false,
     offset: [0, -6], maxWidth: 220 })
     .setLatLng([lat, lon])
@@ -2191,7 +2195,11 @@ function sambungDetail() {
   const b = document.getElementById("gb-detail");
   if (!b || !gelembungTitik) return;
   const t = gelembungTitik;
-  b.addEventListener("click", () => { tutupGelembung(); openPoint(t.lat, t.lon, t.label, t.isMe); });
+  /* GELEMBUNGNYA TIDAK DITUTUP. Dia membawa angka parameter yang sedang
+     dipilih di tempatnya, tepat di sebelah titiknya di peta, dan itu tetap
+     berguna selagi panel bawah terbuka. Menekan Detail lagi cuma menggambar
+     ulang panelnya untuk titik yang sama, tidak merusak apa apa. */
+  b.addEventListener("click", () => { openPoint(t.lat, t.lon, t.label, t.isMe); });
 }
 
 async function openPoint(lat, lon, label, isMe) {
@@ -2200,16 +2208,39 @@ async function openPoint(lat, lon, label, isMe) {
   if (pp) { pp.classList.add("open"); pp.classList.remove("hidden"); }
   $("pt-reopen")?.classList.remove("show");
   ukurPanelBawah();
+
+  /* MENDEKAT KE TITIKNYA, dikerjakan di UJUNG renderPoint, bukan di sini.
+
+     Di sini tinggi panelnya masih tinggi tulang shimmer, dan ukurPanelBawah
+     akan dipanggil SEKALI LAGI sesudah isinya terpasang. Kalau peta digeser
+     sekarang, pengubahan ukuran yang kedua itu menggeser titik tengahnya
+     lagi, sebab invalidateSize dipanggil dengan pan false yang memang
+     mempertahankan sudut kiri atas, bukan pusat. Terukur melesetnya 177
+     piksel mendatar dan 78 tegak. */
+  perluDekati = { lat, lon };
   // Marker: ikon "orang" (kamu di sini) utk geolokasi, belah-ketupat utk titik lain.
   if (pointMarker) map.removeLayer(pointMarker);
   const html = isMe
     ? '<span class="pm-me"><span class="material-symbols-outlined">person</span></span>'
     : '<span class="pm-diamond"></span>';
   const sz = isMe ? 32 : 20;
+  /* Penandanya TEPAT DI KOORDINAT kotanya, tidak digeser. Yang diminta
+     pemilik urutan LAPISAN, bukan letak, penanda ini digambar DI BAWAH
+     lapisan label nama kota supaya namanya tidak tertutup.
+
+     Pane "labels" z-index 650, sedangkan label kota ada di pane "cityicons"
+     z-index 660, jadi urutannya memang sudah benar tanpa perlu diubah. */
+  const diKota = !isMe && !!label && cityIndexByName && cityIndexByName.has(label);
   pointMarker = L.marker([lat, lon], {
-    icon: L.divIcon({ className: "point-mark", html, iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] }),
+    icon: L.divIcon({ className: "point-mark" + (diKota ? " pm-kota" : ""), html,
+      iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] }),
     interactive: false, pane: "labels",
   }).addTo(map);
+  /* Nama kotanya ikut berkedip, bukan cuma titiknya. Label kota digambar
+     ulang tiap bingkai waktu berganti, jadi penandanya disimpan di variabel
+     dan dibaca lagi di refreshCityIcons. */
+  kotaTerpilih = diKota ? label : null;
+  refreshCityIcons();
   setPointLabel(label || fmtCoord(lat, lon), label ? "addr" : "coord");
   sharedPoint = { lat, lon, name: label || null };
   updateHash();
@@ -2654,6 +2685,11 @@ function kondisiGambar() {
   const p = b[kondisiKe % b.length];
   const [teks] = p.sel(i);
   const k = p.kondisi ? p.kondisi(i) : null;
+  /* Di tabel, nilai nol ditulis titik tengah supaya kolomnya tidak penuh
+     angka nol yang tidak berarti. Di panel ini titik itu berdiri sendirian
+     di bawah ikon besar dan terbaca seperti gagal memuat, jadi dikembalikan
+     jadi angka nol. */
+  const teksPanel = teks === "·" ? "0" : teks;
   /* Satuan menempel ke ANGKANYA, bukan ke namanya. Di nama dia terbaca
      seperti bagian dari nama parameternya, "Badai CAPE", dan itu memang
      sempat terjadi. */
@@ -2664,7 +2700,7 @@ function kondisiGambar() {
        ditulis "37°", dan menambahkan satuan "°C" di belakangnya
        menghasilkan "37°°C". */
     `<div class="kon-nilai">${k ? `<span class="kon-kata">${k.nilai}</span>`
-      : teks + (p.satuan && !(String(teks).endsWith("°") && p.satuan.startsWith("°"))
+      : teksPanel + (p.satuan && !(String(teks).endsWith("°") && p.satuan.startsWith("°"))
         ? `<span>${p.satuan}</span>` : "")}</div>` +
     `<div class="sik-cacah">${(kondisiKe % b.length) + 1} dari ${b.length}</div>`;
 }
@@ -2763,6 +2799,7 @@ function pasangLencana() {
 /* Blok fenomena digambar ulang tiap titik berganti dan tiap jam berganti,
    sebab siklon, kondisi, dan pita ITCZ memang ikut waktu. */
 let fenTitik = null;
+let perluDekati = null;  // titik yang harus didekati sesudah panel selesai digambar
 let barisTitik = [];     // baris meteogram berikut ikonnya, dipakai panel Kondisi
 function gambarFenomena(lat, lon, nama) {
   if (lat === undefined && fenTitik) { lat = fenTitik.lat; lon = fenTitik.lon; nama = fenTitik.nama; }
@@ -2921,6 +2958,15 @@ function renderPoint(pd, lat, lon) {
      ketahuan sesudah barisnya terpasang, dan jumlah barisnya ikut variabel
      yang dipunyai model. */
   ukurPanelBawah();
+  /* Sekarang tinggi panelnya sudah final, jadi geser petanya aman. Zoom cuma
+     DINAIKKAN, tidak pernah diturunkan, sebab kalau orangnya sudah mengamati
+     satu pulau dari dekat, memaksanya mundur ke zoom patokan itu merebut
+     pekerjaannya. */
+  if (perluDekati) {
+    const t = perluDekati; perluDekati = null;
+    try { map.flyTo([t.lat, t.lon], Math.max(map.getZoom(), 6), { duration: 0.6 }); }
+    catch (e) { /* peta belum siap */ }
+  }
   tandaiJamAktif();
   muatKonteks(lat, lon, sharedPoint && sharedPoint.name);
 }
@@ -2965,6 +3011,9 @@ function exportCSV() {
    sering dipakai bersamaan dengan panel ini. Tingginya tidak tetap, sebab
    jumlah barisnya ikut variabel yang dipunyai model. */
 let mbTinggiLama = -1;
+/* Penjaga supaya frameRegion tidak ikut jalan waktu yang berubah cuma tinggi
+   kotak peta gara gara panel titik. Lihat frameRegion() di init(). */
+let abaikanBingkai = false;
 function ukurPanelBawah() {
   const bar = $("meteo-bar");
   const buka = bar && bar.classList.contains("open") && !bar.classList.contains("hidden");
@@ -2995,7 +3044,11 @@ function ukurPanelBawah() {
      barunya tanpa menggeser pusat peta. Zoom minimum yang sudah dihitung
      untuk layar penuh tetap berlaku, dan di kotak yang lebih pendek itu
      justru menyisakan ruang geser, bukan mengurangi. */
+  abaikanBingkai = true;
   try { map.invalidateSize({ pan: false }); } catch (e) { /* peta belum siap */ }
+  /* Dilepas di putaran berikutnya, bukan seketika, sebab Leaflet boleh
+     menunda peristiwa resize-nya. */
+  setTimeout(() => { abaikanBingkai = false; }, 0);
 }
 window.addEventListener("resize", ukurPanelBawah);
 
@@ -3007,6 +3060,7 @@ function closePoint() {
   ukurPanelBawah();
   $("pt-reopen")?.classList.remove("show");
   if (pointMarker) { map.removeLayer(pointMarker); pointMarker = null; }
+  if (kotaTerpilih) { kotaTerpilih = null; refreshCityIcons(); }
   sharedPoint = null;
   updateHash();
 }
@@ -3861,7 +3915,8 @@ async function refreshCityIcons() {
       : "";
     const m = L.marker([c.p.lat, c.p.lon], {
       pane: "cityicons", title: c.p.n, keyboard: false,
-      icon: L.divIcon({ className: "city-cond" + (cityIconsOn ? "" : " no-ico"),
+      icon: L.divIcon({ className: "city-cond" + (cityIconsOn ? "" : " no-ico") +
+        (kotaTerpilih && c.p.n === kotaTerpilih ? " kota-pilih" : ""),
         iconSize: [30, 30], iconAnchor: [15, 15],
         html: ico + alarmHtml(c.alarm, cityShortName(c.p.n)) +
               `<span class="cc-lbl"><b>${escHtml(cityShortName(c.p.n))}</b>` +
@@ -5574,6 +5629,18 @@ async function init() {
     // penuh, tanpa bar kosong dan tanpa terpotong; tepi domain data (yang lebih
     // luas) tak pernah terlihat. Dihitung ulang tiap kali jendela di-resize.
     function frameRegion() {
+      /* DILEWATI kalau yang memicu resize itu panel titik buka tutup.
+
+         map.on("resize", frameRegion) memasang ini di SETIAP perubahan
+         ukuran, termasuk invalidateSize yang dipanggil ukurPanelBawah waktu
+         kotak peta memendek. Akibatnya tiap kali panel naik, frameRegion
+         menata ulang seluruh bingkai dan setView ke tengah domain, jadi
+         peta yang baru saja terbang ke titiknya langsung ditarik balik.
+         Terukur, zoom naik 4 ke 6 lalu balik dan titiknya meleset 733
+         piksel. Yang dilaporkan pemilik, "zoom trs balik lagi zoom out".
+
+         Resize dari JENDELA tetap diurus seperti biasa. */
+      if (abaikanBingkai) return;
       const crs = map.options.crs;
       // Lepas dulu rem lama. getBoundsZoom() memotong hasilnya ke minZoom yang
       // sedang berlaku, jadi tanpa ini jendela yang DIKECILKAN tak pernah bisa

@@ -1212,7 +1212,12 @@ html, body {
      terbaca sendiri tanpa perlu digaris. */
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 1100;
   background: var(--surface); border-top: 0;
-  max-height: 58vh; display: flex; flex-direction: column;
+  /* TINGGI BERJEPIT, bukan 58vh telanjang. Peramban yang di-zoom 400 persen
+     menyisakan viewport setinggi 270 px, dan 58 persen dari itu cuma 157 px,
+     tidak cukup untuk satu baris pun. Sebaliknya di monitor 4K yang di-zoom
+     25 persen, 58 persen berarti 2500 px dan panel ini akan menelan layar.
+     clamp memberi lantai dan langit langit, isinya digulir kalau mentok. */
+  max-height: clamp(190px, 58vh, 660px); display: flex; flex-direction: column;
   /* PUDAR MASUK DAN KELUAR, bukan menggeser dari bawah. Geseran menuntut
      tepi panel dan tepi peta bergerak serempak sempurna, dan selisih
      sekejap saja sudah terbaca sebagai pita menganga. Dengan pudar, yang
@@ -1255,14 +1260,19 @@ html, body {
    menyusut mengikuti tabel, dan blok fenomena yang memakan sisanya. Kalau
    tabelnya memang lebih lebar dari layar, seperti WRF yang 67 kolom, dia
    boleh menyusut dan digulir, dan blok fenomena berhenti di lebar minimumnya. */
-.mb-scroll { overflow: auto; flex: 0 1 auto; min-width: 0; }
+.mb-scroll { overflow: auto; flex: 0 1 auto; min-width: 0; align-self: stretch; }
 
 /* ---------------------- METEOGRAM, TABELNYA ----------------------
    Ikut terbuang sekali waktu blok fenomena dipotong, dan akibatnya satuan
    di kolom label menempel ke namanya, "SuhuC", serta kepala harinya
    melipat. Ditulis balik di sini, terpisah dari blok fenomena, supaya
    kejadian yang sama tidak terulang. */
-.mb-tabel { table-layout: fixed; border-collapse: collapse; font-family: var(--font-ui); font-size: 11.5px; }
+/* TABELNYA MENGISI TINGGI PANEL. Tinggi panel ditentukan blok fenomena di
+   kanan, dan tabel yang cuma dua belas baris menyisakan bidang putih kosong
+   di bawahnya. Dengan height 100 persen, baris barisnya membagi sisa ruang
+   itu, jadi tidak ada yang kosong dan jarak antar barisnya malah lebih
+   longgar di layar tinggi. */
+.mb-tabel { table-layout: fixed; border-collapse: collapse; font-family: var(--font-ui); font-size: 11.5px; height: 100%; }
 .mb-tabel th, .mb-tabel td {
   padding: 1px 0; text-align: center; width: 38px; white-space: nowrap;
   line-height: 1.5; border-left: 1px solid rgba(7, 65, 115, .07);
@@ -1328,8 +1338,25 @@ html, body {
    ===================================================================== */
 .mb-fenomena {
   flex: 1 1 auto; min-width: 360px; display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: 1fr 1fr;
+  /* JUMLAH KOLOM MENGHITUNG SENDIRI. auto-fit dengan lebar minimum 148 px,
+     jadi di blok yang lebar dapat tiga kolom seperti sketsa, dan begitu
+     sempit dia turun ke dua tanpa satu pun titik putus ditulis tangan. Panel
+     ITCZ melebar dua kolom, jadi di susunan tiga kolom dia mengisi sisa
+     baris kedua persis seperti sketsanya.
+
+     minmax(0, ...), BUKAN angka telanjang. Jalur grid bawaannya tidak boleh
+     lebih pendek dari isinya, jadi satu panel yang isinya tinggi akan
+     mendorong seluruh blok melewati batas tinggi panelnya dan yang di baris
+     bawah terpotong di luar layar. Terlihat waktu peramban di-zoom 80 persen. */
+  /* max() di dalam minmax itu kuncinya. Jalurnya tidak boleh lebih sempit
+     dari 148 px DAN tidak boleh lebih sempit dari sepertiga blok, jadi
+     jumlahnya tidak pernah lewat tiga berapa pun lebarnya, dan turun sendiri
+     ke dua lalu satu waktu bloknya menyempit. Tanpa max() yang sepertiga,
+     auto-fit mengambil sebanyak yang muat dan kelimanya berjejer sebaris
+     di layar lebar. */
+  grid-template-columns: repeat(auto-fit, minmax(max(148px, 33.333%), 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  overflow: auto;
   border-left: var(--bw) solid var(--ink);
 }
 .mb-sel {
@@ -1342,19 +1369,26 @@ html, body {
 .mb-sel:nth-child(3n+1) { border-left: 0; }
 #mb-itcz { grid-column: span 2; }
 .mb-sel-judul {
-  font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  font-size: clamp(7.5px, 0.62vw, 10px); letter-spacing: .1em; text-transform: uppercase;
   color: var(--ink); opacity: .55; margin-bottom: 4px; line-height: 1.3;
 }
 /* Bagian bergambar MEMAKAN SISA tinggi, jadi oktagon, ikon siklon, dan peta
    kecil sama sama membesar mengikuti panelnya, bukan dipatok piksel. */
 .mb-sel-peraga {
-  flex: 1 1 auto; min-height: 0; display: flex;
+  flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex;
   align-items: center; justify-content: center;
 }
-.mb-sel-peraga .mjo-okt { max-height: 100%; width: auto; margin: 0; }
-.mb-sel-isi { font-size: 10.5px; line-height: 1.4; padding-top: 4px; }
-.mb-sel-kosong { font-size: 10.5px; opacity: .5; margin: auto 0; line-height: 1.5; }
-.mb-mini { flex: 1 1 auto; min-height: 60px; background: #eef1f3; }
+/* Oktagon dibatasi TINGGINYA, bukan lebarnya. Dengan width 100 persen, di
+   layar lebar atau waktu peramban di-zoom keluar, kolomnya melebar dan SVG
+   persegi ini ikut meninggi sampai mendorong seluruh blok keluar panel.
+   Dipatok tinggi, lebarnya menyesuaikan sendiri mengikuti viewBox. */
+.mb-sel-peraga .mjo-okt {
+  height: 100%; width: auto; max-width: 100%; max-height: 100%; margin: 0;
+}
+.mb-sel-peraga > .sk-bar { flex: none; }
+.mb-sel-isi { font-size: clamp(8.5px, 0.7vw, 11.5px); line-height: 1.4; padding-top: 4px; }
+.mb-sel-kosong { font-size: clamp(8.5px, 0.7vw, 11.5px); opacity: .5; margin: auto 0; line-height: 1.5; }
+.mb-mini { flex: 1 1 auto; min-height: 36px; background: #eef1f3; }
 .mb-mini .leaflet-container { background: #eef1f3; }
 
 /* Lencana "buka fitur", muncul waktu panelnya disorot. */
@@ -1387,13 +1421,13 @@ html, body {
 .okt-juring-mjo { fill: rgba(27, 122, 61, .25); stroke: #1b7a3d; stroke-width: 1; }
 
 /* Indeks AUSMI */
-.au-angka { font-size: 20px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+.au-angka { font-size: clamp(13px, 1.25vw, 24px); font-weight: 700; line-height: 1.1; color: var(--ink); }
 .au-angka span { font-size: 9.5px; font-weight: 400; opacity: .55; margin-left: 3px; }
 .au-arah { font-size: 10px; opacity: .7; }
 
 /* Siklon, ikon berputar sesuai belahan bumi */
 .sik-ikon { line-height: 1; }
-.sik-ikon .material-symbols-outlined { font-size: 66px; }
+.sik-ikon .material-symbols-outlined { font-size: clamp(28px, 4vw, 72px); }
 @keyframes sik-kiri { to { transform: rotate(-360deg); } }
 @keyframes sik-kanan { to { transform: rotate(360deg); } }
 .sik-utara .material-symbols-outlined { display: inline-block; animation: sik-kiri 9s linear infinite; }
@@ -1401,14 +1435,14 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .sik-utara .material-symbols-outlined, .sik-selatan .material-symbols-outlined { animation: none; }
 }
-.sik-kat { font-size: 11px; font-weight: 700; line-height: 1.25; }
-.sik-jarak { font-size: 10px; opacity: .78; margin-top: 3px; line-height: 1.4; }
+.sik-kat { font-size: clamp(8.5px, 0.75vw, 12.5px); font-weight: 700; line-height: 1.25; }
+.sik-jarak { font-size: clamp(8px, 0.68vw, 11.5px); opacity: .78; margin-top: 3px; line-height: 1.4; }
 .sik-cacah { font-size: 9px; opacity: .45; letter-spacing: .06em; padding-top: 3px; }
 
 /* Kondisi saat ini, parameter bergantian */
-.kon-nama { font-size: 11.5px; font-weight: 700; color: var(--ink); }
-.kon-ikon { font-size: 62px; color: var(--primary); }
-.kon-nilai { font-size: 24px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+.kon-nama { font-size: clamp(9px, 0.8vw, 13px); font-weight: 700; color: var(--ink); }
+.kon-ikon { font-size: clamp(26px, 3.8vw, 70px); color: var(--primary); }
+.kon-nilai { font-size: clamp(15px, 1.5vw, 28px); font-weight: 700; line-height: 1.1; color: var(--ink); }
 .kon-nilai span { font-weight: 400; opacity: .5; font-size: 10px; margin-left: 3px; }
 /* Kata keadaan cuaca, bukan angka, jadi ukurannya diturunkan supaya muat. */
 .kon-nilai .kon-kata { font-size: 14px; font-weight: 700; opacity: 1; margin: 0; }
@@ -1423,6 +1457,23 @@ html, body {
   letter-spacing: .14em; text-transform: uppercase; color: #ffffff;
   text-shadow: 0 0 3px rgba(0, 0, 0, .85), 0 0 6px rgba(0, 0, 0, .6);
   margin-left: -26px;
+}
+
+/* ---- LAYAR PENDEK, misalnya peramban di-zoom 200 persen ke atas ----
+   Yang dikorbankan jarak, bukan isi. Panelnya tetap lima, cuma merapat, dan
+   kalau benar benar tidak muat blok fenomena boleh digulir sendiri. */
+@media (max-height: 560px) {
+  #meteo-bar { max-height: clamp(150px, 66vh, 400px); }
+  .mb-sel { padding: 4px 6px 5px; }
+  .mb-sel-judul { margin-bottom: 2px; }
+  .mb-tabel th, .mb-tabel td { padding: 0; line-height: 1.35; }
+  .mb-label { padding: 1px 8px !important; }
+}
+/* Pendek sekali, zoom 400 persen ke atas. Baris tabel yang paling jarang
+   dibaca disembunyikan supaya yang penting tetap terbaca. */
+@media (max-height: 380px) {
+  .mb-sel-judul { display: none; }
+  .mb-mini { min-height: 28px; }
 }
 
 /* Layar sempit. Panelnya boleh lebih tinggi sebab petanya memang sudah
@@ -1482,6 +1533,25 @@ html, body {
    sela itu sempat terlihat pita HITAM. Dengan latar yang sama warnanya,
    sela itu tidak lagi terbaca sebagai lubang. */
 #stage { background: #04131F; }
+
+/* ---- PENANDA TITIK BERKEDIP ----
+   Supaya mata orang menemukan titik yang baru dipilihnya di antara belasan
+   label kota. Kedipnya pelan dan tidak pernah sampai hilang sama sekali,
+   cuma turun ke 35 persen, jadi dia menarik perhatian tanpa jadi lampu
+   disko. Dimatikan untuk yang memilih gerak minimal. */
+@keyframes kedip-titik {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .35; transform: scale(.82); }
+}
+.point-mark > * { animation: kedip-titik 1.35s ease-in-out infinite; }
+/* Nama kota yang sedang dipilih ikut berkedip, dan ditebalkan supaya
+   bedanya tetap terbaca di tengah kedipan. */
+@keyframes kedip-nama { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+.city-cond.kota-pilih .cc-lbl { animation: kedip-nama 1.35s ease-in-out infinite; }
+.city-cond.kota-pilih .cc-lbl b { font-weight: 700; }
+@media (prefers-reduced-motion: reduce) {
+  .point-mark > *, .city-cond.kota-pilih .cc-lbl { animation: none; }
+}
 
 /* ===================== SEARCH KOTA/KABUPATEN ===================== */
 .search-wrap { position: relative; pointer-events: auto; }
