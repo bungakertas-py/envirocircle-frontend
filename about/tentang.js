@@ -21,6 +21,28 @@
 (function () {
   "use strict";
 
+  /* GAMBAR TIM DIMUAT LEBIH DULU, DI LUAR PENJAGA GSAP.
+     Kalau pemuatannya ditaruh di dalam adegan, peramban tanpa GSAP atau yang
+     minta gerak dikurangi tidak akan pernah mengambil berkasnya dan yang
+     tersisa cuma kotak kosong. Jebakan yang sama pernah kena di repo ini. */
+  function muatGambar(lalu) {
+    var fig = document.getElementById("gbr-tulis");
+    var kanvas = document.getElementById("gbr-kanvas");
+    if (!fig || !kanvas) return;
+    var alamat = fig.getAttribute("data-svg");
+    fetch(alamat).then(function (r) {
+      if (!r.ok) throw new Error("svg " + r.status);
+      return r.text();
+    }).then(function (teks) {
+      kanvas.innerHTML = teks;
+      if (lalu) lalu(fig, kanvas);
+    }).catch(function () {
+      /* Gagal mengambil, dipasang apa adanya. Diam tanpa gerak masih jauh
+         lebih baik daripada kotak kosong. */
+      kanvas.innerHTML = '<img src="' + alamat + '" alt="Ilustrasi tim Envirocircle" />';
+    });
+  }
+
   var sasaran = document.querySelectorAll("[data-abt]");
   function tampilSemua() {
     for (var i = 0; i < sasaran.length; i++) {
@@ -31,6 +53,9 @@
     for (var j = 0; j < f.length; j++) f[j].style.clipPath = "none";
     var n = document.querySelectorAll(".abt-num");
     for (var k = 0; k < n.length; k++) n[k].textContent = n[k].dataset.akhir || n[k].textContent;
+    var g = document.getElementById("gbr-tulis");
+    if (g) g.classList.remove("gbr-siap");   /* potongannya kembali terlihat semua */
+    muatGambar(null);
   }
 
   /* Angka aslinya disimpan dulu, sebab tween nanti menimpanya. */
@@ -50,6 +75,100 @@
     semua.push(tl);
     return tl;
   }
+
+  /* --- gambar tim, digambar sendiri seperti di papan tulis --- */
+  (function () {
+    /* SVG-nya DISISIPKAN, bukan dipasang sebagai img, sebab tiap potongan
+       garis harus bisa disentuh satu per satu. */
+    muatGambar(pasang);
+
+    function pasang(fig, kanvas) {
+      var gores = kanvas.querySelectorAll(".gs");
+      var tulis = kanvas.querySelectorAll(".tx");
+      if (!gores.length) return;
+      fig.classList.add("gbr-siap");
+
+      /* PENA BERJALAN DI SEPANJANG GARIS, bukan bidang yang dimunculkan.
+
+         Gambarnya sekarang goresan betulan, hasil mengambil garis tengah
+         dari gambar garis aslinya. Tiap goresan disembunyikan dengan
+         dasharray sepanjang dirinya sendiri lalu dibuka dengan menurunkan
+         dashoffset, jadi dia benar benar tergambar dari pangkal ke ujung.
+
+         Versi sebelumnya memunculkan bidang satu per satu dan pemilik bilang
+         belum seperti orang menggambar. Memang bukan, yang itu bidang
+         muncul, yang ini garis ditarik.
+
+         Urutannya sudah dipanggang di berkasnya, tiga orangnya dulu dari
+         tengah lalu latarnya, dan di tiap kelompok goresan berikutnya selalu
+         yang pangkalnya paling dekat dengan ujung goresan sebelumnya supaya
+         penanya menyambung, bukan melompat. */
+      var n = gores.length, mulai = new Array(n), panjang = new Array(n), total = 0;
+      for (var i = 0; i < n; i++) {
+        mulai[i] = +gores[i].getAttribute("data-s");
+        panjang[i] = +gores[i].getAttribute("data-l");
+        gores[i].style.strokeDasharray = panjang[i] + " " + (panjang[i] + 1);
+        gores[i].style.strokeDashoffset = panjang[i];
+        total = mulai[i] + panjang[i];
+      }
+
+      /* Sapuan warna disiapkan sama caranya, disembunyikan dengan dasharray
+         sepanjang dirinya sendiri. Dia punya penomoran jarak sendiri yang
+         mulai dari nol, terpisah dari goresan tinta. */
+      var warna = kanvas.querySelectorAll(".wn");
+      var wm = [], wp = [], wtotal = 0;
+      for (var j = 0; j < warna.length; j++) {
+        wm[j] = +warna[j].getAttribute("data-s");
+        wp[j] = +warna[j].getAttribute("data-l");
+        warna[j].style.strokeDasharray = wp[j] + " " + (wp[j] + 1);
+        warna[j].style.strokeDashoffset = wp[j];
+        wtotal = wm[j] + wp[j];
+      }
+
+      var sec = document.querySelector(".abt-gambar");
+      var tl = garis(sec, "84%");
+
+      /* SATU tween saja untuk tiga ribu goresan. Tiap bingkai cuma goresan
+         yang sedang ditarik yang disentuh, sisanya tidak. Kalau tiap goresan
+         diberi tween sendiri, peramban menggambar ulang ribuan bidang tiap
+         bingkai dan jalannya tersendat. Sudah kejadian di versi sebelumnya. */
+      var kenop = { d: 0 }, k = 0;
+      tl.to(kenop, { d: total, duration: 4.6, ease: "none", onUpdate: function () {
+        var d = kenop.d;
+        while (k < n && mulai[k] + panjang[k] <= d) { gores[k].style.strokeDashoffset = "0"; k++; }
+        if (k < n) {
+          var sisa = panjang[k] - (d - mulai[k]);
+          gores[k].style.strokeDashoffset = (sisa > 0 ? sisa : 0) + "";
+        }
+      } }, 0);
+
+      /* DUA, MEWARNAI. Sesudah garisnya jadi, kuas masuk. Caranya sama
+         persis dengan pena, satu tween untuk semua sapuan, jadi tiap
+         bingkai cuma satu sapuan yang disentuh.
+
+         Baju pakai biru palet, siklon di layar kiri lime, vektor angin
+         Atmosight toska, dan kontur PM2.5 Smokewatch merah sebagai warna
+         pelengkap. Diminta pemilik. */
+      if (warna.length) {
+        var kw = { d: 0 }, w = 0;
+        tl.to(kw, { d: wtotal, duration: 2.3, ease: "none", onUpdate: function () {
+          var d = kw.d;
+          while (w < warna.length && wm[w] + wp[w] <= d) { warna[w].style.strokeDashoffset = "0"; w++; }
+          if (w < warna.length) {
+            var sisa = wp[w] - (d - wm[w]);
+            warna[w].style.strokeDashoffset = (sisa > 0 ? sisa : 0) + "";
+          }
+        } }, 4.4);
+      }
+
+      /* TIGA, tulisan di layarnya. Ini teks betulan, bukan bagian gambar,
+         sebab huruf kecil hasil penelusuran cuma jadi gumpalan dan terbaca
+         ENVBOORELE bukan ENVIROCIRCLE. */
+      if (tulis.length) tl.to(tulis, { opacity: 1, duration: 0.22, ease: "none",
+                                       stagger: { each: 0.05 } }, 4.0);
+
+    }
+  })();
 
   /* --- kepala halaman --- */
   (function () {

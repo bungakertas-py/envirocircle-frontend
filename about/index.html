@@ -93,9 +93,44 @@
             <img class="abt-ec" src="../img/logo-envirocircle-teks.png" data-abt
                  width="1115" height="375" alt="Envirocircle" />
           </div>
-          <h1 class="abt-pernyataan" data-abt>From Atmospheric Data to Environmental Insight.</h1>
         </div>
-        <span class="abt-garis" data-abt aria-hidden="true"></span>
+        <!-- GAMBAR TIM, DIGAMBAR SENDIRI WAKTU DIGULIR. Diminta pemilik, gaya
+             whiteboard animation seperti hero raja.co.id, garisnya muncul
+             bertahap.
+
+             Berkasnya vektor hasil penelusuran, delapan lapis bidang isi per
+             tingkat nada, BUKAN goresan ber-stroke. Jadi stroke-dashoffset,
+             trik baku untuk animasi garis, tidak punya apa apa untuk dipegang
+             di sini. Yang dipakai, berkasnya dipecah lebih dulu jadi 191
+             234 potongan berurut, TIGA ORANGNYA DULU dari tengah melebar
+             keluar baru latarnya, lalu potongan itu dinyalakan satu per satu
+             tanpa pudar sama sekali. Lapis bayangnya menyusul sesudah garisnya hampir penuh,
+             seperti orang menebalkan arsiran sesudah sketsanya jadi.
+
+             TIDAK ADA TIRAI SAPUAN. Sempat ada mata pena yang berjalan di tepi
+             gambar, dibuang atas permintaan pemilik. Yang menggerakkan cerita
+             cukup garisnya sendiri.
+
+             SVG-nya DISISIPKAN lewat fetch, bukan dipasang sebagai img, sebab
+             tiap potongan harus bisa disentuh skrip satu per satu. Berkasnya
+             jadi tetap terpisah dan ikut disimpan peramban, halaman ini tidak
+             ikut membengkak 2,3 MB. -->
+        <div class="abt-gambar">
+          <!-- PERNYATAANNYA MASUK KE DALAM GAMBAR, diminta pemilik. Separuh
+               di pojok kiri atas, separuh lagi di pojok kanan bawah, dua
+               duanya menempati ruang kosong gambarnya. Tetap satu h1 utuh
+               supaya mesin pencari dan pembaca layar membacanya sebagai
+               satu kalimat, cuma dipecah tampilannya. Garis rambut pemisah
+               yang dulu ada di atas paragraf juga dibuang. -->
+          <h1 class="abt-pernyataan" data-abt>
+            <span class="pny-a">From Atmospheric Data</span>
+            <span class="pny-b">to Environmental Insight.</span>
+          </h1>
+          <figure class="gbr-tulis" id="gbr-tulis" data-svg="../img/atmos-team-anim.svg">
+            <div class="gbr-kanvas" id="gbr-kanvas"></div>
+          </figure>
+        </div>
+
         <div class="abt-paragraf">
           <p data-abt>Envirocircle merupakan inisiatif yang dikembangkan oleh salah satu kelompok riset di Program Studi Sains Atmosfer dan Keplanetan, yang berfokus pada hilirisasi hasil kajian dan penelitian ke dalam bentuk sistem informasi berbasis website yang mudah diakses oleh masyarakat. Platform ini dirancang untuk menyediakan informasi prediksi cuaca yang bersumber dari data satelit serta model Numerical Weather Prediction (NWP) yang dijalankan secara operasional melalui infrastruktur server di Institut Teknologi Sumatera (ITERA).</p>
           <p data-abt>Selain itu, Envirocircle juga menyajikan informasi prediksi kualitas udara yang dihasilkan melalui integrasi berbagai sumber data dan model, seperti data satelit, model WRF-Chem, CAMx, serta model dispersi udara lainnya. Pendekatan multi-model ini memungkinkan pengguna untuk melakukan perbandingan hasil prediksi secara komprehensif. Lebih lanjut, sistem ini turut menyediakan informasi terkait titik panas (hotspot), serta analisis daya dukung dan daya tampung lingkungan untuk wilayah Indonesia, sehingga dapat mendukung pengambilan keputusan berbasis data dalam pengelolaan lingkungan dan mitigasi risiko bencana.</p>
@@ -110,7 +145,7 @@
           <div class="abt-butir" data-abt><span class="abt-num">514</span><span class="abt-ket">Kota dan kabupaten</span></div>
           <div class="abt-butir" data-abt><span class="abt-num">14</span><span class="abt-ket">Pekerjaan pemodelan</span></div>
           <div class="abt-butir" data-abt><span class="abt-num">02</span><span class="abt-ket">Instrumen</span></div>
-          <div class="abt-butir" data-abt><span class="abt-num">01</span><span class="abt-ket">Makalah terbit</span></div>
+          <div class="abt-butir" data-abt><span class="abt-num">11</span><span class="abt-ket">Makalah terbit</span></div>
         </div>
       </div>
     </section>

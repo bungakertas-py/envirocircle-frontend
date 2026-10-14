@@ -1956,6 +1956,36 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
   .js-anim .pub2-figur, .js-anim .kry-gbr { clip-path: none; }
 }
 
+/* ---- Gambar tim yang digambar sendiri, 14 Oktober 2026 ----
+   Gambarnya GORESAN BETULAN, bukan bidang. Garis tengahnya diambil dari
+   gambar aslinya lalu tiap goresan digambar pena lewat stroke-dashoffset.
+
+   Sesudah garisnya jadi, KUAS masuk. Sapuan warnanya juga goresan, cuma
+   jauh lebih tebal dan dikurung clipPath mengikuti bentuk yang diwarnai.
+
+   Keadaan awal TIDAK dipasang di CSS. Tiap goresan panjangnya beda beda
+   sehingga dasharray-nya harus per elemen, dan itu cuma bisa dipasang
+   skrip. Tanpa skrip gambarnya tampil utuh, dan itu memang yang diinginkan,
+   bukan kotak kosong. */
+/* DIKECILKAN DUA KALI atas permintaan pemilik, 25 persen lalu 10 persen
+   lagi, jadi 67,5 persen lebar tulisannya. DITENGAHKAN. Tempatnya juga
+   pindah, dari bawah bagian pembuka ke antara slogan dan dua paragrafnya,
+   jadi dia membaca sebagai gambar pembuka tulisan, bukan jeda antar bagian.
+   Di layar sempit pengecilannya dilepas, 75 persen dari layar telepon sudah
+   terlalu kecil untuk gambar sedetail ini. */
+.abt-gambar { position: relative; width: 67.5%; margin: 26px auto 34px; }
+@media (max-width: 860px) { .abt-gambar { width: 100%; margin: 20px 0 26px; } }
+.gbr-tulis {
+  position: relative; margin: 0; overflow: hidden;
+  border: var(--rambut) solid var(--sisi-20); background: #fff;
+}
+.gbr-kanvas svg { width: 100%; height: auto; display: block; }
+.gbr-siap .tx { opacity: 0; }
+/* Yang tidak mau gerak langsung dapat gambar jadinya, bukan kanvas kosong. */
+@media (prefers-reduced-motion: reduce) {
+  .gbr-siap .tx { opacity: 1; }
+}
+
 /* =====================================================================
    HALAMAN ABOUT US, about/index.html, 27 September 2026.
    Menumpang gaya yang sama dengan landing dan halaman karya.
@@ -2007,10 +2037,41 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
    besar berjarak lebar, dan itu disengaja. Isinya kalimat penuh, bukan label.
    Kalimat sepanjang ini dalam huruf besar 0,1em berhenti terbaca sebagai
    kalimat dan berubah jadi papan pengumuman. */
+/* PERNYATAAN DUDUK DI DALAM GAMBAR, dua penggal di dua pojok kosongnya.
+   Satu h1 utuh, cuma kedua penggalnya ditempatkan terpisah. pointer-events
+   dimatikan di pembungkusnya supaya dia tidak menghalangi apa pun, lalu
+   dihidupkan lagi di penggalnya supaya teksnya tetap bisa diseleksi. */
 .abt-pernyataan {
-  margin: 34px auto 0; max-width: 22ch;
-  font-size: clamp(28px, 4.2vw, 54px); line-height: 1.2;
-  letter-spacing: .01em; font-weight: 300; color: var(--ink);
+  /* z-index WAJIB. Figur gambarnya position relative dan datang BELAKANGAN
+     di dokumen, jadi tanpa ini dia menggambar di atas judulnya dan latar
+     putihnya menelan tulisan itu sepenuhnya. Sudah kejadian. */
+  position: absolute; inset: 0; z-index: 2; margin: 0; pointer-events: none;
+  /* BESAR dan TEBAL, diminta pemilik. Di halaman ini bobot bakunya 200
+     sampai 300, jadi 600 sudah terbaca jelas lebih berat tanpa keluar dari
+     gayanya. */
+  font-size: clamp(22px, 3.1vw, 46px); line-height: 1.06;
+  letter-spacing: -.005em; font-weight: 600; color: var(--ink);
+}
+/* Dua penggalnya duduk di PITA KOSONG DI SAMPING gambar, bukan di atasnya.
+   Gambarnya 67,5 persen lebar tulisan dan ditengahkan, jadi di kiri dan
+   kanannya ada sisa sekitar 16 persen, dan di situlah tempatnya. Nilai -24
+   persen itu diukur terhadap lebar gambar, hasilnya persis sisa tadi.
+   Dan dia sengaja MENJOROK KELUAR bingkai gambarnya, sebagian di dalam
+   sebagian di luar, diminta pemilik. Yang di dalam jatuh di ruang kosong,
+   pojok kiri atas langit langit dan pojok kanan bawah lantai. */
+.pny-a, .pny-b { position: absolute; display: block; pointer-events: auto; }
+.pny-a { left: -20%; top: -4%; width: 37%; }
+.pny-b { right: -20%; bottom: 3%; width: 37%; text-align: right; }
+
+/* Layar sempit tidak punya sisa itu, gambarnya selebar tulisan. Judulnya
+   kembali jadi aliran biasa di atas gambar, bukan dipaksa ke tepi yang
+   tidak ada. */
+@media (max-width: 1040px) {
+  .abt-pernyataan {
+    position: static; font-size: clamp(22px, 4.4vw, 36px);
+    margin: 0 0 18px; max-width: 24ch;
+  }
+  .pny-a, .pny-b { position: static; display: inline; width: auto; max-width: none; text-align: left; }
 }
 .abt-paragraf {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 56px;
