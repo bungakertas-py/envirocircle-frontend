@@ -1631,10 +1631,32 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
 .pub-lap {
   position: sticky; top: var(--lekat, auto); z-index: var(--lap, 1);
   background: var(--paper);
-  border-top: var(--rambut) solid var(--sisi-20);
-  padding: 52px 0 60px;
+  /* TEPINYA DITANDAI BAYANGAN BERTINGKAT, BUKAN GARIS. Diminta pemilik,
+     garis lime diganti bayangan abu bertumpuk seperti beauty shadow.
+
+     Lima tingkat, jaraknya dan kaburnya berlipat dua tiap tingkat dengan
+     kepekatan yang sama kecilnya. Satu bayangan tunggal yang kabur selalu
+     terbaca sebagai pita kelabu bertepi, sedangkan tumpukan seperti ini
+     meluruh mulus menjauh dari tepinya, itu yang membuatnya terbaca sebagai
+     lembar yang benar benar menumpang di atas lembar lain.
+
+     Arahnya KE ATAS, sebab yang menumpang memang naik dari bawah menutupi
+     yang di atasnya. Warnanya abu netral, bukan tinta navy, supaya tidak
+     terbaca sebagai aksen warna. */
+  border-top: 0;
+  box-shadow:
+    0 -1px 2px rgba(0, 0, 0, .026),
+    0 -2px 4px rgba(0, 0, 0, .026),
+    0 -4px 8px rgba(0, 0, 0, .026),
+    0 -8px 16px rgba(0, 0, 0, .026),
+    0 -16px 32px rgba(0, 0, 0, .026);
+  padding: 50px 0 60px;
 }
-.pub-lap:first-of-type { border-top: 0; padding-top: 14px; }
+/* MAKALAH PERTAMA TANPA TEPI, dia tidak menumpang apa apa. Penandanya kelas,
+   BUKAN :first-of-type. of-type menghitung per nama tag, dan anak div pertama
+   di bagian ini pembungkus kepala bagian, bukan lapisan, jadi aturannya tidak
+   pernah kena satu pun dan garisnya tetap muncul. Dilaporkan pemilik. */
+.pub-lap--awal { box-shadow: none; padding-top: 14px; }
 /* RUANG BAGI PROJECT UNTUK MENUTUPI, DAN KENAPA BUKAN PADDING.
    Lapisan lengket dikurung oleh wadahnya, dan kurungan itu berhenti di KOTAK
    ISI, bukan kotak padding. Sudah diukur sendiri. Dengan padding bawah 92vh
