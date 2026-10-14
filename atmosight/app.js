@@ -2178,7 +2178,6 @@ async function bukaGelembung(lat, lon, label, isMe) {
     .setLatLng([lat, lon])
     .setContent(isi(`<div class="gb-angka gb-tunggu">···</div>`))
     .openOn(map);
-  sambungDetail();
 
   const def = LAYER_SAMPEL[activeLayer];
   if (!def) { tulisGelembung(isi(`<div class="gb-angka">–</div>`)); return; }
@@ -2199,18 +2198,33 @@ async function bukaGelembung(lat, lon, label, isMe) {
 function tulisGelembung(html) {
   if (!gelembung) return;
   gelembung.setContent(html);
-  sambungDetail();
 }
-function sambungDetail() {
-  const b = document.getElementById("gb-detail");
+/* SATU PENDENGAR SAJA, DIWAKILKAN DARI DOKUMEN.
+
+   Dulu tombol Detail dirangkai ulang tiap kali isi gelembung digambar,
+   sebab setContent Leaflet mengganti seluruh simpulnya. Itu rapuh, dan
+   terbukti bocor. Dilaporkan pemilik, sesudah panel disembunyikan lalu
+   pindah titik, Detail tidak membuka panelnya lagi.
+
+   Terlacak dengan menandai simpul tombol tiap kali dirangkai lalu mengintip
+   penanda itu waktu diketuk. Simpul yang hidup saat diketuk ternyata TANPA
+   penanda, padahal perangkainya tercatat jalan empat kali dan semuanya
+   berhasil. Artinya ada satu penggambaran terakhir, 240 milidetik sesudah
+   perangkaian terakhir, yang mengganti tombolnya tanpa lewat perangkai itu.
+
+   Diwakilkan dari dokumen, soal siapa yang menggambar ulang tidak penting
+   lagi. Tombol dicari dari sasaran ketukan, dan titiknya dibaca dari
+   keadaan gelembung yang sedang berdiri. */
+document.addEventListener("click", (e) => {
+  const b = e.target && e.target.closest && e.target.closest("#gb-detail, .gb-detail");
   if (!b || !gelembungTitik) return;
   const t = gelembungTitik;
   /* GELEMBUNGNYA TIDAK DITUTUP. Dia membawa angka parameter yang sedang
      dipilih di tempatnya, tepat di sebelah titiknya di peta, dan itu tetap
      berguna selagi panel bawah terbuka. Menekan Detail lagi cuma menggambar
      ulang panelnya untuk titik yang sama, tidak merusak apa apa. */
-  b.addEventListener("click", () => { openPoint(t.lat, t.lon, t.label, t.isMe); });
-}
+  openPoint(t.lat, t.lon, t.label, t.isMe);
+});
 
 async function openPoint(lat, lon, label, isMe) {
   ++pointToken; // titik baru → batalkan reverse-geocode titik sebelumnya
@@ -2716,8 +2730,9 @@ function siklonGambar() {
      namanya. */
   const warna = cycloneColor(c.tr.tier, c.tr.peak_cat);
   const putar = c.p.lat >= 0 ? "sik-utara" : "sik-selatan";
-  const nama = c.tr.peak_label || c.p.label || "Sistem siklonik";
-  const kini = c.p.label && c.p.label !== nama ? `<div class="sik-kini">saat ini ${c.p.label}</div>` : "";
+  const nama = rapikanNamaSiklon(c.tr.peak_label || c.p.label || "Sistem siklonik");
+  const namaKini = rapikanNamaSiklon(c.p.label);
+  const kini = namaKini && namaKini !== nama ? `<div class="sik-kini">saat ini ${namaKini}</div>` : "";
   el.innerHTML = judul +
     `<div class="mb-sel-peraga"><div class="sik-ikon ${putar}" style="color:${warna}" ` +
     `data-lat="${c.p.lat}" data-lon="${c.p.lon}">` +
@@ -2726,6 +2741,29 @@ function siklonGambar() {
     `<div class="sik-jarak">Terjadi pada <b>${Math.round(c.d.km)} km</b><br>arah ${c.d.arah} (${Math.round(c.d.brg)}°)</div></div>` +
     (n > 1 ? `<div class="sik-cacah">${(siklonKe % n) + 1} dari ${n}</div>` : "");
 }
+/* "Siklon Tropis \u00b7 Badai Tropis Kuat" dibaca jadi "Siklon Tropis (Kuat)".
+   Diminta pemilik, titik tengah di tengah nama terbaca seperti dua sistem
+   yang berbeda padahal yang kedua cuma menerangkan yang pertama.
+
+   Yang di belakang titik tengah dipangkas dari kata yang sudah ada di nama
+   pokoknya, jadi "Badai Tropis Kuat" di belakang "Siklon Tropis" tinggal
+   "Kuat". Kalau sesudah dipangkas tidak ada sisanya, keterangan aslinya yang
+   dipakai utuh, jadi label bentuk lain tidak ikut rusak. */
+const SIK_KATA_UMUM = ["badai", "siklon", "sistem"];
+function rapikanNamaSiklon(teks) {
+  if (!teks) return teks;
+  const bagi = String(teks).split(/\s*\u00b7\s*/);
+  if (bagi.length < 2) return teks;
+  const pokok = bagi[0].trim();
+  const penuh = bagi.slice(1).join(" ").trim();
+  const kataPokok = pokok.toLowerCase().split(/\s+/);
+  const sisa = penuh.split(/\s+/).filter((w) => {
+    const k = w.toLowerCase();
+    return kataPokok.indexOf(k) < 0 && SIK_KATA_UMUM.indexOf(k) < 0;
+  });
+  return pokok + " (" + (sisa.length ? sisa.join(" ") : penuh) + ")";
+}
+
 /* SOROT IKONNYA, LENCANA IKUT KURSOR. DIKETUK, BARU PETANYA MENUJU.
 
    Versi pertama langsung terbang waktu disorot, dan pemilik membetulkannya.
