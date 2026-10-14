@@ -1114,19 +1114,47 @@ function ensoStrength(oni) {
   if (a < 0.5) return ""; if (a < 1.0) return "lemah"; if (a < 1.5) return "sedang";
   if (a < 2.0) return "kuat"; return "sangat kuat";
 }
+/* STATUS ENSO KOSONG BUKAN BERARTI NETRAL.
+
+   Dilaporkan pemilik, ringkasannya berbunyi ENSO netral padahal anomali
+   Nino 3.4 di berkas yang sama +3,25. Sebabnya baris ini dulu berbunyi
+   `state.enso.status || "Netral"`, jadi data yang TIDAK ADA diterjemahkan
+   jadi pernyataan bahwa keadaannya netral. Itu dua hal yang sangat berbeda,
+   dan yang kedua menyesatkan.
+
+   Status resmi datang dari ONI CPC, rata rata tiga bulan anomali Nino 3.4,
+   dan dia memang bisa kosong kalau kiriman hari itu belum lengkap. Kalau
+   kosong, statusnya DIHITUNG dari anomali Nino 3.4 yang sedang berjalan
+   dengan ambang yang sama, dan dasarnya disebutkan terang terangan di
+   ringkasannya. Kalau Nino 3.4 pun tidak ada, barulah mengaku belum ada
+   data, bukan mengaku netral. */
 function laySummary() {
-  const es = state.enso.status || "Netral";                         // El Nino / La Nina / Netral
-  const oni = state.enso.oni_latest ? state.enso.oni_latest.anom : null;
+  let es = state.enso.status;
+  let oni = state.enso.oni_latest ? state.enso.oni_latest.anom : null;
+  let dasar = "";
+  if (!es) {
+    const reg = state.enso.regions || {};
+    const n34 = reg.nino34 ? reg.nino34.now : null;
+    const amb = state.enso_thresh || 0.5;
+    if (n34 != null) {
+      es = n34 >= amb ? "El Nino" : n34 <= -amb ? "La Nina" : "Netral";
+      oni = n34;
+      dasar = "Dibaca dari anomali Nino 3.4 yang sedang berjalan, ONI resmi belum masuk.";
+    }
+  }
   const is = state.iod.status || "Netral";                          // IOD Positif / IOD Negatif / Netral
   const strg = oni != null ? ensoStrength(oni) : "";
-  const ensoLabel = es === "Netral" ? "ENSO netral" : `${es}${strg ? " " + strg : ""}`;
+  const ensoLabel = !es ? "ENSO belum ada data"
+    : es === "Netral" ? "ENSO netral" : `${es}${strg ? " " + strg : ""}`;
   let dampak;
-  if (es.indexOf("El Nino") >= 0) dampak = "Indonesia cenderung lebih kering dari biasanya (hujan di bawah normal); waspada kekeringan dan kebakaran lahan.";
+  if (!es) dampak = "Status ENSO belum bisa dibaca, data indeksnya belum masuk.";
+  else if (es.indexOf("El Nino") >= 0) dampak = "Indonesia cenderung lebih kering dari biasanya (hujan di bawah normal); waspada kekeringan dan kebakaran lahan.";
   else if (es.indexOf("La Nina") >= 0) dampak = "Indonesia cenderung lebih basah dari biasanya (hujan di atas normal); waspada banjir dan longsor.";
   else dampak = "Pola hujan Indonesia cenderung mendekati normal.";
   if (is.indexOf("Positif") >= 0) dampak += " IOD positif memperkuat kecenderungan kering, terutama Indonesia bagian barat.";
   else if (is.indexOf("Negatif") >= 0) dampak += " IOD negatif menambah peluang hujan, terutama Indonesia bagian barat.";
-  return { ensoLabel, es, is, dampak };
+  if (dasar) dampak += " " + dasar;
+  return { ensoLabel, es: es || "", is, dampak };
 }
 function renderBrief() {
   if (!state || !state.enso || !state.iod) return;
