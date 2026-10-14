@@ -2050,7 +2050,15 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
      sampai 300, jadi 600 sudah terbaca jelas lebih berat tanpa keluar dari
      gayanya. */
   font-size: clamp(22px, 3.1vw, 46px); line-height: 1.06;
-  letter-spacing: -.005em; font-weight: 600; color: var(--ink);
+  letter-spacing: -.005em; font-weight: 300; color: var(--ink);
+}
+/* "From" dan "to" dibiarkan tipis, dua penggal intinya yang dinaikkan dua
+   tingkat ukuran dan ditebalkan, diminta pemilik. 1,56em itu dua langkah
+   tangga 1,25. Spasi hurufnya dirapatkan sedikit sebab pada ukuran sebesar
+   itu jaraknya terbaca melebar. */
+.pny-besar {
+  display: block; font-size: 1.5em; font-weight: 700;
+  letter-spacing: -.022em; line-height: 1.0;
 }
 /* Dua penggalnya duduk di PITA KOSONG DI SAMPING gambar, bukan di atasnya.
    Gambarnya 67,5 persen lebar tulisan dan ditengahkan, jadi di kiri dan
@@ -2060,8 +2068,8 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
    sebagian di luar, diminta pemilik. Yang di dalam jatuh di ruang kosong,
    pojok kiri atas langit langit dan pojok kanan bawah lantai. */
 .pny-a, .pny-b { position: absolute; display: block; pointer-events: auto; }
-.pny-a { left: -20%; top: -4%; width: 37%; }
-.pny-b { right: -20%; bottom: 3%; width: 37%; text-align: right; }
+.pny-a { left: -20%; top: -5%; width: 56%; }
+.pny-b { right: -20%; bottom: 2%; width: 56%; text-align: right; }
 
 /* Layar sempit tidak punya sisa itu, gambarnya selebar tulisan. Judulnya
    kembali jadi aliran biasa di atas gambar, bukan dipaksa ke tepi yang
@@ -2072,6 +2080,7 @@ body.foto-atas-terang .hero-top:not(.padat) .hero-nav a:hover {
     margin: 0 0 18px; max-width: 24ch;
   }
   .pny-a, .pny-b { position: static; display: inline; width: auto; max-width: none; text-align: left; }
+  .pny-besar { display: inline; }
 }
 .abt-paragraf {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 56px;
