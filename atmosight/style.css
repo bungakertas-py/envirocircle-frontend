@@ -1825,6 +1825,20 @@ html, body {
 }
 .pw-input:focus { box-shadow: 3px 3px 0 0 var(--ink); }
 .pw-err { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #e8342c; }
+/* ---- KETERANGAN UJI COBA, model privat saja ----
+   Kartunya menumpang .pw-card supaya tepi, bayang, dan warnanya dijamin
+   sama dengan gerbang sandi selamanya. Yang disetel cuma lebarnya, sebab
+   tiga alinea tidak muat di 360 piksel. */
+.uji-card { max-width: 440px; padding-right: 44px; gap: 8px; }
+.uji-teks { font-family: var(--font-ui); font-size: 13px; line-height: 1.6;
+  color: var(--variant); margin: 0; }
+.uji-card .pw-act { margin-top: 6px; }
+/* Tombol tanda serunya ikut .zoom, jadi dia mewarisi ukuran, tepi, dan
+   bayang tombol layar penuh di sebelahnya. Cuma muncul di model privat. */
+.zoom--uji { display: none; }
+body.model-private .zoom--uji { display: flex; }
+
+
 .pw-err[hidden] { display: none; }
 .pw-act { display: flex; gap: 8px; align-self: stretch; justify-content: flex-end; margin-top: 4px; }
 .pw-btn {

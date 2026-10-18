@@ -467,6 +467,47 @@ const DT_SANDI = "envi123!";
 const isLayerDT = (key) => !!key && key.startsWith("dt_");
 
 // Tampilkan modal, kembalikan janji true kalau sandinya benar.
+/* ================= KETERANGAN UJI COBA, MODEL PRIVAT =================
+
+   Diminta pemilik atas saran rekan tim. Model ini dijalankan dengan satu
+   konfigurasi dan parameterisasi yang sama untuk seluruh Indonesia, tanpa
+   penyetelan per wilayah, jadi ada wilayah yang hasilnya bisa meleset.
+   Pembaca berhak tahu itu sebelum memakai angkanya.
+
+   Muncul SEKALI TIAP SESI dan cuma di model privat. CAMS tidak diberi
+   keterangan ini, dia produk global yang sudah dipakai luas.
+
+   Blok ini kembaran dari yang di Atmosight, bedanya cuma rujukan resminya
+   dan di sini tidak ada gerbang sandi yang perlu ditunggu. */
+const UJI_KUNCI = "kertas-cuaca:uji-" + MODEL_ID;
+
+function pasangUji() {
+  const ov = $("uji-overlay");
+  if (!ov || ov.dataset.siap) return;          // sekali saja, jangan menumpuk
+  ov.dataset.siap = "1";
+  const tutup = () => ov.classList.remove("show");
+  const buka  = () => ov.classList.add("show");
+  const x = $("uji-close"), ok = $("uji-ok"), tombol = $("uji-btn");
+  if (x) x.addEventListener("click", tutup);
+  if (ok) ok.addEventListener("click", tutup);
+  if (tombol) tombol.addEventListener("click", buka);
+  ov.addEventListener("click", (e) => { if (e.target === ov) tutup(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && ov.classList.contains("show")) tutup();
+  });
+}
+
+function ujiSekaliSesi() {
+  if (MODEL_ID === MODEL_GLOBAL) return;
+  document.body.classList.add("model-private");   // menyalakan tombol tanda serunya
+  let sudah = false;
+  try { sudah = sessionStorage.getItem(UJI_KUNCI) === "1"; } catch { /* mode privat */ }
+  if (sudah) return;
+  try { sessionStorage.setItem(UJI_KUNCI, "1"); } catch { /* abaikan */ }
+  const ov = $("uji-overlay");
+  if (ov) ov.classList.add("show");
+}
+
 function mintaSandiDT() {
   return new Promise((selesai) => {
     const ov = $("pw-overlay"), inp = $("pw-input"), err = $("pw-err");
@@ -3877,6 +3918,10 @@ async function init() {
     showLoadMsg("⚠️ Library peta gagal dimuat (cek koneksi internet ke unpkg.com / CDN diblokir).");
     return;
   }
+  // Keterangan uji coba model privat. Dipasang sedini ini, sebelum data
+  // ditarik, supaya jalur mode kosong tetap kebagian.
+  pasangUji();
+  ujiSekaliSesi();
   try {
     let cat = null;
     try {

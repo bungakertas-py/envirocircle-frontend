@@ -604,6 +604,54 @@ function mintaSandi(label) {
   });
 }
 
+/* ================= KETERANGAN UJI COBA, MODEL PRIVAT =================
+
+   Diminta pemilik atas saran rekan tim, dan alasannya kuat. Model ini
+   dijalankan dengan satu konfigurasi dan parameterisasi yang sama untuk
+   seluruh Indonesia, tanpa penyetelan per wilayah, jadi ada wilayah yang
+   hasilnya bisa meleset. Pembaca berhak tahu itu sebelum memakai angkanya,
+   terutama kalau prakiraannya nanti ternyata salah.
+
+   Muncul SEKALI TIAP SESI, bukan tiap pindah halaman, dan cuma di model
+   privat. Model global tidak diberi keterangan ini, dia produk yang sudah
+   dipakai luas dan memberinya peringatan yang sama malah mengaburkan maksud
+   peringatannya.
+
+   Penandanya TIDAK hilang sesudah ditutup. Tombol tanda seru di samping
+   tombol layar penuh tetap ada selama model privat terbuka, dan dia membuka
+   kartu ini lagi kapan saja. */
+const UJI_KUNCI = "kertas-cuaca:uji-" + MODEL_ID;
+
+function pasangUji() {
+  const ov = $("uji-overlay");
+  if (!ov || ov.dataset.siap) return;          // sekali saja, jangan menumpuk
+  ov.dataset.siap = "1";
+  const tutup = () => ov.classList.remove("show");
+  const buka  = () => ov.classList.add("show");
+  const x = $("uji-close"), ok = $("uji-ok"), tombol = $("uji-btn");
+  if (x) x.addEventListener("click", tutup);
+  if (ok) ok.addEventListener("click", tutup);
+  if (tombol) tombol.addEventListener("click", buka);
+  ov.addEventListener("click", (e) => { if (e.target === ov) tutup(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && ov.classList.contains("show")) tutup();
+  });
+}
+
+function ujiSekaliSesi() {
+  if (MODEL_ID === MODEL_GLOBAL) return;
+  // Kelas yang sama juga dipasang terapkanFiturModel, tapi itu jalan jauh
+  // lebih belakangan. Dipasang di sini juga supaya tombol tanda serunya
+  // sudah ada begitu kartunya muncul, bukan menyusul beberapa detik.
+  document.body.classList.add("model-private");
+  let sudah = false;
+  try { sudah = sessionStorage.getItem(UJI_KUNCI) === "1"; } catch { /* mode privat */ }
+  if (sudah) return;
+  try { sessionStorage.setItem(UJI_KUNCI, "1"); } catch { /* abaikan */ }
+  const ov = $("uji-overlay");
+  if (ov) ov.classList.add("show");
+}
+
 /* Angka resolusi model diambil dari katalog, bukan dipatok di kode.
    Backend mengubah grid WRF dari 9 km jadi 12 km tanpa mengganti nama folder,
    dan angka barunya mereka kirim di catalog.model_label. Yang diambil di sini
@@ -5706,6 +5754,12 @@ async function init() {
     const boleh = await mintaSandi(MODEL.label);
     if (!boleh) { location.replace(location.pathname); return; }
   }
+  /* Keterangan uji coba menyusul SESUDAH gerbang sandi, bukan sebelumnya.
+     Dua kartu bertumpuk membingungkan, dan orang yang batal di gerbang
+     tidak perlu membacanya sama sekali. Dipasang di sini juga supaya jalur
+     mode kosong tetap kebagian, sama alasannya dengan dropdown model. */
+  pasangUji();
+  ujiSekaliSesi();
   /* ---- ANTARMUKA YANG TIDAK BUTUH DATA, disetel DULUAN ----
 
      Ketiganya dulu dijalankan SESUDAH katalog terbaca, dan itu bug. Jalur

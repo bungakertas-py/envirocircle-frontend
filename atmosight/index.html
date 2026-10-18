@@ -289,6 +289,13 @@
             <div class="zoom zoom--fs">
               <button id="fs-btn" aria-label="Layar penuh" title="Layar penuh"><span class="material-symbols-outlined">fullscreen</span></button>
             </div>
+            <!-- Keterangan uji coba. Cuma ada di model privat, disembunyikan
+                 CSS lewat kelas .model-private di body. Pop up yang sudah
+                 ditutup tidak menjaga apa apa sesudahnya, jadi harus ada
+                 jalan membukanya lagi kapan saja. -->
+            <div class="zoom zoom--uji">
+              <button id="uji-btn" aria-label="Keterangan uji coba" title="Keterangan uji coba"><span class="material-symbols-outlined">priority_high</span></button>
+            </div>
             <div class="zoom">
               <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
               <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
@@ -529,6 +536,25 @@
         <div class="pw-act">
           <button id="pw-cancel" type="button" class="pw-btn">Batal</button>
           <button id="pw-ok" type="button" class="pw-btn pw-btn-primary">Buka</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KETERANGAN UJI COBA model privat. Diminta pemilik atas saran rekan
+         tim, dan alasannya memang kuat. Setelan model ini sama untuk seluruh
+         Indonesia, jadi pembaca berhak tahu batasnya sebelum memakai
+         angkanya. Muncul sekali tiap sesi waktu model privat dibuka, dan
+         bisa dibuka lagi lewat tombol tanda seru di samping layar penuh. -->
+    <div id="uji-overlay" class="about-overlay">
+      <div class="pw-card uji-card">
+        <button id="uji-close" type="button" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <span class="about-tag">UJI COBA</span>
+        <h2 class="pw-title">Keluaran uji coba</h2>
+        <p class="uji-teks">Informasi dari model ini bersifat eksperimental dan masih dalam tahap uji coba.</p>
+        <p class="uji-teks">Model dijalankan dengan satu konfigurasi dan parameterisasi yang sama untuk seluruh Indonesia, tanpa penyetelan khusus per wilayah. Karena itu hasilnya bisa meleset di daerah tertentu, terutama pada kejadian ekstrem dan di wilayah bertopografi rumit.</p>
+        <p class="uji-teks">Gunakan sebagai bahan kajian dan pembanding, bukan sebagai dasar peringatan dini atau keputusan operasional. Untuk informasi cuaca resmi, rujuk BMKG.</p>
+        <div class="pw-act">
+          <button id="uji-ok" type="button" class="pw-btn pw-btn-primary">Saya mengerti</button>
         </div>
       </div>
     </div>

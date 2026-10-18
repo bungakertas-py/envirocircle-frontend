@@ -303,6 +303,11 @@
             <div class="zoom zoom--fs">
               <button id="fs-btn" aria-label="Layar penuh" title="Layar penuh"><span class="material-symbols-outlined">fullscreen</span></button>
             </div>
+            <!-- Keterangan uji coba, cuma ada di model privat. Identik
+                 dengan yang di Atmosight. -->
+            <div class="zoom zoom--uji">
+              <button id="uji-btn" aria-label="Keterangan uji coba" title="Keterangan uji coba"><span class="material-symbols-outlined">priority_high</span></button>
+            </div>
             <div class="zoom">
               <button id="zoom-in" aria-label="Perbesar"><span class="material-symbols-outlined">add</span></button>
               <button id="zoom-out" aria-label="Perkecil"><span class="material-symbols-outlined">remove</span></button>
@@ -527,6 +532,22 @@
     </div>
 
     <!-- Kartu Tim Envirocircle -->
+    <!-- KETERANGAN UJI COBA model privat. Sama dengan Atmosight, cuma
+         rujukan resminya yang berbeda sebab ini kualitas udara. -->
+    <div id="uji-overlay" class="about-overlay">
+      <div class="pw-card uji-card">
+        <button id="uji-close" type="button" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <span class="about-tag">UJI COBA</span>
+        <h2 class="pw-title">Keluaran uji coba</h2>
+        <p class="uji-teks">Informasi dari model ini bersifat eksperimental dan masih dalam tahap uji coba.</p>
+        <p class="uji-teks">Model dijalankan dengan satu konfigurasi dan parameterisasi yang sama untuk seluruh Indonesia, tanpa penyetelan khusus per wilayah. Karena itu hasilnya bisa meleset di daerah tertentu, terutama pada kejadian ekstrem dan di wilayah bertopografi rumit.</p>
+        <p class="uji-teks">Gunakan sebagai bahan kajian dan pembanding, bukan sebagai dasar peringatan dini atau keputusan operasional. Untuk status kualitas udara resmi, rujuk ISPU dari Kementerian Lingkungan Hidup dan Kehutanan.</p>
+        <div class="pw-act">
+          <button id="uji-ok" type="button" class="pw-btn pw-btn-primary">Saya mengerti</button>
+        </div>
+      </div>
+    </div>
+
     <div id="about-overlay" class="about-overlay">
       <div id="about-card-team" class="about-card about-card--team">
         <button id="about-close" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
