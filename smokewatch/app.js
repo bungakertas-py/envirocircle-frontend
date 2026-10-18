@@ -177,14 +177,33 @@ function umurKatalog(res) {
    Infinity tetap kalah berapa pun ambangnya, jadi cadangan tetap menolong
    di keadaan itu. */
 const AMBANG_PINDAH_MS = 6 * 60 * 60 * 1000;
+/* ALAMAT CADANGAN ITU PER SUMBER DATA, bukan satu untuk semua.
+
+   DATA_CADANGAN menunjuk ke AKAR keluaran di GitAction, dan di akar itu
+   yang ada katalog model global. Satelit punya folder sendiri di bawahnya.
+
+   Tanpa pemisahan ini, memilih satelit lalu jatuh ke cadangan memulangkan
+   katalog MODEL GLOBAL, dan yang tampil daftar parameter model lengkap
+   dengan namanya sendiri di panel sumber. Persis itu yang dilaporkan
+   pemilik, Satelit Himawari-9 terpilih tapi yang keluar Suhu, Kelembapan,
+   Tutupan Awan, dan kawan kawan.
+
+   Yang memulangkan null artinya sumber ini memang tidak punya cadangan,
+   dan itu benar untuk model privat. */
+function basisCadangan() {
+  if (!DATA_CADANGAN) return null;
+  if (MODEL_ID === MODEL_GLOBAL) return DATA_CADANGAN;
+  if (MODEL && MODEL.satelit) return DATA_CADANGAN + "himawari/";
+  return null;
+}
+
 async function ambilKatalog() {
   /* SATELIT ikut boleh memakai cadangan, dan untuk sekarang itu satu
      satunya tempat datanya. Citranya dimasak GitAction dan terbit ke
      GitHub Pages, sedangkan folder hostingan diisi server ITERA dan belum
      berisi satelit. Begitu backend mengirimnya, aturan umur bekerja
      seperti biasa dan GitAction turun jadi cadangan betulan. */
-  const bolehCadangan = !!DATA_CADANGAN
-    && (MODEL_ID === MODEL_GLOBAL || !!(MODEL && MODEL.satelit));
+  const bolehCadangan = !!basisCadangan();
   const pakai = (base, res) => {
     pakaiSumber(base);
     katalogMendarat = res.headers.get("last-modified");
@@ -199,9 +218,9 @@ async function ambilKatalog() {
     return dekatBaik ? pakai(MODEL.base, dekat) : null;
   }
 
-  const jauh = await cobaKatalog(DATA_CADANGAN);
+  const jauh = await cobaKatalog(basisCadangan());
   if (jauh && jauh.ok && umurKatalog(jauh) + AMBANG_PINDAH_MS < umurDekat) {
-    return pakai(DATA_CADANGAN, jauh);
+    return pakai(basisCadangan(), jauh);
   }
   if (dekatBaik) return pakai(MODEL.base, dekat);
   return null;
