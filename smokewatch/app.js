@@ -36,7 +36,7 @@
 // Penanda `satelit` dibaca di beberapa tempat, jangan dihapus.
 const MODELS = {
   cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km",    dx: 0.4   },
-  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 12 km", dx: 0.108 },
+  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 12 km", dx: 0.108, privat: true },
   hima:    { base: "../backend/smokewatch/data/output/himawari/",            label: "Satelit Himawari-9", dx: 0.05, satelit: true },
 };
 
@@ -546,7 +546,12 @@ function pasangUji() {
 }
 
 function ujiSekaliSesi() {
-  if (MODEL_ID === MODEL_GLOBAL) return;
+  /* CUMA MODEL PRIVAT. Syarat lamanya "bukan model global", dan itu ikut
+     menyeret SATELIT, padahal satelit itu pengamatan, tidak punya
+     parameterisasi yang bisa meleset, jadi peringatannya tidak berlaku
+     untuknya. Dipergoki pemilik di tangkapan layar, kartu uji coba dan
+     tombol tanda serunya muncul waktu Satelit Himawari-9 dipilih. */
+  if (!MODEL || !MODEL.privat) return;
   document.body.classList.add("model-private");   // menyalakan tombol tanda serunya
   let sudah = false;
   try { sudah = sessionStorage.getItem(UJI_KUNCI) === "1"; } catch { /* mode privat */ }
