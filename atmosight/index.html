@@ -175,6 +175,10 @@
               <button class="layer-btn" data-layer="pressure_surface" data-tip="Tekanan"><span class="material-symbols-outlined">speed</span> <span class="lb-txt">Tekanan</span></button>
               <button class="layer-btn" data-layer="storm_potential" data-tip="Convective Available Potential Energy, bahan bakar badai"><span class="material-symbols-outlined">thunderstorm</span> <span class="lb-txt">CAPE</span></button>
               <button class="layer-btn" data-layer="cin_surface" data-tip="Convective Inhibition, penahan naiknya udara"><span class="material-symbols-outlined">shield</span> <span class="lb-txt">CIN</span></button>
+              <!-- PENGAMATAN, bukan ramalan. Satu satunya tombol di baris ini
+                   yang isinya keadaan yang sedang terjadi, bukan prakiraan,
+                   jadi garis waktunya mundur ke belakang bukan maju. -->
+              <button class="layer-btn" data-layer="cloudtop_temp" data-khusus="hima" data-tip="Suhu puncak awan dari satelit Himawari, pengamatan bukan ramalan"><span class="material-symbols-outlined">satellite_alt</span> <span class="lb-txt">Puncak Awan</span></button>
             </div>
             <button id="layer-next" class="layer-nav" aria-label="Variabel berikutnya"><span class="material-symbols-outlined">chevron_right</span></button>
             <!-- Buka-tutup panel kiri (Parameter + Model). Menempel di sisi kontainer
@@ -200,7 +204,7 @@
           <button type="button" class="sisi-spine" id="spine-model"
                   aria-controls="sisi-model" aria-expanded="false">
             <span class="material-symbols-outlined sisi-ico">layers</span>
-            <span class="sisi-lbl">Model</span>
+            <span class="sisi-lbl">Model &amp; Satelit</span>
           </button>
           <div class="sisi-body">
             <div class="col col-model">
@@ -218,13 +222,13 @@
 
           <div class="panel selects">
             <div class="field">
-              <div class="label-caps">MODEL</div>
+              <div class="label-caps">MODEL &amp; SATELIT</div>
               <div class="select-wrap">
                 <select id="model-select"><option>GFS (NOAA) - 28 km</option></select>
                 <span class="material-symbols-outlined">arrow_drop_down</span>
               </div>
             </div>
-            <div class="field">
+            <div class="field field--level">
               <div class="label-caps">LEVEL</div>
               <div class="select-wrap">
                 <select id="level-select" disabled><option value="surface">Permukaan</option></select>

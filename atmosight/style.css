@@ -1834,9 +1834,30 @@ html, body {
   color: var(--variant); margin: 0; }
 .uji-card .pw-act { margin-top: 6px; }
 /* Tombol tanda serunya ikut .zoom, jadi dia mewarisi ukuran, tepi, dan
-   bayang tombol layar penuh di sebelahnya. Cuma muncul di model privat. */
-.zoom--uji { display: none; }
-body.model-private .zoom--uji { display: flex; }
+   bayang tombol layar penuh di sebelahnya. Cuma muncul di model privat.
+
+   PEMILIHNYA SENGAJA PANJANG. Bentuk pendek `.zoom--uji` KALAH, sebab ada
+   `.alat .zoom { display: flex }` yang lebih spesifik dan datang lebih
+   belakang di berkas ini. Gejalanya menipu, aturannya ada di lembar gaya,
+   elemennya cocok, badan tidak berkelas model-private, tapi tombolnya
+   tetap tampil. Dibuktikan dengan menyuntik aturan kembar di ujung
+   dokumen, yang biasa tetap kalah dan yang !important baru menang. */
+/* Dipakai menyembunyikan parameter yang tidak dipunyai sumber data yang
+   sedang dibuka, misalnya waktu satelit dipilih. Penting ditandai dengan
+   !important sebab tombolnya diatur banyak aturan lain yang lebih
+   spesifik, dan di sini yang menang harus selalu sembunyi. */
+/* Atribut hidden HARUS menang di dua lencana ini. Keduanya diberi
+   display oleh aturan kelas yang lebih spesifik, jadi `box.hidden = true`
+   di skrip tidak menyembunyikan apa apa dan yang tampil pil kosong berisi
+   ikon saja. Baru ketahuan waktu satelit masuk, sebab dia sumber pertama
+   yang memang tidak punya angka akurasi. */
+#acc-badge[hidden], #fresh-badge[hidden] { display: none !important; }
+
+.layer-btn.sembunyi, .lb-btn.sembunyi, .level-bar.sembunyi,
+.panel.selects .field--level.sembunyi { display: none !important; }
+
+.alat .zoom.zoom--uji { display: none; }
+body.model-private .alat .zoom.zoom--uji { display: flex; }
 
 
 .pw-err[hidden] { display: none; }

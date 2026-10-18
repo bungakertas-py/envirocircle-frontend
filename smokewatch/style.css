@@ -1016,8 +1016,17 @@ html, body {
 .uji-teks { font-family: var(--font-ui); font-size: 13px; line-height: 1.6;
   color: var(--variant); margin: 0; }
 .uji-card .pw-act { margin-top: 6px; }
-.zoom--uji { display: none; }
-body.model-private .zoom--uji { display: flex; }
+/* Tombol tanda serunya ikut .zoom, jadi dia mewarisi ukuran, tepi, dan
+   bayang tombol layar penuh di sebelahnya. Cuma muncul di model privat.
+
+   PEMILIHNYA SENGAJA PANJANG. Bentuk pendek `.zoom--uji` KALAH, sebab ada
+   `.alat .zoom { display: flex }` yang lebih spesifik dan datang lebih
+   belakang di berkas ini. Gejalanya menipu, aturannya ada di lembar gaya,
+   elemennya cocok, badan tidak berkelas model-private, tapi tombolnya
+   tetap tampil. Dibuktikan dengan menyuntik aturan kembar di ujung
+   dokumen, yang biasa tetap kalah dan yang !important baru menang. */
+.alat .zoom.zoom--uji { display: none; }
+body.model-private .alat .zoom.zoom--uji { display: flex; }
 
 
 .pw-err[hidden] { display: none; }

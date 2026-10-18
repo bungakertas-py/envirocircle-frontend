@@ -31,9 +31,20 @@
 // dx itu jarak antar sel dalam derajat, dipakai menghitung batas zoom-in di
 // zoomMaksGrid(). Angka di sini cuma CADANGAN. Kalau katalog membawa
 // image_bounds, jaraknya dihitung dari situ dan angka ini diabaikan.
+// SATELIT ikut masuk daftar ini, bukan jadi layer tempelan di katalog GFS.
+// Dia memang sumber data tersendiri, domainnya sendiri, waktunya sendiri,
+// dan parameternya sendiri. Menumpangkannya ke GFS membuat garis waktu
+// ramalan dan garis waktu pengamatan berebut satu penggeser.
+//
+// Dua penanda baru di baris ini dibaca di banyak tempat, jadi jangan
+// dihapus. `privat` menentukan siapa yang lewat gerbang sandi dan siapa
+// yang dapat keterangan uji coba. `satelit` menentukan siapa yang
+// menyembunyikan parameter yang tidak dipunyainya, menyembunyikan pilihan
+// level, dan tidak punya panel titik.
 const MODELS = {
   gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true,  dx: 0.25  },
-  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false, dx: 0.108 },
+  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false, dx: 0.108, privat: true },
+  hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true },
 };
 
 // ================= SAKLAR MODEL =================
@@ -62,6 +73,7 @@ const MODELS = {
 const MODEL_AKTIF = {
   gfs: true,
   wrf9: true,          // keluaran meteorologi WRF-Chem 9 km dari server ITERA
+  hima: true,          // citra Himawari-9, PENGAMATAN bukan ramalan
 };
 const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 
@@ -212,7 +224,17 @@ function umurKatalog(res) {
    di keadaan itu. */
 const AMBANG_PINDAH_MS = 6 * 60 * 60 * 1000;
 async function ambilKatalog() {
-  const bolehCadangan = !!DATA_CADANGAN && MODEL_ID === MODEL_GLOBAL;
+  /* SATELIT ikut boleh memakai cadangan, dan itu bukan kelonggaran, itu
+     memang satu satunya tempat datanya untuk sekarang. Citra Himawari
+     dimasak GitAction dan terbit ke GitHub Pages, sedangkan folder di
+     hostingan diisi server ITERA dan belum berisi satelit sama sekali.
+     Tanpa baris ini pilihan Satelit akan selalu kosong di situs.
+
+     Begitu backend mengirimnya ke hostingan, aturan umurnya yang bekerja
+     seperti biasa, yang dekat menang kecuali cadangan lebih segar lewat
+     ambang, dan GitAction otomatis turun jadi cadangan betulan. */
+  const bolehCadangan = !!DATA_CADANGAN
+    && (MODEL_ID === MODEL_GLOBAL || !!(MODEL && MODEL.satelit));
   const pakai = (base, res) => {
     pakaiSumber(base);
     katalogMendarat = res.headers.get("last-modified");
@@ -397,6 +419,22 @@ const LEGENDS = {
             ["60", "#35c84a", 0], ["90", "#8ed82a", 0], ["120", "#ead821", 0], ["150", "#f5a91e", 0],
             ["200", "#f2701c", 1], ["300", "#e42320", 1], ["400", "#e33bbf", 1], ["500", "#8a29c8", 1]],
   },
+  /* SUHU PUNCAK AWAN dari Himawari-9. Ini PENGAMATAN, bukan ramalan, satu
+     satunya layer di Atmosight yang menunjukkan keadaan yang sedang terjadi.
+
+     Angkanya WAJIB sama dengan SKALA di backend/pipeline/himawari.py.
+
+     Yang hangat sengaja BENING, sebab di situ memang tidak ada awan tinggi
+     dan peta di bawahnya lebih berguna daripada warna rata. Pergantian ke
+     kuning di minus 40 bukan selera, itu ambang yang biasa dipakai untuk
+     menandai konveksi dalam. */
+  cloudtop_temp: {
+    head: "°C",
+    cells: [["-90", "#2e1c7d", 1], ["-80", "#75248a", 1], ["-70", "#c2415c", 1],
+            ["-60", "#e05a41", 1], ["-50", "#fcac1c", 0], ["-40", "#f9dc5c", 0],
+            ["-32", "#5a6e82", 1], ["-20", "#96a5b4", 0], ["0", "#c8d2dc", 0],
+            ["10", "transparent", 0]],
+  },
   temp_surface: {
     head: "°C",
     cells: [["0", "#2450b4", 1], ["8", "#4a97dc", 1], ["16", "#cfe4f2", 0], ["22", "#ffe08a", 0],
@@ -457,6 +495,7 @@ const LAYER_THEME = {
   wind_surface: "dark", rain_surface: "dark", rain_accum_surface: "dark",
   temp_surface: "dark", humidity_surface: "dark", cloud_surface: "dark", pressure_surface: "dark",
   storm_potential: "dark", cin_surface: "dark", wind_strato: "dark", temp_strato: "dark",
+  cloudtop_temp: "dark",
 };
 
 // Override warna border batas administrasi per-layer (selain default tema).
@@ -504,13 +543,35 @@ function stratoAvailable() {
 }
 
 // Redupkan tombol yang tak tersedia di level aktif (di strato: hanya Angin & Suhu).
+//
+// SATELIT lain perlakuannya. Dia cuma punya satu dua parameter, dan sebelas
+// tombol redup berjajar di sebelah satu tombol hidup itu terbaca seperti
+// aplikasinya rusak, bukan seperti sumber yang memang isinya sedikit. Jadi
+// untuk satelit yang tidak ada datanya DISEMBUNYIKAN, bukan diredupkan.
+// Model tetap diredupkan seperti dulu, sebab di model ketidakhadiran satu
+// parameter itu kabar, bukan sifat sumbernya.
 function applyLevelUI() {
   const strato = mapLevel === "strato";
+  // Penjagaan `catalog` WAJIB. Fungsi ini juga dipanggil sebelum katalog
+  // mendarat, dan tanpa penjagaan itu SELURUH tombol dianggap tak berdata
+  // lalu disembunyikan, termasuk yang sebentar lagi terbukti ada.
+  const satelit = !!(MODEL && MODEL.satelit) && !!catalog;
   document.querySelectorAll(".layer-btn[data-layer]").forEach((b) => {
     const base = b.dataset.layer;
     const has = catalog && catalog.layers[resolveLayer(base)];
     const enabled = strato ? (!!STRATO_OF[base] && !!has) : !!has;
+    // Tombol yang KHUSUS milik satu sumber disembunyikan di sumber lain,
+    // bukan diredupkan. Suhu puncak awan tidak akan pernah ada di GFS, dan
+    // memajangnya dalam keadaan redup cuma menjanjikan sesuatu yang tidak
+    // pernah datang.
+    const khusus = b.dataset.khusus;
     b.classList.toggle("disabled", !enabled);
+    b.classList.toggle("sembunyi", (!!khusus && khusus !== MODEL_ID) || (satelit && !enabled));
+  });
+  // Pilihan level ikut hilang di satelit. Citra kanal 13 itu satu bidang,
+  // tidak ada permukaan dan tidak ada stratosfer.
+  document.querySelectorAll(".level-bar, .panel.selects .field--level").forEach((n) => {
+    n.classList.toggle("sembunyi", satelit);
   });
 }
 
@@ -639,7 +700,9 @@ function pasangUji() {
 }
 
 function ujiSekaliSesi() {
-  if (MODEL_ID === MODEL_GLOBAL) return;
+  // Satelit TIDAK dapat keterangan ini. Dia pengamatan, tidak punya
+  // parameterisasi yang bisa meleset, jadi peringatannya tidak berlaku.
+  if (!MODEL || !MODEL.privat) return;
   // Kelas yang sama juga dipasang terapkanFiturModel, tapi itu jalan jauh
   // lebih belakangan. Dipasang di sini juga supaya tombol tanda serunya
   // sudah ada begitu kartunya muncul, bukan menyusul beberapa detik.
@@ -705,7 +768,7 @@ function setupModelSelect() {
   sel.addEventListener("change", async () => {
     const id = sel.value;
     if (id === MODEL_ID) return;
-    if (id !== "gfs") {
+    if (MODELS[id] && MODELS[id].privat) {
       const boleh = await mintaSandi(MODELS[id].label);
       if (!boleh) { sel.value = MODEL_ID; return; }   // batal, kembalikan pilihan
       tulisTiket();                                   // tiket sekali pakai
@@ -4044,6 +4107,7 @@ const CITY_UNIT = {
   temp_surface: { u: "\u00b0C", d: 0 },
   humidity_surface: { u: "%", d: 0 },
   cloud_surface: { u: "%", d: 0 },
+  cloudtop_temp: { u: "\u00b0C", d: 0 },
   pressure_surface: { u: "hPa", d: 0 },
   storm_potential: { u: "J/kg", d: 0 },
   cin_surface: { u: "J/kg", d: 0 },
@@ -5750,7 +5814,9 @@ async function init() {
   }
   // Dibuka langsung lewat ?model=wrf juga harus lewat gerbang, kalau tidak
   // penguncian di dropdown gampang dilewati cuma dengan mengetik alamatnya.
-  if (MODEL_ID !== "gfs" && !ambilTiket()) {
+  // Yang digerbangi CUMA model privat. Dulu syaratnya "bukan gfs", dan itu
+  // ikut menggerbangi satelit yang datanya justru terbuka untuk umum.
+  if (MODEL && MODEL.privat && !ambilTiket()) {
     const boleh = await mintaSandi(MODEL.label);
     if (!boleh) { location.replace(location.pathname); return; }
   }
@@ -5869,6 +5935,10 @@ async function init() {
     if (windS) windS.frames.forEach((f) => { if (f.velocity_json) windVelStrato[f.valid_time] = f.velocity_json; });
 
     setupHP();               // bilah bawah + chip parameter + kotak keterangan (HP)
+    // Dipanggil SESUDAH katalog mendarat dan sesudah bilah HP dibangun.
+    // Dia yang menyembunyikan parameter yang tidak dipunyai sumber ini,
+    // dan cermin tombol di bilah HP ikut berubah lewat pengamat kelas.
+    applyLevelUI();
     terapkanFiturModel();    // sembunyikan fitur yang tak punya data di model ini
     setupLevelSelect();      // hidupkan dropdown LEVEL kalau data strato ada
 
@@ -6304,7 +6374,11 @@ function bangunLowbar() {
         const cermin = () => {
           isi[i].className = "lb-btn"
             + (src.classList.contains("active") ? " active" : "")
-            + (src.classList.contains("disabled") ? " disabled" : "");
+            + (src.classList.contains("disabled") ? " disabled" : "")
+            // Kelas sembunyi WAJIB ikut dicerminkan. Kalau tidak, tombol
+            // yang sudah hilang di sisi kanan tetap berjajar di bilah bawah
+            // HP, dan dua tampilan itu jadi bercerita beda.
+            + (src.classList.contains("sembunyi") ? " sembunyi" : "");
         };
         cermin();
         new MutationObserver(cermin).observe(src, { attributes: true, attributeFilter: ["class"] });
