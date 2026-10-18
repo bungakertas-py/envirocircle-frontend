@@ -419,6 +419,18 @@ const LEGENDS = {
             ["60", "#35c84a", 0], ["90", "#8ed82a", 0], ["120", "#ead821", 0], ["150", "#f5a91e", 0],
             ["200", "#f2701c", 1], ["300", "#e42320", 1], ["400", "#e33bbf", 1], ["500", "#8a29c8", 1]],
   },
+  /* ANGIN GERAK AWAN dari Himawari-9. Ini angin yang DIUKUR dari
+     perpindahan awan antar citra, bukan hitungan model, jadi dia pasangan
+     yang pas untuk layer Angin GFS di sebelahnya.
+
+     Legendanya bukan tangga angka melainkan TIGA LAPIS, sebab yang penting
+     dibedakan memang lapisannya. Warnanya sama dengan warna panah di
+     backend/pipeline/himawari_angin.py, dan dua duanya harus disetel
+     bersama kalau diubah. */
+  amv_angin: {
+    head: "lapisan",
+    cells: [["< 400 hPa", "#c5ff95", 0], ["400-700", "#5debd7", 0], ["> 700 hPa", "#4fa8d8", 1]],
+  },
   /* SUHU PUNCAK AWAN dari Himawari-9. Ini PENGAMATAN, bukan ramalan, satu
      satunya layer di Atmosight yang menunjukkan keadaan yang sedang terjadi.
 
@@ -495,7 +507,7 @@ const LAYER_THEME = {
   wind_surface: "dark", rain_surface: "dark", rain_accum_surface: "dark",
   temp_surface: "dark", humidity_surface: "dark", cloud_surface: "dark", pressure_surface: "dark",
   storm_potential: "dark", cin_surface: "dark", wind_strato: "dark", temp_strato: "dark",
-  cloudtop_temp: "dark",
+  cloudtop_temp: "dark", amv_angin: "dark",
 };
 
 // Override warna border batas administrasi per-layer (selain default tema).
@@ -1351,6 +1363,17 @@ function buildTicks() {
   if (!wrap || !frames.length) return;
   const n = frames.length;
   let prevDay = null;
+  /* Kalau SELURUH bingkai jatuh di hari yang sama, sumbu waktunya jadi
+     polos tanpa satu pun angka, sebab label cuma dipasang di pergantian
+     hari. Itu yang terjadi pada sumber pengamatan seperti satelit, yang
+     riwayatnya cuma beberapa jam. Pembaca melihat penggeser tanpa
+     keterangan apa apa di belakangnya.
+
+     Jadi kalau harinya tidak pernah berganti, yang dilabeli JAM, dipilih
+     berjarak supaya tidak berdesakan. */
+  const hariAwal = toWIB(frames[0].valid_time).getUTCDate();
+  const sehariSaja = frames.every((f) => toWIB(f.valid_time).getUTCDate() === hariAwal);
+  const langkahJam = Math.max(1, Math.round(n / 5));
   wrap.innerHTML = frames.map((f, i) => {
     const wib = toWIB(f.valid_time);
     const day = wib.getUTCDate();
@@ -1367,8 +1390,10 @@ function buildTicks() {
     // Mark untuk tiap frame; label TANGGAL saja (di pergantian hari) biar tak berdesakan.
     const lbl = isDay
       ? `<span class="tl-tick-lbl">${wib.toLocaleDateString("id-ID", { day: "numeric", month: "short", timeZone: "UTC" })}</span>`
-      : "";
-    return `<div class="tl-tick${isDay ? " day" : ""}${edge}" style="left:${pos}%">` +
+      : (sehariSaja && (i % langkahJam === 0 || i === n - 1)
+        ? `<span class="tl-tick-lbl">${String(wib.getUTCHours()).padStart(2, "0")}:${String(wib.getUTCMinutes()).padStart(2, "0")}</span>`
+        : "");
+    return `<div class="tl-tick${isDay ? " day" : (lbl ? " jam" : "")}${edge}" style="left:${pos}%">` +
       `<span class="tl-tick-mark"></span>${lbl}</div>`;
   }).join("");
 }
@@ -2271,6 +2296,11 @@ function tutupGelembung() {
 }
 
 async function bukaGelembung(lat, lon, label, isMe) {
+  /* SUMBER SATELIT TIDAK PUNYA PANEL TITIK. Citra itu bidang gambar, tidak
+     ada deret waktu per titik untuk ditarik, dan jalur panel titik akan
+     melempar galat kalau dipaksa. Diam saja lebih baik daripada gelembung
+     berisi titik titik yang tidak pernah jadi isi. */
+  if (MODEL && MODEL.satelit) return;
   /* PANEL TIDAK DITUTUP waktu titik berganti. Dulu dia ditutup dulu, dan
      orang yang sedang membandingkan Jakarta dengan Bandung harus menekan
      Detail lagi tiap kali. Sekarang kalau panelnya sedang terbuka, isinya
@@ -4108,6 +4138,7 @@ const CITY_UNIT = {
   humidity_surface: { u: "%", d: 0 },
   cloud_surface: { u: "%", d: 0 },
   cloudtop_temp: { u: "\u00b0C", d: 0 },
+  amv_angin: { u: "m/detik", d: 0 },
   pressure_surface: { u: "hPa", d: 0 },
   storm_potential: { u: "J/kg", d: 0 },
   cin_surface: { u: "J/kg", d: 0 },

@@ -30,9 +30,14 @@
    dx itu jarak antar sel dalam derajat, dipakai menghitung batas zoom-in di
    zoomMaksGrid(). Angka di sini cuma CADANGAN. Kalau katalog membawa
    image_bounds, jaraknya dihitung dari situ dan angka ini diabaikan. */
+// SATELIT ikut masuk daftar ini, bukan jadi layer tempelan di katalog CAMS.
+// Dia sumber tersendiri, waktunya sendiri, parameternya sendiri, dan yang
+// paling penting, isinya PENGAMATAN sedangkan dua yang lain ramalan.
+// Penanda `satelit` dibaca di beberapa tempat, jangan dihapus.
 const MODELS = {
   cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km",    dx: 0.4   },
   wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 12 km", dx: 0.108 },
+  hima:    { base: "../backend/smokewatch/data/output/himawari/",            label: "Satelit Himawari-9", dx: 0.05, satelit: true },
 };
 
 /* Folder WRF meteo milik Atmosight. Dipakai CUMA untuk meminjam medan angin,
@@ -47,6 +52,7 @@ const WRF_METEO_BASE = "../backend/atmosight/data/output/wrfchem_9km_meteo/";
 const MODEL_AKTIF = {
   cams: true,
   wrfchem: true,
+  hima: true,         // citra Himawari-9, PENGAMATAN bukan ramalan
 };
 const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 
@@ -172,7 +178,13 @@ function umurKatalog(res) {
    di keadaan itu. */
 const AMBANG_PINDAH_MS = 6 * 60 * 60 * 1000;
 async function ambilKatalog() {
-  const bolehCadangan = !!DATA_CADANGAN && MODEL_ID === MODEL_GLOBAL;
+  /* SATELIT ikut boleh memakai cadangan, dan untuk sekarang itu satu
+     satunya tempat datanya. Citranya dimasak GitAction dan terbit ke
+     GitHub Pages, sedangkan folder hostingan diisi server ITERA dan belum
+     berisi satelit. Begitu backend mengirimnya, aturan umur bekerja
+     seperti biasa dan GitAction turun jadi cadangan betulan. */
+  const bolehCadangan = !!DATA_CADANGAN
+    && (MODEL_ID === MODEL_GLOBAL || !!(MODEL && MODEL.satelit));
   const pakai = (base, res) => {
     pakaiSumber(base);
     katalogMendarat = res.headers.get("last-modified");
@@ -376,6 +388,23 @@ function aqiKategori(v) {
 }
 const AQI_RENTANG = ["0-50", "51-100", "101-150", "151-200", "201-300", "\u2265301"];
 const LEGENDS = {
+  /* DUA LAYER SATELIT. Legendanya pakai KATA, bukan tangga angka, sebab
+     dua duanya memang bukan besaran terukur yang punya satuan.
+
+     Debu dan abu itu gabungan tiga selisih kanal, warnanya penanda jenis
+     bukan nilai. Namanya sengaja bukan asap, sebab asap kebakaran hampir
+     tidak terlihat di inframerah termal. Untuk kebakaran yang diandalkan
+     layer Titik Panas. Titik panas itu dua tingkat keyakinan, dan kata
+     "indikatif" sengaja ditulis di legenda, bukan disembunyikan di
+     keterangan, sebab ambangnya kami tetapkan sendiri dan ini bukan
+     produk kebakaran resmi. */
+  debu_abu: { head: "satelit", words: 1,
+    cells: [["Debu dan abu", "#c98a5e", 0], ["Awan tinggi", "#5a4a7a", 1],
+            ["Udara bersih", "transparent", 0]] },
+  titik_panas: { head: "indikatif", words: 1,
+    cells: [["Panas kuat", "#e42320", 1], ["Panas sedang", "#f5a91e", 0],
+            ["Tidak terdeteksi", "transparent", 0]] },
+
   // Sel ISPU DUA BARIS: nama kategori di atas, rentang angkanya di bawah. Orang awam
   // membaca kategorinya, orang yang terbiasa dengan ISPU mencari bilangannya.
   // Nama ditulis apa adanya (satu baris). Di DESKTOP tak di-wrap: fontnya diturunkan
@@ -604,13 +633,28 @@ function stratoAvailable() {
 }
 
 // Redupkan tombol yang tak tersedia di level aktif (di strato: hanya Angin & Suhu).
+// SATELIT lain perlakuannya. Dia cuma punya dua parameter, dan belasan
+// tombol redup berjajar di sebelahnya terbaca seperti aplikasi rusak, bukan
+// seperti sumber yang memang isinya sedikit. Jadi untuk satelit yang tidak
+// ada datanya DISEMBUNYIKAN, bukan diredupkan. Blok ini kembaran dari yang
+// di Atmosight.
 function applyLevelUI() {
   const strato = mapLevel === "strato";
+  // Penjagaan `catalog` WAJIB, fungsi ini juga dipanggil sebelum katalog
+  // mendarat dan tanpa itu semua tombol ikut disembunyikan.
+  const satelit = !!(MODEL && MODEL.satelit) && !!catalog;
   document.querySelectorAll(".layer-btn[data-layer]").forEach((b) => {
     const base = b.dataset.layer;
     const has = catalog && catalog.layers[resolveLayer(base)];
     const enabled = strato ? (!!STRATO_OF[base] && !!has) : !!has;
+    // Tombol KHUSUS milik satu sumber disembunyikan di sumber lain, bukan
+    // diredupkan. Asap satelit tidak akan pernah ada di CAMS.
+    const khusus = b.dataset.khusus;
     b.classList.toggle("disabled", !enabled);
+    b.classList.toggle("sembunyi", (!!khusus && khusus !== MODEL_ID) || (satelit && !enabled));
+  });
+  document.querySelectorAll(".level-bar, .panel.selects .field--level").forEach((n) => {
+    n.classList.toggle("sembunyi", satelit);
   });
 }
 
@@ -2733,6 +2777,10 @@ function _popupKeBawah(pop) {
 }
 
 async function openPoint(lat, lon, label, isMe) {
+  /* SUMBER SATELIT TIDAK PUNYA PANEL TITIK. Citra itu bidang gambar, tidak
+     ada deret waktu per titik untuk ditarik, dan jalur panel titik akan
+     melempar galat kalau dipaksa. */
+  if (MODEL && MODEL.satelit) return;
   const key = activeLayer;
   if (!key) return;
   const sidebar = pakaiSidebar(key);
@@ -3981,6 +4029,9 @@ async function init() {
       btn.classList.toggle("active", key === activeLayer);
     });
     renderLegend(activeLayer);
+    // Dipanggil SESUDAH katalog mendarat. Dia yang menyembunyikan parameter
+    // yang tidak dipunyai sumber ini.
+    applyLevelUI();
     // Tombol Paparan ada di KONTROL KANAN (bukan bilah layer), tapi memilih layer 'paparan'.
     const _pb = $("paparan-btn");
     if (_pb) {

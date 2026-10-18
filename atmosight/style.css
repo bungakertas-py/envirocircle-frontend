@@ -413,6 +413,10 @@ html, body {
 .tl-tick.day .tl-tick-mark { height: 10px; background: var(--ink); }
 .tl-tick-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--variant); margin-top: 2px; white-space: nowrap; }
 .tl-tick.day .tl-tick-lbl { color: var(--ink); font-weight: 700; }
+/* Label JAM, dipakai sumber yang riwayatnya cuma beberapa jam sehingga
+   harinya tidak pernah berganti. Sengaja lebih redup daripada label
+   tanggal, dia penanda biasa bukan pergantian hari. */
+.tl-tick.jam .tl-tick-mark { height: 7px; }
 .tl-btns { display: flex; align-items: center; gap: 10px; }
 .tl-btn {
   width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;

@@ -179,6 +179,14 @@
               <button class="layer-btn" data-layer="pbl" data-tip="Planetary Boundary Layer Height">
                 <span class="material-symbols-outlined">vertical_align_bottom</span> <span class="lb-txt">Planetary Boundary Layer Height <span class="lb-kode">PBLH</span></span>
               </button>
+              <!-- DUA LAYER SATELIT, pengamatan bukan ramalan. Cuma muncul
+                   waktu sumbernya satelit, disembunyikan di CAMS dan WRF. -->
+              <button class="layer-btn" data-layer="debu_abu" data-khusus="hima" data-tip="Debu dan abu vulkanik dari selisih kanal inframerah Himawari, jalan siang dan malam. Asap kebakaran hampir tidak terlihat di inframerah, untuk itu pakai Titik Panas">
+                <span class="material-symbols-outlined">blur_on</span> <span class="lb-txt">Debu dan Abu</span>
+              </button>
+              <button class="layer-btn" data-layer="titik_panas" data-khusus="hima" data-tip="Titik panas indikatif dari kanal 3,9 mikrometer Himawari, tiap jam">
+                <span class="material-symbols-outlined">local_fire_department</span> <span class="lb-txt">Titik Panas</span>
+              </button>
             </div>
             <button id="layer-next" class="layer-nav" aria-label="Variabel berikutnya"><span class="material-symbols-outlined">chevron_right</span></button>
             <!-- Buka-tutup panel kiri (Parameter + Model). Menempel di sisi kontainer
@@ -212,7 +220,7 @@
           <button type="button" class="sisi-spine" id="spine-model"
                   aria-controls="sisi-model" aria-expanded="false">
             <span class="material-symbols-outlined sisi-ico">layers</span>
-            <span class="sisi-lbl">Model</span>
+            <span class="sisi-lbl">Model &amp; Satelit</span>
           </button>
           <div class="sisi-body">
             <div class="col col-model">
@@ -230,7 +238,7 @@
 
           <div class="panel selects">
             <div class="field">
-              <div class="label-caps">MODEL</div>
+              <div class="label-caps">MODEL &amp; SATELIT</div>
               <div class="select-wrap">
                 <!-- Isi dropdown ini DIBANGUN ULANG oleh app.js lewat
                      setupModelSelect(), jadi option di bawah cuma cadangan
@@ -252,7 +260,7 @@
                 <span class="material-symbols-outlined">arrow_drop_down</span>
               </div>
             </div>
-            <div class="field">
+            <div class="field field--level">
               <div class="label-caps">LEVEL</div>
               <div class="select-wrap">
                 <select id="level-select" disabled><option value="surface">Permukaan</option></select>

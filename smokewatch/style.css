@@ -1025,6 +1025,13 @@ html, body {
    elemennya cocok, badan tidak berkelas model-private, tapi tombolnya
    tetap tampil. Dibuktikan dengan menyuntik aturan kembar di ujung
    dokumen, yang biasa tetap kalah dan yang !important baru menang. */
+/* Menyembunyikan parameter yang tidak dipunyai sumber yang sedang dibuka,
+   misalnya waktu satelit dipilih. Bertanda penting sebab tombolnya diatur
+   banyak aturan lain yang lebih spesifik. */
+.layer-btn.sembunyi, .lb-btn.sembunyi, .level-bar.sembunyi,
+.panel.selects .field--level.sembunyi { display: none !important; }
+#acc-badge[hidden], #fresh-badge[hidden] { display: none !important; }
+
 .alat .zoom.zoom--uji { display: none; }
 body.model-private .alat .zoom.zoom--uji { display: flex; }
 
