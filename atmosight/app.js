@@ -1106,6 +1106,19 @@ const speedPane = map.createPane("speed");
 speedPane.style.zIndex = 350;
 speedPane.style.pointerEvents = "none";
 
+/* ALAS SATELIT. Satu tingkat DI BAWAH pane speed, jadi dia benar benar
+   jadi latar dan panah anginnya duduk di atasnya.
+
+   Ini pasangan untuk pola yang sudah dipakai layer angin GFS, tempat
+   heatmap kecepatan jadi alas dan partikel velocity.js menari di atasnya.
+   Di satelit, alasnya suhu puncak awan dan "partikelnya" panah AMV yang
+   sudah digambar server. Tanpa alas, layer Angin Satelit cuma panah
+   melayang di atas peta hitam, dan panah tanpa awan itu kehilangan
+   separuh ceritanya, sebab angin ini memang DIUKUR dari gerak awan. */
+const satAlasPane = map.createPane("satalas");
+satAlasPane.style.zIndex = 340;
+satAlasPane.style.pointerEvents = "none";
+
 // Pane batas administrasi (garis negara & provinsi): di atas partikel
 // (overlayPane z400), di bawah label (z650).
 const adminPane = map.createPane("admin");
@@ -1180,6 +1193,10 @@ let velocityLayer = null;
    sudah bukan yang terakhir. */
 let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
+/* Layer yang dipakai sebagai ALAS waktu layer di kirinya sedang aktif.
+   Cuma berlaku untuk sumber satelit. Lihat komentar pane "satalas". */
+const ALAS_SATELIT = { amv_angin: "cloudtop_temp" };
+let satAlasLayer = null;
 // Jarak antar langkah waktu, dalam JAM. GFS 3 jam, WRF 9 km 1 jam.
 // Dipakai untuk mengubah laju hujan (mm/jam) jadi akumulasi. Dulu dipatok 3
 // dan itu benar selama cuma ada GFS; begitu WRF masuk, patokan itu melebihkan
@@ -1501,7 +1518,30 @@ function tandaiSpineParameter(layerKey) {
   ic.textContent = bi ? bi.textContent.trim() : "tune";
 }
 
+/* Legenda untuk layer yang sedang jadi ALAS. Ikut aturan yang sama dengan
+   legenda utama, cuma kotaknya lebih kecil, sebab dia keterangan pendamping
+   bukan keterangan pokok. */
+function renderLegendaAlas() {
+  const baris = $("legend-alas");
+  if (!baris) return;
+  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+  const def = dasar && LEGENDS[dasar];
+  if (!def) { baris.hidden = true; return; }
+  baris.hidden = false;
+  const head = $("legend-alas-head"), cells = $("legend-alas-cells");
+  if (head) isiKepalaLegenda(head, dasar, def.head);
+  if (cells) {
+    cells.classList.toggle("legend-words", !!def.words);
+    cells.innerHTML = def.cells.map(([label, bg, dark]) =>
+      (bg === "transparent"
+        ? `<div class="legend-cell kotak-catur${dark ? " dark" : ""}">${label}</div>`
+        : `<div class="legend-cell${dark ? " dark" : ""}" style="background:${bg}">${label}</div>`)
+    ).join("");
+  }
+}
+
 function renderLegend(layerKey) {
+  renderLegendaAlas();
   const def = LEGENDS[layerKey];
   const head = $("legend-head"), cells = $("legend-cells");
   if (!def || !head || !cells) return;
@@ -1531,6 +1571,10 @@ function setActiveLayer(layerKey) {
   // di-reuse antar-layer. Mencegah "ghost" palet layer sebelumnya menembus area
   // transparan layer hujan (bug sisa palet putih->biru saat pindah lalu balik).
   if (speedLayer) { map.removeLayer(speedLayer); speedLayer = null; }
+  // Alas satelit ikut dibuang. Kalau dibiarkan, pindah dari Angin Satelit ke
+  // Puncak Awan menyisakan satu citra awan tembus pandang di bawah citra
+  // awan yang baru, dan dua duanya kelihatan.
+  if (satAlasLayer) { map.removeLayer(satAlasLayer); satAlasLayer = null; }
   buildTicks();
   const slider = $("time-slider");
   if (slider) slider.max = String(frames.length - 1);
@@ -1568,6 +1612,57 @@ function pasangAngin(data) {
   }
 }
 
+/* Memasang alas satelit untuk bingkai yang sedang tampil.
+
+   Dicocokkan lewat valid_time, BUKAN lewat nomor bingkai. Dua layer satelit
+   sekarang memang selalu punya deret jam yang sama, tapi kalau suatu hari
+   AMV bolong satu slot sedangkan citranya ada, mencocokkan nomor akan
+   memasang awan jam lain di bawah panah jam ini, dan tidak ada yang akan
+   sadar sebab gambarnya tetap masuk akal. */
+/* Satu bingkai di depan ditarik diam diam.
+
+   Satu keping citra satelit 1,9 MB, sedangkan putaran berganti tiap 1,1
+   detik. Tanpa ancang ancang, tiap langkah berarti menunggu berkas itu
+   mendarat dulu, dan yang dilihat orang peta yang diam walau penggesernya
+   sudah berpindah. Yang ditarik CUMA satu di depan, bukan seluruh deret,
+   sebab dua belas bingkai itu 23 MB dan tidak sopan menyedot sebanyak itu
+   dari orang yang mungkin cuma melihat satu jam.
+
+   Gagalnya diabaikan. Ini ancang ancang, bukan pemuatan datanya sendiri. */
+let praMuatUrl = null;
+function muatDuluBingkaiBerikut() {
+  if (!frames.length || !DATA_BASE) return;
+  const b = frames[(current + 1) % frames.length];
+  if (!b || !b.preview_image) return;
+  const url = DATA_BASE + b.preview_image;
+  if (url === praMuatUrl) return;
+  praMuatUrl = url;
+  const im = new Image(); im.decoding = "async"; im.src = url;
+  // Alasnya ikut, kalau tidak yang mulus cuma panahnya dan awan di
+  // belakangnya tetap tersendat.
+  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+  const def = dasar && catalog && catalog.layers[dasar];
+  const fa = def && def.frames.find((f) => f.valid_time === b.valid_time);
+  if (fa) { const ia = new Image(); ia.decoding = "async"; ia.src = DATA_BASE + fa.preview_image; }
+}
+
+function pasangAlasSatelit(frame) {
+  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+  const def = dasar && catalog && catalog.layers[dasar];
+  const fa = def && def.frames.find((f) => f.valid_time === frame.valid_time);
+  if (!fa || !imageBounds) {
+    if (satAlasLayer) { map.removeLayer(satAlasLayer); satAlasLayer = null; }
+    return;
+  }
+  const url = DATA_BASE + fa.preview_image;
+  if (!satAlasLayer) {
+    satAlasLayer = L.imageOverlay(url, imageBounds,
+      { pane: "satalas", opacity: 0.85, interactive: false }).addTo(map);
+  } else {
+    satAlasLayer.setUrl(url);
+  }
+}
+
 async function showFrame(i) {
   current = (i + frames.length) % frames.length;
   const frame = frames[current];
@@ -1582,6 +1677,7 @@ async function showFrame(i) {
   }
   const isVector = catalog.layers[activeLayer]?.kind === "vector";
   speedLayer.setOpacity(isVector ? 0.92 : 1); // scalar opaque; angin semi
+  pasangAlasSatelit(frame);                   // citra awan di bawah panah AMV
 
   // Partikel angin PUTIH — SELALU ada (angin & hujan), dari medan angin waktu sama.
   // Ikut LEVEL: di stratosfer pakai medan angin 70 hPa agar konsisten dengan heatmap.
@@ -1632,18 +1728,37 @@ async function showFrame(i) {
   if (mjoOn) { refreshMjo(); mjoIsiNote(); }   // amplop MJO ikut waktu aktif
   if (activeLayer === "pressure_surface") refreshIsobars();   // isobar ikut waktu aktif
   segarkanSkewT();   // kartu Skew-T ikut jam yang sedang tampil
+  muatDuluBingkaiBerikut();   // ancang ancang, biar putaran tidak tersendat
   updateHash();
 }
 
-function togglePlay() {
-  playing = !playing;
-  $("play-icon").textContent = playing ? "pause" : "play_arrow";
-  if (playing) {
-    playTimer = setInterval(async () => { await showFrame(current + 1); }, 1100);
-  } else {
-    clearInterval(playTimer);
-  }
+/* MAIN DAN BERHENTI, satu pintu.
+
+   Dulu ini cuma togglePlay yang membalik `playing` lalu, kalau hidupnya
+   jadi true, memasang interval baru. Dua hal yang bisa berantakan di situ.
+
+   Pertama, waktu dimatikan ia memanggil clearInterval tapi tidak pernah
+   mengosongkan pemegangnya, jadi tidak ada satu pun tempat yang bisa
+   memastikan "sekarang benar benar tidak ada timer yang jalan".
+
+   Kedua, dan ini yang membuatnya rapuh, keadaan main itu disimpan DUA KALI,
+   di variabel `playing` dan di adanya timer. Kalau dua duanya sempat tidak
+   sepakat, misalnya `playing` true sementara timernya sudah hilang, tekanan
+   tombol berikutnya justru MEMATIKAN yang memang sudah mati. Dari luar itu
+   terlihat persis seperti tombol main yang tidak berfungsi, dan baru jalan
+   di tekanan kedua.
+
+   Sekarang keadaannya disetel, bukan dibalik, dan timer lama SELALU dicabut
+   lebih dulu, hidup atau mati. Jadi tidak mungkin ada dua timer berjalan
+   bersamaan, dan tidak mungkin ada `playing` true tanpa timer. */
+function setPlay(on) {
+  playing = !!on;
+  const ic = $("play-icon");
+  if (ic) ic.textContent = playing ? "pause" : "play_arrow";
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  if (playing) playTimer = setInterval(() => { showFrame(current + 1); }, 1100);
 }
+function togglePlay() { setPlay(!playing); }
 
 // ================= POINT DETAIL =================
 let pointData = null;      // { meta, vars: {name:{arr,scale,offset}} }
@@ -5967,7 +6082,7 @@ async function init() {
         // Pilih variabel TIDAK menutup dropdown; hanya tombol panah "Parameter" yg menutup.
         btn.addEventListener("click", () => {
           if (btn.classList.contains("disabled")) return;   // diredupkan (mis. di strato)
-          if (playing) togglePlay();
+          setPlay(false);          // ganti parameter selalu menghentikan putaran
           activeBase = key;
           setActiveLayer(resolveLayer(key));
         });
@@ -6088,7 +6203,11 @@ async function init() {
     if (slider) {
       slider.max = String(frames.length - 1);
       slider.addEventListener("input", (ev) => {
-        if (playing) togglePlay();
+        /* Menyeret selalu menghentikan putaran, bukan membaliknya. Dengan
+           toggle lama, satu keadaan yang tidak sepakat membuat seretan
+           justru MENYALAKAN putaran lalu tombol main mematikannya lagi,
+           dan orang melihat slider yang tidak mau jalan. */
+        setPlay(false);
         showFrame(parseInt(ev.target.value, 10));
       });
     }

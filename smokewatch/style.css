@@ -1880,8 +1880,8 @@ body { font-weight: 200; }
    tegak dibaca dari bawah ke atas. */
 .sisi-spine {
   flex: none; width: 40px; min-height: 190px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  padding: 14px 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 12px 0; cursor: pointer;
   background: var(--ink); color: var(--paper);
   border: 0; transition: background .2s ease;
 }
@@ -1891,7 +1891,10 @@ body { font-weight: 200; }
 .sisi-ico { font-size: 20px; }
 .sisi-lbl {
   writing-mode: vertical-rl; transform: rotate(180deg);
-  font-size: 12px; font-weight: 300; letter-spacing: .14em;
+  /* 10px, bukan 12px. Label terpanjang "MODEL & SATELIT" membuat tulang
+     punggungnya tumbuh sampai 189px dan ujung bawahnya MASUK KE DALAM
+     bilah waktu di layar setinggi 724px. Diukur, bukan ditaksir. */
+  font-size: 10px; font-weight: 300; letter-spacing: .10em;
   text-transform: uppercase; white-space: nowrap;
 }
 

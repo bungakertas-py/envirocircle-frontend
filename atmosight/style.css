@@ -384,6 +384,16 @@ html, body {
    di atasnya via position:absolute → TIDAK menambah tinggi alur, jadi bar warna
    tak terdorong turun/keluar layar saat toggle aktif. */
 .legend-col { position: relative; align-self: flex-end; }
+/* Legenda ALAS, satu baris di atas legenda utama.
+   JEBAKAN yang sudah pernah memakan waktu di app ini, atribut hidden KALAH
+   lawan display:flex, jadi aturan [hidden] di bawah WAJIB ada.
+   margin-left auto pada legenda utama juga wajib. Begitu kolom ini punya
+   anak yang lebih lebar, legenda utama berhenti menyusut sendiri dan
+   melar mengikuti si lebar, lalu berdiri tidak rata kanan lagi. */
+.legend-alas-baris { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.legend-alas-baris[hidden] { display: none; }
+.legend-col > .legend-panel { width: max-content; margin-left: auto; }
+.legend-alas-baris .legend-cell { width: 36px; min-height: 26px; font-size: 11px; }
 /* Keterangan kondisi = popover yang muncul ke KIRI tombol Kondisi (pola sama
    dengan kotak pencarian). Dibungkus .city-wrap (position relative). */
 .city-wrap { position: relative; pointer-events: auto; }
@@ -1757,6 +1767,14 @@ html, body {
   /* legenda warna: selebar isinya (rata kanan), tak melar penuh. Kalau isinya
      panjang (mis. KNOTS) dibatasi 100% lalu bisa di-scroll. */
   .legend-panel { min-width: 0; align-self: flex-end; max-width: 100%; }
+  /* Legenda ALAS DIMATIKAN di layar sempit. Di sini legenda berubah jadi
+     batang TEGAK berposisi fixed di tepi kiri, dan dua batang tegak akan
+     berdiri di titik yang sama persis lalu saling menimpa. Sudah terjadi
+     waktu fitur ini dipasang. Yang disisakan legenda layer aktif, sebab
+     itu yang dipilih orang, dan warna awan di belakangnya masih terbaca
+     tanpa angka. */
+  .legend-alas-baris { display: none; }
+  .legend-col > .legend-panel { width: auto; margin-left: 0; }
   .legend { overflow-x: auto; min-width: 0; }
   .legend-cell { width: 34px; min-height: 30px; font-size: 12px; }
 
@@ -2305,8 +2323,8 @@ body { font-weight: 200; }
    tegak dibaca dari bawah ke atas. */
 .sisi-spine {
   flex: none; width: 40px; min-height: 190px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  padding: 14px 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 12px 0; cursor: pointer;
   background: var(--ink); color: var(--paper);
   border: 0; transition: background .2s ease;
 }
@@ -2316,7 +2334,10 @@ body { font-weight: 200; }
 .sisi-ico { font-size: 20px; }
 .sisi-lbl {
   writing-mode: vertical-rl; transform: rotate(180deg);
-  font-size: 12px; font-weight: 300; letter-spacing: .14em;
+  /* 10px, bukan 12px. Label terpanjang "MODEL & SATELIT" membuat tulang
+     punggungnya tumbuh sampai 189px dan ujung bawahnya MASUK KE DALAM
+     bilah waktu di layar setinggi 724px. Diukur, bukan ditaksir. */
+  font-size: 10px; font-weight: 300; letter-spacing: .10em;
   text-transform: uppercase; white-space: nowrap;
 }
 

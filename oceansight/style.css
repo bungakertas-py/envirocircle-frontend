@@ -1457,12 +1457,12 @@ html, body {
 .sisi { position: absolute; top: 50%; transform: translateY(-50%); z-index: 40; display: flex; align-items: stretch; pointer-events: auto; }
 .sisi--kiri { left: 0; flex-direction: row-reverse; }
 .sisi--kanan { right: 0; flex-direction: row; }
-.sisi-spine { flex: none; width: 40px; min-height: 190px; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 0; cursor: pointer; background: var(--ink); color: var(--paper); border: 0; transition: background .2s ease; }
+.sisi-spine { flex: none; width: 40px; min-height: 190px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0; cursor: pointer; background: var(--ink); color: var(--paper); border: 0; transition: background .2s ease; }
 .sisi--kiri  .sisi-spine { border-radius: 0 4px 4px 0; }
 .sisi--kanan .sisi-spine { border-radius: 4px 0 0 4px; }
 .sisi-spine:hover { background: var(--ink); }
 .sisi-ico { font-size: 20px; }
-.sisi-lbl { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; font-weight: 300; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.sisi-lbl { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10px; font-weight: 300; letter-spacing: .10em; text-transform: uppercase; white-space: nowrap; }
 .sisi-body { display: none; width: 300px; max-height: 78vh; overflow-y: auto; background: var(--paper); border: var(--rambut, 0.7px) solid var(--ink-20); padding: 18px 16px; }
 .sisi--kiri  .sisi-body { border-left: 0; border-radius: 0 4px 4px 0; }
 .sisi--kanan .sisi-body { border-right: 0; border-radius: 4px 0 0 4px; }

@@ -488,6 +488,17 @@
                pojok kanan bawah dan tertimpa bar legenda ini, jadi tidak
                pernah ketemu. Hanya tampil sesudah ada titik dipilih. -->
           <button id="pt-reopen" title="Tampilkan lagi panel titik"><span class="material-symbols-outlined">expand_less</span>Panel titik</button>
+          <!-- Legenda ALAS. Cuma muncul waktu sebuah layer digambar di atas
+               layer lain, dan untuk sekarang itu cuma Angin Satelit yang
+               duduk di atas Puncak Awan. Dua sistem warna di satu layar
+               WAJIB dua keterangan, kalau tidak warna awannya jadi hiasan
+               yang tidak ada yang bisa membacanya. -->
+          <div class="legend-alas-baris" id="legend-alas" hidden>
+            <div class="legend-panel">
+              <div class="legend-head mono" id="legend-alas-head">°C</div>
+              <div class="legend" id="legend-alas-cells"></div>
+            </div>
+          </div>
           <div class="legend-panel">
             <div class="legend-head mono" id="legend-head">KNOTS</div>
             <div class="legend" id="legend-cells"></div>
