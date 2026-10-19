@@ -641,8 +641,14 @@ html, body {
 }
 .skt-k { font-size: 9px; letter-spacing: .04em; color: var(--variant); font-family: var(--font-mono); }
 .skt-v { font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
+/* Satu kolom di bawah diagram yang 340px, dua kolom kalau wadahnya memang
+   cukup lebar. Dipatok lewat auto-fit, bukan angka tetap, sebab label
+   terpanjangnya "DGZ, zona tumbuh kristal es" butuh sekitar 185px bersama
+   contoh garisnya. Dengan dua kolom paksa di 340px dia membungkus dan
+   barisnya jadi tinggi tinggi tidak rata. */
 .skt-legend {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 4px 10px;
   margin-top: 8px; padding-top: 8px; border-top: 2px solid var(--ink);
 }
 .skt-lg { display: flex; align-items: center; gap: 6px; font-size: 10px; font-family: var(--font-mono); color: var(--ink); }

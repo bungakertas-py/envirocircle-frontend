@@ -2366,6 +2366,13 @@ async function bukaSkewT(lat, lon) {
     `<div class="skt-badan">` +
       `<div class="skt-kiri">` +
         window.SkewT.svg(d, { W: 340, H: 380 }) +
+        /* Legenda DUDUK DI BAWAH PLOT, bukan di kolom kanan. Diminta
+           pemilik 19 Okt, dan memang di situ tempatnya. Kolom kiri
+           menyisakan ruang kosong setinggi hampir tiga ratus piksel di
+           bawah diagram, sedangkan kolom kanan sudah penuh. Lagipula
+           legenda itu menerangkan garis garis di diagram, jadi lebih enak
+           dibaca sambil melihat diagramnya. */
+        skewtLegend() +
       `</div>` +
       `<div class="skt-kanan">` +
         `<div class="skt-panel-row">` +
@@ -2374,7 +2381,6 @@ async function bukaSkewT(lat, lon) {
         `</div>` +
         `<div class="skt-note">Profil ${fmtValid(pd.meta.times[ti])} · indikasi model GFS (grid ~1°), bukan sounding asli.</div>` +
         skewtTabel(d) +
-        skewtLegend() +
         `<div class="skt-exp-row"><button type="button" class="skt-export" id="skt-export">` +
         `<span class="material-symbols-outlined">image</span> Export PNG</button></div>` +
       `</div>` +
