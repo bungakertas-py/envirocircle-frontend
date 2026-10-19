@@ -720,8 +720,6 @@ function mintaSandi(label) {
    Penandanya TIDAK hilang sesudah ditutup. Tombol tanda seru di samping
    tombol layar penuh tetap ada selama model privat terbuka, dan dia membuka
    kartu ini lagi kapan saja. */
-const UJI_KUNCI = "kertas-cuaca:uji-" + MODEL_ID;
-
 function pasangUji() {
   const ov = $("uji-overlay");
   if (!ov || ov.dataset.siap) return;          // sekali saja, jangan menumpuk
@@ -738,7 +736,19 @@ function pasangUji() {
   });
 }
 
-function ujiSekaliSesi() {
+/* TIAP KALI MASUK, bukan sekali per sesi.
+
+   Versi lama menyimpan penanda di sessionStorage, jadi kartunya cuma muncul
+   di kunjungan pertama. Masalahnya SANDINYA TIDAK BEGITU. Tiketnya sekali
+   pakai dan langsung hangus, jadi pindah ke model lain lalu balik lagi
+   tetap diminta sandi. Hasilnya mulai kunjungan kedua orang mengetik sandi
+   lalu tidak ada apa apa yang muncul, dan itu terbaca seperti kartunya
+   rusak. Dilaporkan pemilik.
+
+   Sekarang dua duanya seirama, sandi diminta tiap masuk dan keterangannya
+   ikut muncul tiap masuk. Menutupnya tetap satu klik, dan tombol tanda seru
+   di samping tombol layar penuh membukanya lagi kapan saja. */
+function ujiTiapMasuk() {
   // Satelit TIDAK dapat keterangan ini. Dia pengamatan, tidak punya
   // parameterisasi yang bisa meleset, jadi peringatannya tidak berlaku.
   if (!MODEL || !MODEL.privat) return;
@@ -746,10 +756,6 @@ function ujiSekaliSesi() {
   // lebih belakangan. Dipasang di sini juga supaya tombol tanda serunya
   // sudah ada begitu kartunya muncul, bukan menyusul beberapa detik.
   document.body.classList.add("model-private");
-  let sudah = false;
-  try { sudah = sessionStorage.getItem(UJI_KUNCI) === "1"; } catch { /* mode privat */ }
-  if (sudah) return;
-  try { sessionStorage.setItem(UJI_KUNCI, "1"); } catch { /* abaikan */ }
   const ov = $("uji-overlay");
   if (ov) ov.classList.add("show");
 }
@@ -6221,7 +6227,7 @@ async function init() {
      tidak perlu membacanya sama sekali. Dipasang di sini juga supaya jalur
      mode kosong tetap kebagian, sama alasannya dengan dropdown model. */
   pasangUji();
-  ujiSekaliSesi();
+  ujiTiapMasuk();
   /* ---- ANTARMUKA YANG TIDAK BUTUH DATA, disetel DULUAN ----
 
      Ketiganya dulu dijalankan SESUDAH katalog terbaca, dan itu bug. Jalur

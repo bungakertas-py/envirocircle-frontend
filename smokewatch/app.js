@@ -550,7 +550,6 @@ const isLayerDT = (key) => !!key && key.startsWith("dt_");
 
    Blok ini kembaran dari yang di Atmosight, bedanya cuma rujukan resminya
    dan di sini tidak ada gerbang sandi yang perlu ditunggu. */
-const UJI_KUNCI = "kertas-cuaca:uji-" + MODEL_ID;
 
 function pasangUji() {
   const ov = $("uji-overlay");
@@ -568,7 +567,19 @@ function pasangUji() {
   });
 }
 
-function ujiSekaliSesi() {
+/* TIAP KALI MASUK, bukan sekali per sesi.
+
+   Versi lama menyimpan penanda di sessionStorage, jadi kartunya cuma muncul
+   di kunjungan pertama. Masalahnya SANDINYA TIDAK BEGITU. Tiketnya sekali
+   pakai dan langsung hangus, jadi pindah ke model lain lalu balik lagi
+   tetap diminta sandi. Hasilnya mulai kunjungan kedua orang mengetik sandi
+   lalu tidak ada apa apa yang muncul, dan itu terbaca seperti kartunya
+   rusak. Dilaporkan pemilik.
+
+   Sekarang dua duanya seirama, sandi diminta tiap masuk dan keterangannya
+   ikut muncul tiap masuk. Menutupnya tetap satu klik, dan tombol tanda seru
+   di samping tombol layar penuh membukanya lagi kapan saja. */
+function ujiTiapMasuk() {
   /* CUMA MODEL PRIVAT. Syarat lamanya "bukan model global", dan itu ikut
      menyeret SATELIT, padahal satelit itu pengamatan, tidak punya
      parameterisasi yang bisa meleset, jadi peringatannya tidak berlaku
@@ -576,10 +587,6 @@ function ujiSekaliSesi() {
      tombol tanda serunya muncul waktu Satelit Himawari-9 dipilih. */
   if (!MODEL || !MODEL.privat) return;
   document.body.classList.add("model-private");   // menyalakan tombol tanda serunya
-  let sudah = false;
-  try { sudah = sessionStorage.getItem(UJI_KUNCI) === "1"; } catch { /* mode privat */ }
-  if (sudah) return;
-  try { sessionStorage.setItem(UJI_KUNCI, "1"); } catch { /* abaikan */ }
   const ov = $("uji-overlay");
   if (ov) ov.classList.add("show");
 }
@@ -4122,7 +4129,7 @@ async function init() {
   // Keterangan uji coba model privat. Dipasang sedini ini, sebelum data
   // ditarik, supaya jalur mode kosong tetap kebagian.
   pasangUji();
-  ujiSekaliSesi();
+  ujiTiapMasuk();
   try {
     let cat = null;
     try {
