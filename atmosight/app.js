@@ -450,8 +450,16 @@ const LEGENDS = {
     head: "lapisan",
     cells: [["< 400 hPa", "#c5ff95", 0], ["400-700", "#5debd7", 0], ["> 700 hPa", "#4fa8d8", 1]],
   },
-  /* SUHU PUNCAK AWAN dari Himawari-9. Ini PENGAMATAN, bukan ramalan, satu
-     satunya layer di Atmosight yang menunjukkan keadaan yang sedang terjadi.
+  /* BRIGHTNESS TEMPERATURE kanal 13 Himawari-9, 10,4 mikrometer. Ini
+     PENGAMATAN, bukan ramalan, satu satunya layer di Atmosight yang
+     menunjukkan keadaan yang sedang terjadi.
+
+     Namanya DISENGAJA bukan "Puncak Awan". Yang dihitung suhu kecerahan
+     kanalnya, bukan produk turunan Cloud Top Temperature. Di langit cerah
+     yang terukur permukaan laut, bukan awan. Yang membuat layarnya tetap
+     terbaca sebagai awan itu skalanya, di atas 20 derajat alfanya nol dan
+     di 10 derajat tinggal 40 dari 255, jadi laut tropis yang 28 derajat
+     bening total dan yang berwarna memang tinggal awannya.
 
      Angkanya WAJIB sama dengan SKALA di backend/pipeline/himawari.py.
 
@@ -1134,7 +1142,7 @@ speedPane.style.pointerEvents = "none";
    Ini pasangan untuk pola yang sudah dipakai layer angin GFS, tempat
    heatmap kecepatan jadi alas dan partikel velocity.js menari di atasnya.
    Di satelit, alasnya suhu puncak awan dan "partikelnya" panah AMV yang
-   sudah digambar server. Tanpa alas, layer Angin Satelit cuma panah
+   sudah digambar server. Tanpa alas, layer AMV cuma panah
    melayang di atas peta hitam, dan panah tanpa awan itu kehilangan
    separuh ceritanya, sebab angin ini memang DIUKUR dari gerak awan. */
 const satAlasPane = map.createPane("satalas");
@@ -1593,8 +1601,8 @@ function setActiveLayer(layerKey) {
   // di-reuse antar-layer. Mencegah "ghost" palet layer sebelumnya menembus area
   // transparan layer hujan (bug sisa palet putih->biru saat pindah lalu balik).
   if (speedLayer) { map.removeLayer(speedLayer); speedLayer = null; }
-  // Alas satelit ikut dibuang. Kalau dibiarkan, pindah dari Angin Satelit ke
-  // Puncak Awan menyisakan satu citra awan tembus pandang di bawah citra
+  // Alas satelit ikut dibuang. Kalau dibiarkan, pindah dari AMV ke
+  // Brightness Temperature menyisakan satu citra tembus pandang di bawah citra
   // awan yang baru, dan dua duanya kelihatan.
   if (satAlasLayer) { map.removeLayer(satAlasLayer); satAlasLayer = null; }
   buildTicks();

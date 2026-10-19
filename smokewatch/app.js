@@ -413,7 +413,7 @@ const LEGENDS = {
      Debu dan abu itu gabungan tiga selisih kanal, warnanya penanda jenis
      bukan nilai. Namanya sengaja bukan asap, sebab asap kebakaran hampir
      tidak terlihat di inframerah termal. Untuk kebakaran yang diandalkan
-     layer Titik Panas. Titik panas itu dua tingkat keyakinan, dan kata
+     layer Active Fire Detection. Titik panas itu dua tingkat keyakinan, dan kata
      "indikatif" sengaja ditulis di legenda, bukan disembunyikan di
      keterangan, sebab ambangnya kami tetapkan sendiri dan ini bukan
      produk kebakaran resmi. */
