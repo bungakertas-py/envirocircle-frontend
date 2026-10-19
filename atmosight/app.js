@@ -2345,10 +2345,28 @@ function setSkewtMode(on) {
   if (t) t.textContent = skewtMode ? "Generate Skew-T plot here" : "Click Here";
 }
 
-async function bukaSkewT(lat, lon) {
+/* SEMUA klik di peta jatuh ke sounding selama mode Skew-T menyala, termasuk
+   klik di ikon kota dan di ikon siklon.
+
+   Dulu cuma klik peta kosong yang kebagian. Penanda kota memasang
+   pendengarnya sendiri lalu memanggil stopPropagation, jadi kliknya tidak
+   pernah sampai ke pendengar peta dan yang terbuka justru panel detail.
+   Dilaporkan pemilik, dan memang membingungkan, sebab kursornya sudah
+   bertuliskan "Generate Skew-T plot here" tapi yang keluar bukan itu.
+
+   Mengembalikan true kalau kliknya sudah ditangani sebagai Skew-T, jadi
+   pemanggilnya tahu harus berhenti. */
+function sktTangkap(lat, lon, nama) {
+  if (!skewtMode) return false;
+  setSkewtMode(false);
+  bukaSkewT(lat, lon, nama);
+  return true;
+}
+
+async function bukaSkewT(lat, lon, nama) {
   const ov = $("skt-overlay"), isi = $("skt-card")?.querySelector(".skt-isi");
   if (!ov || !isi) return;
-  sktTitik = { lat, lon };
+  sktTitik = { lat, lon, nama };
   ov.classList.add("show");
   isi.innerHTML = skewtSkeleton();
   let pd;
@@ -2361,7 +2379,9 @@ async function bukaSkewT(lat, lon) {
   isi.innerHTML =
     `<div class="skt-kepala">` +
       `<span class="skt-tag">Profil Atmosfer · Skew-T</span>` +
-      `<span class="skt-koord mono">${fmtCoord(lat, lon)}</span>` +
+      `<span class="skt-koord mono">` +
+        (nama ? `<b class="skt-nama">${escHtml(nama)}</b> · ` : "") +
+        fmtCoord(lat, lon) + `</span>` +
     `</div>` +
     `<div class="skt-badan">` +
       `<div class="skt-kiri">` +
@@ -2396,7 +2416,7 @@ function tutupSkewT() {
    peta di belakangnya sudah pindah jam. */
 function segarkanSkewT() {
   if (sktTitik && $("skt-overlay")?.classList.contains("show"))
-    bukaSkewT(sktTitik.lat, sktTitik.lon);
+    bukaSkewT(sktTitik.lat, sktTitik.lon, sktTitik.nama);
 }
 
 function fmtCoord(lat, lon) {
@@ -4573,7 +4593,10 @@ async function refreshCityIcons() {
               `<span class="cc-lbl"><b>${escHtml(cityShortName(c.p.n))}</b>` +
               (c.val ? `<i>${escHtml(c.val)}</i>` : "") + `</span>` }),
     });
-    m.on("click", (e) => { L.DomEvent.stopPropagation(e); bukaGelembung(c.p.lat, c.p.lon, c.p.n); });
+    m.on("click", (e) => {
+      L.DomEvent.stopPropagation(e);
+      if (!sktTangkap(c.p.lat, c.p.lon, c.p.n)) bukaGelembung(c.p.lat, c.p.lon, c.p.n);
+    });
     cityGroup.addLayer(m);
   }
   cityPlacedPts = placed;
@@ -4683,7 +4706,10 @@ function refreshCyclones() {
       icon: L.divIcon({ className: "cyc-mark", iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2],
         html: `<span class="cyc-spin" style="color:${color};font-size:${sz - 4}px"><span class="material-symbols-outlined" style="font-size:${sz - 4}px">cyclone</span></span>` }),
     });
-    m.on("click", (e) => { L.DomEvent.stopPropagation(e); openPoint(cur.lat, cur.lon, tr.name); });
+    m.on("click", (e) => {
+      L.DomEvent.stopPropagation(e);
+      if (!sktTangkap(cur.lat, cur.lon, tr.name)) openPoint(cur.lat, cur.lon, tr.name);
+    });
     cycloneGroup.addLayer(m);
   }
 }
@@ -6486,8 +6512,7 @@ async function init() {
     /* Klik peta BERCABANG. Dalam mode Skew-T dia memilih titik plot, di luar
        itu dia membuka panel titik seperti biasa. */
     map.on("click", (e) => {
-      if (skewtMode) { setSkewtMode(false); bukaSkewT(e.latlng.lat, e.latlng.lng); }
-      else bukaGelembung(e.latlng.lat, e.latlng.lng);
+      if (!sktTangkap(e.latlng.lat, e.latlng.lng)) bukaGelembung(e.latlng.lat, e.latlng.lng);
     });
     $("skewt-toggle")?.addEventListener("click", () => setSkewtMode(!skewtMode));
     $("hov-buka")?.addEventListener("click", bukaHovmoller);

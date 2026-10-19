@@ -4388,6 +4388,9 @@ body { font-weight: 200; }
   font-weight: 300; color: var(--ink-50);
 }
 .skt-koord { font-size: 12px; font-weight: 200; color: var(--ink-70); }
+/* Nama kota di kepala kartu, muncul cuma kalau soundingnya memang dibuat
+   dari ikon kota atau ikon siklon, bukan dari klik di peta kosong. */
+.skt-nama { font-weight: 400; color: var(--ink); letter-spacing: .02em; }
 .skt-badan {
   display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
   gap: 26px; align-items: start;
