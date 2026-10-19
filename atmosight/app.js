@@ -1251,6 +1251,19 @@ let ikutDomain = false;
 let playing = false;
 let playTimer = null;
 let activeLayer = "wind_surface";
+
+/* Layer yang menyala waktu app dibuka. Untuk sumber SATELIT itu True Color
+   RGB, diminta pemilik 19 Okt, sebab citra warna asli yang paling langsung
+   dimengerti orang begitu peta terbuka, tanpa perlu membaca legenda dulu.
+
+   Kalau unduhan kanal tampaknya gagal, layernya memang TIDAK ADA di katalog,
+   sebab pipeline cuma menuliskannya kalau ada bingkai yang jadi. Jadi di sini
+   wajib ada jalan mundur, kalau tidak app-nya membuka layer yang tidak ada.
+   Tautan berisi ?l=... tetap menang, itu diurus restoreFromHash. */
+function layerAwal(cat, avail) {
+  if (MODEL && MODEL.satelit) return cat.layers["citra_tampak"] ? "citra_tampak" : avail[0];
+  return cat.layers["wind_surface"] ? "wind_surface" : avail[0];
+}
 let activeBase = "wind_surface";   // tombol layer aktif (kunci PERMUKAAN); di strato dipetakan ke varian _strato
 let mapLevel = "surface";          // "surface" | "strato" (70 hPa) — dari dropdown LEVEL
 let catalog = null;
@@ -6085,7 +6098,7 @@ async function init() {
       if (fr && fr.length > 1) { hitungStepJam(fr.map((f) => f.valid_time)); break; }
     }
     if (!avail.length) throw new Error("catalog.json tidak punya layer");
-    activeLayer = cat.layers["wind_surface"] ? "wind_surface" : avail[0];
+    activeLayer = layerAwal(cat, avail);
     frames = cat.layers[activeLayer].frames;
 
     // Tiga kotak yang beda peran, jangan tertukar.

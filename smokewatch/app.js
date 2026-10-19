@@ -979,6 +979,21 @@ let ikutDomain = false;
 let playing = false;
 let playTimer = null;
 let activeLayer = "ispu";
+
+/* Layer yang menyala waktu app dibuka. Untuk sumber SATELIT itu True Color
+   RGB, diminta pemilik 19 Okt, sebab citra warna asli yang paling langsung
+   dimengerti orang begitu peta terbuka, tanpa perlu membaca legenda dulu.
+
+   Kalau unduhan kanal tampaknya gagal, layernya memang TIDAK ADA di katalog,
+   sebab pipeline cuma menuliskannya kalau ada bingkai yang jadi. Jadi di sini
+   wajib ada jalan mundur, kalau tidak app-nya membuka layer yang tidak ada.
+   Tautan berisi ?l=... tetap menang, itu diurus restoreFromHash. */
+function layerAwal(cat, avail) {
+  if (MODEL && MODEL.satelit) return cat.layers["citra_tampak"] ? "citra_tampak" : avail[0];
+  if (cat.layers["ispu"]) return "ispu";
+  if (cat.layers["pm25"]) return "pm25";
+  return avail[0];
+}
 let activeBase = "pm25";   // tombol layer aktif (kunci PERMUKAAN); di strato dipetakan ke varian _strato
 let mapLevel = "surface";          // "surface" | "strato" (70 hPa) — dari dropdown LEVEL
 let catalog = null;
@@ -4117,7 +4132,7 @@ async function init() {
     const avail = Object.keys((cat && cat.layers) || {});
     if (!avail.length) { cat = SHELL_CATALOG; dataMissing = true; }
     catalog = cat;
-    activeLayer = dataMissing ? null : (cat.layers["ispu"] ? "ispu" : (cat.layers["pm25"] ? "pm25" : avail[0]));
+    activeLayer = dataMissing ? null : layerAwal(cat, avail);
     frames = dataMissing ? [] : cat.layers[activeLayer].frames;
 
     // Domain data penuh (untuk imageOverlay heatmap).
