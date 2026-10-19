@@ -2042,27 +2042,124 @@ function windAt(u, v) {
 }
 
 // ============== PROFIL VERTIKAL (Skew-T) — muat malas & sampel ==============
-let profileData = null;      // { meta, vars:{t,r,u,v} }
-let profileLoading = null;
+let profileMeta = null, profileMetaJanji = null;
 
-async function loadProfileData() {
-  if (profileData) return profileData;
-  if (profileLoading) return profileLoading;
-  profileLoading = (async () => {
-    const meta = await fetch(DATA_BASE + "profile_meta.json").then((r) => r.json());
-    const gz = await fetch(DATA_BASE + "profile.bin.gz").then((r) => r.arrayBuffer());
-    const stream = new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const buf = await new Response(stream).arrayBuffer();
-    const vars = {};
-    for (const v of meta.vars) {
-      const Ctor = v.dtype === "uint8" ? Uint8Array : Int16Array;
-      vars[v.var] = { arr: new Ctor(buf, v.byteOffset, v.byteLength / Ctor.BYTES_PER_ELEMENT),
-                      scale: v.scale, offset: v.offset };
+async function muatProfilMeta() {
+  if (profileMeta) return profileMeta;
+  if (!profileMetaJanji) {
+    profileMetaJanji = fetch(DATA_BASE + "profile_meta.json")
+      .then((r) => { if (!r.ok) throw new Error("profile_meta HTTP " + r.status); return r.json(); })
+      .then((m) => (profileMeta = m))
+      .catch((e) => { profileMetaJanji = null; throw e; });
+  }
+  return profileMetaJanji;
+}
+
+/* SATU SEL PROFIL LEWAT HTTP RANGE.
+
+   DIUKUR 19 Oktober 2026, dan angkanya yang membuat ini ditulis. Berkas
+   lama `profile.bin.gz` bersusun [waktu][level][y][x], jadi satu titik
+   tersebar di seluruh berkas dan harus diunduh utuh. 19,3 MB, 16 detik,
+   untuk memakai 3.850 bita, yaitu 0,02 persennya. Hitungan Skew-T-nya
+   sendiri cuma 0,8 milidetik, jadi seluruh rasa lambat itu satu unduhan.
+
+   `profile_cells.bin` bersusun [y][x][var][level][waktu], jadi satu titik
+   duduk bersebelahan dan cukup diminta sepotong. Terukur 0,18 detik.
+
+   Polanya SALINAN dari bacaSel untuk point_cells.bin, termasuk cara
+   memulangkan jendela kecil yang bentuknya sama dengan kisi penuh, supaya
+   sampleProfile di bawah tidak perlu diubah sama sekali. */
+const selProfilCache = new Map();
+
+async function bacaSelProfil(meta, { x0, x1, y0, y1 }) {
+  const c = meta.cells, nkol = x1 - x0 + 1, baris = y1 === y0 ? [y0] : [y0, y1];
+  const potongan = await Promise.all(baris.map(async (y) => {
+    const awal = (y * meta.nx + x0) * c.stride, akhir = awal + nkol * c.stride - 1;
+    const r = await fetchUlang(DATA_BASE + c.file, { headers: { Range: "bytes=" + awal + "-" + akhir } });
+    if (r.status !== 206) {
+      /* Server yang mengabaikan Range membalas 200 berikut SELURUH berkas,
+         dan itu 30 MB. Jangan ditelan, putuskan dan laporkan. */
+      try { if (r.body) await r.body.cancel(); } catch (_) { /* abaikan */ }
+      throw new Error(c.file + " HTTP " + r.status + ", bukan 206");
     }
-    profileData = { meta, vars };
-    return profileData;
-  })();
-  return profileLoading;
+    const b = new Uint8Array(await r.arrayBuffer());
+    if (b.length !== nkol * c.stride)
+      throw new Error(c.file + " potongan " + b.length + " bita, mau " + nkol * c.stride);
+    return b;
+  }));
+  const nbar = baris.length, bidang = nkol * nbar;
+  const nt = meta.times.length, nlev = meta.levels.length, vars = {};
+  for (const v of meta.vars) {
+    const u8 = v.dtype === "uint8";
+    const arr = u8 ? new Uint8Array(nt * nlev * bidang) : new Int16Array(nt * nlev * bidang);
+    for (let r = 0; r < nbar; r++) for (let k = 0; k < nkol; k++) {
+      /* DataView, bukan Int16Array langsung, supaya tidak ada urusan
+         perataan dua bita waktu potongannya tidak mulai di batas genap. */
+      const dv = new DataView(potongan[r].buffer,
+                              potongan[r].byteOffset + k * c.stride + v.cellOffset, v.cellLength);
+      for (let l = 0; l < nlev; l++) for (let t = 0; t < nt; t++) {
+        const dari = l * nt + t;                       // di dalam sel, [level][waktu]
+        arr[(t * nlev + l) * bidang + r * nkol + k] = u8 ? dv.getUint8(dari) : dv.getInt16(dari * 2, true);
+      }
+    }
+    vars[v.var] = { arr, scale: v.scale, offset: v.offset };
+  }
+  const [w, , , n] = meta.bounds, { dx, dy } = meta;
+  return { meta: { ...meta, nx: nkol, ny: nbar,
+                   bounds: [w + x0 * dx, n - y1 * dy, w + x1 * dx, n - y0 * dy] }, vars };
+}
+
+/* SELURUH KISI SEKALIGUS, dan ini MASIH DIPAKAI, bukan sisa yang menunggu
+   dibuang.
+
+   Dua pemakainya. Pertama katalog yang belum menulis profile_cells.bin.
+   Kedua, dan ini yang menetap, MODE MJO LOKAL. Dia merata ratakan
+   kelembapan sepanjang pita lintang untuk SETIAP bujur, jadi dia memang
+   butuh seluruh kisi dan tidak bisa ditolong potongan per sel.
+
+   Mode itu cuma hidup selama `mjo.json` belum berisi `amplop`. Diperiksa 19
+   Oktober 2026, belum berisi, jadi jalur ini betul betul jalan. Kalau suatu
+   saat backend mengirim amplopnya, barulah `profile.bin.gz` boleh dibuang
+   dari pipeline. */
+let profilBlob = null, profilBlobJanji = null;
+async function muatProfilBlob(meta) {
+  if (profilBlob) return profilBlob;
+  if (!profilBlobJanji) {
+    profilBlobJanji = (async () => {
+      const gz = await fetch(DATA_BASE + "profile.bin.gz").then((r) => r.arrayBuffer());
+      const stream = new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"));
+      const buf = await new Response(stream).arrayBuffer();
+      const vars = {};
+      for (const v of meta.vars) {
+        const Ctor = v.dtype === "uint8" ? Uint8Array : Int16Array;
+        vars[v.var] = { arr: new Ctor(buf, v.byteOffset, v.byteLength / Ctor.BYTES_PER_ELEMENT),
+                        scale: v.scale, offset: v.offset };
+      }
+      profilBlob = { meta, vars };
+      return profilBlob;
+    })().catch((e) => { profilBlobJanji = null; throw e; });
+  }
+  return profilBlobJanji;
+}
+
+// Meta dulu, lalu blobnya. Dipakai mode MJO lokal yang butuh seluruh kisi.
+async function muatProfilPenuh() {
+  return muatProfilBlob(await muatProfilMeta());
+}
+
+// Profil siap pakai untuk satu titik. Lewat Range kalau katalognya sudah
+// punya susunan per sel, kalau belum jatuh ke blob lama.
+async function ambilProfil(lat, lon) {
+  const meta = await muatProfilMeta();
+  if (!meta.cells) return muatProfilBlob(meta);
+  const sel = selSekitar(meta, lat, lon);
+  const kunci = sel.x0 + "," + sel.y0;
+  if (!selProfilCache.has(kunci)) {
+    const janji = bacaSelProfil(meta, sel);
+    janji.catch(() => selProfilCache.delete(kunci));
+    selProfilCache.set(kunci, janji);
+  }
+  return selProfilCache.get(kunci);
 }
 
 // Index waktu profil terdekat dengan valid_time frame yang sedang ditampilkan.
@@ -2255,7 +2352,7 @@ async function bukaSkewT(lat, lon) {
   ov.classList.add("show");
   isi.innerHTML = skewtSkeleton();
   let pd;
-  try { pd = await loadProfileData(); }
+  try { pd = await ambilProfil(lat, lon); }
   catch (e) { isi.innerHTML = `<div class="skt-load">Profil belum tersedia untuk model ini.</div>`; return; }
   if (!ov.classList.contains("show")) return;          // keburu ditutup
   const ti = profileTimeIndex(pd);
@@ -4867,7 +4964,7 @@ async function mjoSiapkanLokal() {
   if (mjoPunyaAmplop()) return null;          // backend sudah kirim, profil tak perlu disentuh
   if (!SKEWT_ADA) return null;                // tak ada profile_meta.json
   try {
-    const pd = await loadProfileData();
+    const pd = await muatProfilPenuh();
     const lebar = pd.meta.bounds[2] - pd.meta.bounds[0];
     if (lebar < MJO_LEBAR_MIN) return null;
     mjoLokal = mjoHitungLokal(pd);
@@ -4887,7 +4984,7 @@ function mjoAmplopAktif() {
     const d = Array.isArray(hit.zona) ? hit.zona : [hit];
     return d.filter((x) => isFinite(x.lon_barat) && isFinite(x.lon_timur));
   }
-  if (mjoLokal && profileData) return mjoLokal[profileTimeIndex(profileData)] || null;
+  if (mjoLokal && profilBlob) return mjoLokal[profileTimeIndex(profilBlob)] || null;
   return null;
 }
 
@@ -5383,7 +5480,7 @@ function toggleMjo() {
     if (!mjoSibuk) {
       mjoSibuk = true;
       const sisip = $("mjo-sumber");
-      if (sisip && !mjoPunyaAmplop() && !profileData) sisip.textContent = "Sedang menghitung dari profil model.";
+      if (sisip && !mjoPunyaAmplop() && !profilBlob) sisip.textContent = "Sedang menghitung dari profil model.";
       loadMjo()
         .then(() => mjoSiapkanLokal())
         .then(() => { mjoSibuk = false; if (mjoOn) { mjoIsiNote(); refreshMjo(); mjoGulirKeDiagram(); } })
