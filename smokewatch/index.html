@@ -179,16 +179,22 @@
               <button class="layer-btn" data-layer="pbl" data-tip="Planetary Boundary Layer Height">
                 <span class="material-symbols-outlined">vertical_align_bottom</span> <span class="lb-txt">Planetary Boundary Layer Height <span class="lb-kode">PBLH</span></span>
               </button>
-              <!-- DUA LAYER SATELIT, pengamatan bukan ramalan. Cuma muncul
-                   waktu sumbernya satelit, disembunyikan di CAMS dan WRF. -->
-              <button class="layer-btn" data-layer="citra_tampak" data-khusus="hima" data-tip="Citra warna asli Himawari, kanal tampak. Ini satu satunya layer yang memperlihatkan ASAP, sebab asap memang cuma terlihat di cahaya tampak, bukan di inframerah. SIANG SAJA, malamnya kosong">
+              <!-- TIGA LAYER SATELIT, pengamatan bukan ramalan. Cuma muncul
+                   waktu sumbernya satelit, disembunyikan di CAMS dan WRF.
+
+                   DISAMAKAN PERSIS dengan rel satelit Atmosight, atas
+                   permintaan pemilik, dan pipeline-nya memang salinan
+                   berkas yang sama. Kalau satu app ditambah parameter
+                   satelit, yang lain ikut. Dust RGB dan Active Fire
+                   Detection dibuang bersamaan dengan itu. -->
+              <button class="layer-btn" data-layer="citra_tampak" data-khusus="hima" data-tip="Citra warna asli Himawari, kanal tampak 0,47, 0,51, 0,64, dan 0,86 mikrometer. Ini satu satunya layer yang memperlihatkan ASAP, sebab asap memang cuma terlihat di cahaya tampak. SIANG SAJA, malamnya kosong">
                 <span class="material-symbols-outlined">photo_camera</span> <span class="lb-txt">True Color RGB</span>
               </button>
-              <button class="layer-btn" data-layer="debu_abu" data-khusus="hima" data-tip="Dust RGB, resep baku dari selisih kanal 12,4 dikurangi 10,4 dan 10,4 dikurangi 8,6 mikrometer. Menangkap debu gurun dan abu vulkanik sekaligus, sebab di inframerah dua duanya silikat dan isyaratnya mirip. Jalan siang dan malam. Asap kebakaran hampir tidak terlihat di inframerah, untuk itu pakai Active Fire Detection">
-                <span class="material-symbols-outlined">blur_on</span> <span class="lb-txt">Dust RGB</span>
+              <button class="layer-btn" data-layer="cloudtop_temp" data-khusus="hima" data-tip="Brightness temperature kanal 13 Himawari, 10,4 mikrometer. Yang hangat sengaja bening, jadi yang berwarna di layar memang puncak awan. Pengamatan, bukan ramalan">
+                <span class="material-symbols-outlined">satellite_alt</span> <span class="lb-txt">Brightness Temperature</span>
               </button>
-              <button class="layer-btn" data-layer="titik_panas" data-khusus="hima" data-tip="Active fire detection, titik panas indikatif dari kanal 3,9 mikrometer Himawari diuji lawan latar sekitarnya, tiap jam">
-                <span class="material-symbols-outlined">local_fire_department</span> <span class="lb-txt">Active Fire Detection</span>
+              <button class="layer-btn" data-layer="amv_angin" data-khusus="hima" data-tip="Atmospheric Motion Vectors, angin yang diukur dari perpindahan puncak awan antar dua citra satelit berurutan. Warnanya lapisan tekanan, ditaksir dari suhu puncak awan">
+                <span class="material-symbols-outlined">near_me</span> <span class="lb-txt">Atmospheric Motion Vectors (AMV)</span>
               </button>
             </div>
             <button id="layer-next" class="layer-nav" aria-label="Variabel berikutnya"><span class="material-symbols-outlined">chevron_right</span></button>
@@ -494,6 +500,17 @@
               <span class="fsb-label" id="fire-slider-label">48 jam terakhir</span>
             </div>
             <input id="fire-slider" class="fire-slider" type="range" min="1" max="48" value="48" step="1" aria-label="Jendela waktu titik api (jam ke belakang)">
+          </div>
+          <!-- Legenda ALAS. Cuma muncul waktu sebuah layer digambar di atas
+               layer lain, dan untuk sekarang itu cuma AMV yang duduk di
+               atas Brightness Temperature. Dua sistem warna di satu layar
+               WAJIB dua keterangan, kalau tidak warna awannya jadi hiasan
+               yang tidak ada yang bisa membacanya. -->
+          <div class="legend-alas-baris" id="legend-alas" hidden>
+            <div class="legend-panel">
+              <div class="legend-head mono" id="legend-alas-head">°C</div>
+              <div class="legend" id="legend-alas-cells"></div>
+            </div>
           </div>
           <div class="legend-panel">
             <div class="legend-head mono" id="legend-head">KNOTS</div>

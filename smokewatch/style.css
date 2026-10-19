@@ -839,6 +839,26 @@ html, body {
 /* Kontainer slider titik api: MENGAMBANG di atas legenda bar (position absolute),
    jadi saat muncul/hilang TIDAK mendorong legenda bar maupun slider utama. */
 .legend-col { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+/* Legenda ALAS, satu baris di atas legenda utama, dipakai waktu AMV duduk
+   di atas Brightness Temperature. Jaraknya sudah diurus gap di atas.
+   JEBAKAN yang pernah memakan waktu di Atmosight, atribut hidden KALAH
+   lawan display:flex, jadi aturan [hidden] di bawah WAJIB ada kalau suatu
+   saat baris ini diberi display. */
+.legend-alas-baris[hidden] { display: none; }
+.legend-alas-baris .legend-cell { width: 36px; min-height: 26px; font-size: 11px; }
+/* Sel legenda yang artinya TIDAK ADA NILAI digambar kotak catur, bukan
+   dibiarkan kosong. Tanpa ini labelnya mengambang sendirian di atas peta
+   dan terbaca seperti tulisan yang nyasar. Untuk sekarang yang memakainya
+   cuma sel 10 derajat di Brightness Temperature. */
+.legend-cell.kotak-catur {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #C3CEDA 25%, transparent 25%, transparent 75%, #C3CEDA 75%),
+    linear-gradient(45deg, #C3CEDA 25%, transparent 25%, transparent 75%, #C3CEDA 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+  color: var(--ink); text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+}
 .fire-slider-box { position: absolute; bottom: 100%; right: 0; margin-bottom: 6px; z-index: 500;
   width: 190px; box-sizing: border-box; padding: 5px 9px 7px;
   background: var(--surface); border: 2px solid var(--ink); box-shadow: 3px 3px 0 0 var(--ink);
@@ -1542,6 +1562,14 @@ sub { font-size: .72em; line-height: 0; vertical-align: baseline; position: rela
   }
   .par-chip[hidden] { display: none; }
   .par-chip .material-symbols-outlined { font-size: 16px; }
+
+  /* Legenda ALAS DIMATIKAN di layar sempit. Di sini legenda berubah jadi
+     batang TEGAK berposisi fixed di tepi kiri, dan dua batang tegak akan
+     berdiri di titik yang sama persis lalu saling menimpa. Sudah terjadi
+     waktu fitur ini dipasang di Atmosight. Yang disisakan legenda layer
+     aktif, sebab itu yang dipilih orang, dan warna awan di belakangnya
+     masih terbaca tanpa angka. */
+  .legend-alas-baris { display: none; }
 
   /* ---- legenda TEGAK di kiri, TINGGI ----
      Layar HP itu potret, jadi ruang tegaknya banyak. Legenda direntang dari

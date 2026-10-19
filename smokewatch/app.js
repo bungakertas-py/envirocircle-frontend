@@ -407,22 +407,45 @@ function aqiKategori(v) {
 }
 const AQI_RENTANG = ["0-50", "51-100", "101-150", "151-200", "201-300", "\u2265301"];
 const LEGENDS = {
-  /* DUA LAYER SATELIT. Legendanya pakai KATA, bukan tangga angka, sebab
-     dua duanya memang bukan besaran terukur yang punya satuan.
+  /* LAYER SATELIT. Definisinya DISALIN DARI ATMOSIGHT dan harus tetap
+     sama dengan yang di sana, sebab dua app ini memakai pipeline satelit
+     yang sama persis. Kalau salah satu disetel, yang lain ikut disetel.
 
-     Debu dan abu itu gabungan tiga selisih kanal, warnanya penanda jenis
-     bukan nilai. Namanya sengaja bukan asap, sebab asap kebakaran hampir
-     tidak terlihat di inframerah termal. Untuk kebakaran yang diandalkan
-     layer Active Fire Detection. Titik panas itu dua tingkat keyakinan, dan kata
-     "indikatif" sengaja ditulis di legenda, bukan disembunyikan di
-     keterangan, sebab ambangnya kami tetapkan sendiri dan ini bukan
-     produk kebakaran resmi. */
-  debu_abu: { head: "satelit", words: 1,
-    cells: [["Debu dan abu", "#c98a5e", 0], ["Awan tinggi", "#5a4a7a", 1],
-            ["Udara bersih", "transparent", 0]] },
-  titik_panas: { head: "indikatif", words: 1,
-    cells: [["Panas kuat", "#e42320", 1], ["Panas sedang", "#f5a91e", 0],
-            ["Tidak terdeteksi", "transparent", 0]] },
+     ANGIN GERAK AWAN dari Himawari-9. Ini angin yang DIUKUR dari
+     perpindahan awan antar citra, bukan hitungan model.
+
+     Legendanya bukan tangga angka melainkan TIGA LAPIS, sebab yang penting
+     dibedakan memang lapisannya. Warnanya sama dengan warna panah di
+     backend/pipeline/himawari_gerak.py, dan dua duanya harus disetel
+     bersama kalau diubah. */
+  amv_angin: {
+    head: "lapisan",
+    cells: [["< 400 hPa", "#c5ff95", 0], ["400-700", "#5debd7", 0], ["> 700 hPa", "#4fa8d8", 1]],
+  },
+  /* BRIGHTNESS TEMPERATURE kanal 13 Himawari-9, 10,4 mikrometer. Ini
+     PENGAMATAN, bukan ramalan, dan di Smokewatch dia pasangan untuk CAMS
+     yang semuanya model.
+
+     Namanya DISENGAJA bukan "Puncak Awan". Yang dihitung suhu kecerahan
+     kanalnya, bukan produk turunan Cloud Top Temperature. Di langit cerah
+     yang terukur permukaan laut, bukan awan. Yang membuat layarnya tetap
+     terbaca sebagai awan itu skalanya, di atas 20 derajat alfanya nol dan
+     di 10 derajat tinggal 40 dari 255, jadi laut tropis yang 28 derajat
+     bening total dan yang berwarna memang tinggal awannya.
+
+     Angkanya WAJIB sama dengan SKALA di backend/pipeline/himawari.py.
+
+     Yang hangat sengaja BENING, sebab di situ memang tidak ada awan tinggi
+     dan peta di bawahnya lebih berguna daripada warna rata. Pergantian ke
+     kuning di minus 40 bukan selera, itu ambang yang biasa dipakai untuk
+     menandai konveksi dalam. */
+  cloudtop_temp: {
+    head: "\u00b0C",
+    cells: [["-90", "#2e1c7d", 1], ["-80", "#75248a", 1], ["-70", "#c2415c", 1],
+            ["-60", "#e05a41", 1], ["-50", "#fcac1c", 0], ["-40", "#f9dc5c", 0],
+            ["-32", "#5a6e82", 1], ["-20", "#96a5b4", 0], ["0", "#c8d2dc", 0],
+            ["10", "transparent", 0]],
+  },
 
   // Sel ISPU DUA BARIS: nama kategori di atas, rentang angkanya di bawah. Orang awam
   // membaca kategorinya, orang yang terbiasa dengan ISPU mencari bilangannya.
@@ -630,7 +653,7 @@ const LAYER_THEME = {
   wind_surface: "dark", rain_surface: "dark", rain_accum_surface: "dark",
   temp_surface: "dark", humidity_surface: "dark", cloud_surface: "dark", pressure_surface: "dark",
   storm_potential: "dark", cin_surface: "dark", wind_strato: "dark", temp_strato: "dark",
-  debu_abu: "dark", titik_panas: "dark", citra_tampak: "dark",
+  cloudtop_temp: "dark", amv_angin: "dark", citra_tampak: "dark",
 };
 
 // Override warna border batas administrasi per-layer (selain default tema).
@@ -861,6 +884,18 @@ const speedPane = map.createPane("speed");
 speedPane.style.zIndex = 350;
 speedPane.style.pointerEvents = "none";
 
+/* Pane ALAS SATELIT, tepat di bawah pane kecepatan. Dipakai waktu satu
+   layer satelit digambar DI ATAS layer satelit lain, dan untuk sekarang itu
+   cuma AMV di atas Brightness Temperature. Citra awannya duduk di sini,
+   jadi panah anginnya di atasnya.
+
+   Tanpa alas, layer AMV cuma panah melayang di atas peta, dan panah tanpa
+   awan itu kehilangan separuh ceritanya, sebab angin ini memang DIUKUR
+   dari gerak awan. */
+const satAlasPane = map.createPane("satalas");
+satAlasPane.style.zIndex = 340;
+satAlasPane.style.pointerEvents = "none";
+
 // Pane batas administrasi (garis negara & provinsi): di atas partikel
 // (overlayPane z400), di bawah label (z650).
 const adminPane = map.createPane("admin");
@@ -928,6 +963,10 @@ let velocityLayer = null;
    Tiap permintaan mengambil nomor, hasilnya dibuang kalau bukan yang terakhir. */
 let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
+/* Layer yang dipakai sebagai ALAS waktu layer di kirinya sedang aktif.
+   Cuma berlaku untuk sumber satelit. Lihat komentar pane "satalas". */
+const ALAS_SATELIT = { amv_angin: "cloudtop_temp" };
+let satAlasLayer = null;
 let dataBounds = null;      // L.latLngBounds domain data (pusat sel; utk klik & geolokasi)
 let imageBounds = null;     // L.latLngBounds TEPI sel — hanya untuk menempatkan pratinjau
 let frameBounds = null;     // L.latLngBounds untuk BINGKAI, minZoom, dan kunci pan
@@ -1244,7 +1283,30 @@ function tandaiSpineParameter(layerKey) {
   ic.textContent = bi ? bi.textContent.trim() : "tune";
 }
 
+/* Legenda untuk layer yang sedang jadi ALAS. Ikut aturan yang sama dengan
+   legenda utama, cuma kotaknya lebih kecil, sebab dia keterangan pendamping
+   bukan keterangan pokok. */
+function renderLegendaAlas() {
+  const baris = $("legend-alas");
+  if (!baris) return;
+  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+  const def = dasar && LEGENDS[dasar];
+  if (!def) { baris.hidden = true; return; }
+  baris.hidden = false;
+  const head = $("legend-alas-head"), cells = $("legend-alas-cells");
+  if (head) isiKepalaLegenda(head, dasar, def.head);
+  if (cells) {
+    cells.classList.toggle("legend-words", !!def.words);
+    cells.innerHTML = def.cells.map(([label, bg, dark]) =>
+      (bg === "transparent"
+        ? `<div class="legend-cell kotak-catur">${label}</div>`
+        : `<div class="legend-cell${dark ? " dark" : ""}" style="background:${bg}">${label}</div>`)
+    ).join("");
+  }
+}
+
 function renderLegend(layerKey) {
+  renderLegendaAlas();
   const def = LEGENDS[layerKey];
   const head = $("legend-head"), cells = $("legend-cells");
   /* Layer yang TIDAK punya skala, untuk sekarang cuma citra warna asli,
@@ -1259,7 +1321,11 @@ function renderLegend(layerKey) {
   cells.classList.toggle("legend-words", !!def.words);   // sel melebar utk label kata
   cells.classList.toggle("legend-lebar", !!def.lebar);   // sel sedikit lebih lebar utk angka spt -50K
   cells.innerHTML = def.cells.map(([label, bg, dark, sub]) =>
-    `<div class="legend-cell${dark ? " dark" : ""}${sub ? " dua-baris" : ""}" style="background:${bg}">` +
+    `<div class="legend-cell${dark ? " dark" : ""}${sub ? " dua-baris" : ""}` +
+    // Sel tembus pandang jadi kotak catur. Satu satunya yang memakainya
+    // sekarang sel 10 derajat di Brightness Temperature, layer CAMS tidak
+    // punya sel semacam itu.
+    `${bg === "transparent" ? " kotak-catur" : ""}" style="background:${bg === "transparent" ? "" : bg}">` +
     (sub ? `<b>${label}</b><span>${sub}</span>` : label) + `</div>`).join("");
 }
 
@@ -1278,6 +1344,10 @@ function setActiveLayer(layerKey) {
   // di-reuse antar-layer. Mencegah "ghost" palet layer sebelumnya menembus area
   // transparan layer hujan (bug sisa palet putih->biru saat pindah lalu balik).
   if (speedLayer) { map.removeLayer(speedLayer); speedLayer = null; }
+  // Alas satelit ikut dibuang. Kalau dibiarkan, pindah dari AMV ke
+  // Brightness Temperature menyisakan satu citra tembus pandang di bawah
+  // citra awan yang baru, dan dua duanya kelihatan.
+  if (satAlasLayer) { map.removeLayer(satAlasLayer); satAlasLayer = null; }
   buildTicks();
   const slider = $("time-slider");
   if (slider) slider.max = String(frames.length - 1);
@@ -1388,6 +1458,23 @@ function pinjamAnginMeteo() {
     .catch(() => { /* folder meteo tidak terjangkau, partikel dilewati saja */ });
 }
 
+function pasangAlasSatelit(frame) {
+  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+  const def = dasar && catalog && catalog.layers[dasar];
+  const fa = def && def.frames.find((f) => f.valid_time === frame.valid_time);
+  if (!fa || !imageBounds) {
+    if (satAlasLayer) { map.removeLayer(satAlasLayer); satAlasLayer = null; }
+    return;
+  }
+  const url = DATA_BASE + fa.preview_image;
+  if (!satAlasLayer) {
+    satAlasLayer = L.imageOverlay(url, imageBounds,
+      { pane: "satalas", opacity: 0.85, interactive: false }).addTo(map);
+  } else {
+    satAlasLayer.setUrl(url);
+  }
+}
+
 async function showFrame(i) {
   current = (i + frames.length) % frames.length;
   const frame = frames[current];
@@ -1411,6 +1498,7 @@ async function showFrame(i) {
   if (petaDT) pasangPetaDT(activeLayer, frame.valid_time);
   const isVector = catalog.layers[activeLayer]?.kind === "vector";
   speedLayer.setOpacity(isVector ? 0.92 : 1); // scalar opaque; angin semi
+  pasangAlasSatelit(frame);                   // citra awan di bawah panah AMV
 
   // Partikel angin PUTIH — SELALU ada (angin & hujan), dari medan angin waktu sama.
   // Ikut LEVEL: di stratosfer pakai medan angin 70 hPa agar konsisten dengan heatmap.
