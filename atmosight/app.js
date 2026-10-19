@@ -995,6 +995,13 @@ const HARIAN_CADANGAN = new Set(["rain_accum_surface"]);   // dipakai kalau fram
 const _harianCache = new Map();
 function layerHarian(key) {
   if (!key) return false;
+  /* PENGAMATAN TIDAK PERNAH DIHITUNG HARIAN, walau jarak bingkainya 24 jam.
+     Sejak 19 Oktober 2026 satelit mengirim satu bingkai per hari di jam
+     11:00 WIB, dan tanpa penjagaan ini labelnya jatuh ke tanggal saja.
+     Itu salah arti. Akumulasi hujan memang nilai sepanjang hari, jadi
+     tanggal saja betul, tapi citra satelit itu POTRET SESAAT di jam
+     tertentu, dan jamnya justru keterangan yang paling penting. */
+  if (catalog && catalog.observasi) return false;
   if (_harianCache.has(key)) return _harianCache.get(key);
   const L = catalog && catalog.layers && catalog.layers[key];
   const fr = L && L.frames;
@@ -2099,7 +2106,11 @@ function exportSkewTPng() {
      panel titik. Dulu wadah lipat di sidebar, dan begitu wadah itu
      dibuang tombol ekspor akan diam saja tanpa satu pun pesan. */
   const wrap = $("skt-card");
-  const svgEl = wrap && wrap.querySelector("svg");   // svg PERTAMA = plot (bukan swatch legenda)
+  /* DITUNJUK LANGSUNG ke kolom kiri. Dulu ini "svg pertama di kartu", dan
+     itu benar selama kartunya cuma punya satu plot. Sejak 19 Oktober 2026
+     ada hodograf dan panel theta-e di kolom kanan, jadi patokan "pertama"
+     tinggal menunggu salah satu dari dua panel itu pindah ke atas. */
+  const svgEl = wrap && wrap.querySelector(".skt-kiri svg");
   if (!svgEl) return;
   const vb = svgEl.viewBox.baseVal;
   const W = vb && vb.width ? vb.width : 340, H = vb && vb.height ? vb.height : 380;
@@ -2137,6 +2148,7 @@ function skewtLegend() {
   return `<div class="skt-legend">` +
     it(line("#e42320"), "Suhu (T)") +
     it(line("#1f8a4c"), "Titik embun (Td)") +
+    it(line("#0b63b8", "3 2"), "Wetbulb (Tw)") +
     it(line("#074173", "4 3"), "Jalur parcel") +
     it(barbSw, "Angin (barbs)") +
     it(line("#0029d7", "5 3"), "LCL · dasar awan") +
@@ -2144,23 +2156,60 @@ function skewtLegend() {
     it(line("#7a1fa2", "5 3"), "EL · puncak konveksi") +
     it(box("rgba(226,35,32,.30)"), "CAPE · energi naik") +
     it(box("rgba(35,96,200,.25)"), "CIN · penghambat") +
+    it(box("rgba(93,235,215,.35)"), "DGZ · zona tumbuh kristal es") +
     `</div>`;
 }
 
-// Kotak indeks konvektif di bawah diagram.
-function skewtIndexBox(d) {
-  const fmtP = (p) => p ? Math.round(p) + " hPa" : "–";
-  const capeCol = d.cape > 2500 ? "#d61f1f" : d.cape > 1000 ? "#e8590c" : d.cape > 300 ? "#f59f00" : "#2b8a3e";
-  const cell = (label, val, col) =>
-    `<div class="skt-cell"><span class="skt-k">${label}</span><span class="skt-v" style="color:${col || "#074173"}">${val}</span></div>`;
-  return `<div class="skt-idx">` +
-    cell("CAPE", Math.round(d.cape) + " J/kg", capeCol) +
-    cell("CIN", Math.round(d.cin) + " J/kg", d.cin < -50 ? "#e8590c" : "#4A6685") +
-    cell("LCL", fmtP(d.lcl.p)) +
-    cell("LFC", fmtP(d.lfc)) +
-    cell("EL", fmtP(d.el)) +
-    cell("LI", d.li !== null ? d.li.toFixed(1) : "–", d.li !== null && d.li < -2 ? "#d61f1f" : "#4A6685") +
+/* Tabel indeks di bawah diagram.
+
+   TIGA PARCEL berdampingan, bukan satu. Parcel permukaan itu yang paling
+   gampang dijelaskan, tapi dia juga yang paling gampang menipu, sebab satu
+   lapisan tipis yang panas di dekat tanah bisa melambungkan CAPE padahal
+   yang benar benar terangkat waktu konveksi itu lapisan campur. Parcel
+   paling tak stabil berguna waktu udara labilnya justru duduk di ATAS
+   lapisan dingin dekat tanah, keadaan yang biasa terjadi malam hari.
+
+   YANG SENGAJA TIDAK DIPASANG di sini, STP, SCP, SHIP, EHI, dan SRH. Semua
+   itu indeks superset badai lintang tengah, disetel untuk tornado di
+   dataran Amerika. Di Indonesia angkanya hampir selalu nol, dan yang tidak
+   nol pun artinya bukan yang tertulis di namanya. Memasangnya membuat
+   tabelnya terlihat mentereng dan isinya derau. */
+function skewtTabel(d) {
+  const fmtP = (p) => (p ? Math.round(p) + "" : "–");
+  const capeCol = (c) => c > 2500 ? "#d61f1f" : c > 1000 ? "#e8590c" : c > 300 ? "#f59f00" : "#2b8a3e";
+  const kol = [["SB", d.sb], ["ML", d.ml], ["MU", d.mu]];
+
+  const baris = (label, isi, satuan) =>
+    `<tr><th>${label}</th>` + kol.map(([, pc]) => isi(pc)).join("") +
+    `<td class="skt-sat">${satuan || ""}</td></tr>`;
+
+  const tabel =
+    `<table class="skt-tabel"><thead><tr><th></th>` +
+    kol.map(([n]) => `<th>${n}</th>`).join("") + `<th></th></tr></thead><tbody>` +
+    baris("CAPE", (pc) => `<td style="color:${capeCol(pc.cape)}">${Math.round(pc.cape)}</td>`, "J/kg") +
+    baris("CIN", (pc) => `<td style="color:${pc.cin < -50 ? "#e8590c" : ""}">${Math.round(pc.cin)}</td>`, "J/kg") +
+    baris("LCL", (pc) => `<td>${fmtP(pc.lcl.p)}</td>`, "hPa") +
+    baris("LFC", (pc) => `<td>${fmtP(pc.lfc)}</td>`, "hPa") +
+    baris("EL", (pc) => `<td>${fmtP(pc.el)}</td>`, "hPa") +
+    `</tbody></table>`;
+
+  const sel = (label, val, col) =>
+    `<div class="skt-cell"><span class="skt-k">${label}</span>` +
+    `<span class="skt-v" style="color:${col || ""}">${val}</span></div>`;
+  const km = (m) => (m === null || m === undefined) ? "–" : (m / 1000).toFixed(1) + " km";
+  const dgzTebal = d.dgz ? Math.round(d.dgz.pBawah - d.dgz.pAtas) + " hPa" : "–";
+
+  const sisa = `<div class="skt-idx">` +
+    sel("LI", d.li !== null ? d.li.toFixed(1) : "–", d.li !== null && d.li < -2 ? "#d61f1f" : "") +
+    sel("Air mampu curah", Math.round(d.pwat) + " mm", d.pwat > 50 ? "#e8590c" : "") +
+    sel("K-index", d.kIndex !== null ? Math.round(d.kIndex) : "–", d.kIndex !== null && d.kIndex > 30 ? "#e8590c" : "") +
+    sel("Total Totals", d.totalTotals !== null ? Math.round(d.totalTotals) : "–") +
+    sel("Tinggi beku", km(d.beku ? d.beku.z : null)) +
+    sel("Tebal DGZ", dgzTebal) +
+    sel("Geser 0-1 km", Math.round(d.geser.km1) + " kt") +
+    sel("Geser 0-6 km", Math.round(d.geser.km6) + " kt") +
     `</div>`;
+  return tabel + sisa;
 }
 
 // Skeleton loading kartu Skew-T (meniru layout: catatan + plot + export + legenda + indeks).
@@ -2222,8 +2271,12 @@ async function bukaSkewT(lat, lon) {
         window.SkewT.svg(d, { W: 340, H: 380 }) +
       `</div>` +
       `<div class="skt-kanan">` +
+        `<div class="skt-panel-row">` +
+          window.SkewT.hodo(d, { W: 196, H: 196 }) +
+          window.SkewT.thetaePanel(d, { W: 196, H: 196 }) +
+        `</div>` +
         `<div class="skt-note">Profil ${fmtValid(pd.meta.times[ti])} · indikasi model GFS (grid ~1°), bukan sounding asli.</div>` +
-        skewtIndexBox(d) +
+        skewtTabel(d) +
         skewtLegend() +
         `<div class="skt-exp-row"><button type="button" class="skt-export" id="skt-export">` +
         `<span class="material-symbols-outlined">image</span> Export PNG</button></div>` +

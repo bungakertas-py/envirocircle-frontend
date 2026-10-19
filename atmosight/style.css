@@ -634,7 +634,7 @@ html, body {
 .skt-sk-idx { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
 .skt-sk-idx .sk-bar { height: 40px; border-radius: 0; border: 2px solid var(--ink); box-shadow: 2px 2px 0 0 var(--ink); }
 .pt-skewt-wrap svg { border: 2px solid var(--ink); box-shadow: 3px 3px 0 0 var(--ink); background: #fff; display: block; }
-.skt-idx { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.skt-idx { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
 .skt-cell {
   border: 2px solid var(--ink); box-shadow: 2px 2px 0 0 var(--ink); background: var(--surface);
   padding: 5px 7px; display: flex; flex-direction: column; gap: 1px;
@@ -4365,7 +4365,10 @@ body { font-weight: 200; }
    semuanya bertumpuk di bawah diagram dan harus digulir.
    ===================================================================== */
 .skt-kartu {
-  position: relative; width: 100%; max-width: 800px; max-height: 90vh;
+  /* Dilebarkan dari 800 waktu hodograf dan panel theta-e masuk. Dengan
+     800 kolom kanannya tinggal 370px untuk dua panel plus jaraknya, dan
+     dua duanya menyusut sampai angkanya tidak terbaca. */
+  position: relative; width: 100%; max-width: 880px; max-height: 90vh;
   overflow-y: auto; background: var(--paper); color: var(--ink);
   border: var(--bw) solid var(--ink-20); padding: 28px 32px 26px;
 }
@@ -4385,6 +4388,44 @@ body { font-weight: 200; }
 }
 .skt-kanan { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
+/* Dua panel pendamping, hodograf dan theta-e, berdampingan di atas tabel.
+   Lebarnya dibagi rata dan BOLEH menyusut, sebab di layar sedang kolom
+   kanan ini sempit dan tanpa minmax(0,1fr) dua svg itu memaksa kartunya
+   melebar keluar layar. */
+.skt-panel-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px; align-items: start;
+}
+.skt-panel-row svg { display: block; width: 100%; height: auto; }
+
+/* Tabel tiga parcel. Angkanya rata KANAN supaya satuan dan ribuan sejajar
+   ke bawah, dan itu yang membuat tiga kolomnya bisa dibandingkan sekilas. */
+.skt-tabel {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--font-mono); font-size: 11px;
+}
+.skt-tabel thead th {
+  font-family: var(--font-ui); font-size: 9px; font-weight: 300;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-50);
+  text-align: right; padding: 0 0 4px;
+}
+.skt-tabel thead th:first-child { text-align: left; }
+.skt-tabel tbody th {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 300;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-50);
+  text-align: left; padding: 3px 0; white-space: nowrap;
+}
+.skt-tabel tbody td {
+  text-align: right; padding: 3px 0 3px 10px; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.skt-tabel tbody tr + tr th,
+.skt-tabel tbody tr + tr td { border-top: 0.7px solid var(--ink-20); }
+.skt-tabel .skt-sat {
+  font-family: var(--font-ui); font-size: 9px; font-weight: 300;
+  color: var(--ink-50); text-align: left; padding-left: 8px; white-space: nowrap;
+}
+
 /* KURSOR SILANG selama mode Skew-T menyala. Ini satu satunya tanda bahwa
    klik berikutnya akan berbeda, selain tulisan di petunjuk kursor, dan dia
    yang paling cepat terbaca sebab langsung di bawah tangan. */
@@ -4395,6 +4436,7 @@ body { font-weight: 200; }
 @media (max-width: 760px) {
   .skt-kartu { max-width: 380px; padding: 22px 20px 20px; }
   .skt-badan { grid-template-columns: 1fr; gap: 18px; }
+  .skt-idx { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 
