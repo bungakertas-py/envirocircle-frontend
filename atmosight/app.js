@@ -456,8 +456,8 @@ const LEGENDS = {
      Namanya DISENGAJA bukan "Puncak Awan". Yang dihitung suhu kecerahan
      kanalnya, bukan produk turunan Cloud Top Temperature.
 
-     SKALANYA INFERNO, sepuluh tingkat berjarak 6 derajat dari -70 sampai
-     -16, lalu bening di -10. Diminta pemilik 19 Okt, menggantikan abu dan
+     SKALANYA INFERNO, sebelas tingkat berjarak 6 derajat dari -70 sampai
+     -10, lalu bening di -5. Diminta pemilik 19 Okt, menggantikan abu dan
      kelabu yang dulu membuat sebagian besar awan terbaca kelabu rata.
 
      Rentangnya dipilih dari data. Percobaan -90 sampai -70 diukur dulu di
@@ -470,7 +470,7 @@ const LEGENDS = {
     cells: [["-70", "#360961", 1], ["-64", "#550f69", 1], ["-58", "#73196e", 1],
             ["-52", "#912668", 1], ["-46", "#ae365c", 1], ["-40", "#cb484b", 1],
             ["-34", "#e26233", 0], ["-28", "#f48116", 0], ["-22", "#fbaa12", 0],
-            ["-16", "#fccd3e", 0], ["-10", "transparent", 0]],
+            ["-16", "#fccd3e", 0], ["-10", "#fbe17a", 0], ["-5", "transparent", 0]],
   },
   temp_surface: {
     head: "°C",

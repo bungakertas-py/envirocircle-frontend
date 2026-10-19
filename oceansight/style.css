@@ -2317,14 +2317,18 @@ body { font-weight: 200; }
 .ui-bottom .panel.timeline { max-width: none; flex: 1 1 auto; min-width: 0; }
 .legend-col { margin-left: 0; flex: 0 0 auto; }
 
-/* Kotak satuan PINDAH KE ATAS pita warnanya, rata kiri, jadi tepi kirinya
-   segaris dengan tepi kiri pita. Sebelumnya dia berdiri di sebelah kiri pita
-   dan ikut menambah lebar kolom legenda, akibatnya kotak waktu berhenti jauh
-   lebih awal. Sekarang lebar kolom legenda ditentukan pitanya saja, dan kotak
-   waktu memanjang mengikuti pita itu, bukan mengikuti pita ditambah satuan. */
-.legend-panel {
-  flex-direction: column; align-items: flex-start; gap: 7px;
-}
+/* Kotak satuan KEMBALI KE SEBELAH KIRI pita warnanya, diminta pemilik 19 Okt
+   sore. Dia memang di situ sejak awal, lalu sempat dipindah ke atas supaya
+   kolom legenda tidak ikut melebar dan kotak waktu bisa lebih panjang.
+   Pemilik memilih di samping, dan konsekuensinya diterima, kotak waktu
+   berhenti sedikit lebih awal.
+
+   CARANYA DENGAN MENGHAPUS ATURAN, bukan menambah. Aturan dasar .legend-panel
+   memang sudah baris dengan kepala di kiri. Yang dulu ditambahkan cuma
+   flex-direction column di sini, dan dia ikut menimpa aturan HP yang memakai
+   column-reverse, sebab dia berdiri di luar media query dan letaknya lebih
+   belakang. Jadi menghapusnya sekaligus mengembalikan susunan HP ke bentuk
+   yang memang dirancang, satuannya di bawah batang tegak. */
 /* Jaraknya naik dari 4 ke 8. */
 .ui-bottom { gap: 8px; }
 
@@ -2596,7 +2600,28 @@ body { font-weight: 200; }
 }
 .status .fresh-ico { font-size: 13px; }
 .status .fresh-src { font-size: 9px; }
-.rel--kiri { top: 154px; }
+
+/* BADGE PARAMETER DIBESARKAN, 19 Oktober 2026 sore, diminta pemilik supaya
+   lebih kelihatan. Dia satu satunya badge di tumpukan ini yang menyebut APA
+   yang sedang dilihat, bukan kapan atau seberapa tepat, jadi dia memang
+   pantas lebih menonjol daripada dua tetangganya.
+
+   HATI HATI dengan rel kiri. Rel parameter mulai di y 154 piksel, dan
+   tumpukan status tumbuh ke bawah dari y 58. Kalau badge ini ditambah
+   terlalu tinggi, badge akurasi di bawahnya yang akan menabrak rel itu
+   duluan. Diukur sesudah disetel, dan jaraknya masih cukup. */
+.status .par-badge {
+  font-size: 15px; padding: 8px 18px; gap: 9px;
+  color: #fff; border-color: rgba(255, 255, 255, .45);
+  letter-spacing: .04em;
+}
+.status .par-badge .fresh-ico { font-size: 19px; color: rgba(255, 255, 255, .9); }
+/* Rel kiri turun dari 154 ke 190, 19 Okt sore. Badge Parameter dibesarkan
+   atas permintaan pemilik, tumpukan status jadi lebih tinggi, dan badge
+   Akurasi di bawahnya MENABRAK tulang rel ini. Terukur, akurasi berakhir di
+   y 175 sedangkan rel mulai di 154, jadi tumpang tindih 21 piksel.
+   Dipindah relnya, bukan badge-nya dikecilkan lagi. */
+.rel--kiri { top: 190px; }
 
 /* Di layar sempit ruangnya tidak ada, jadi pembesaran ini dibatalkan dan
    angkanya dikembalikan ke ukuran lama. */
