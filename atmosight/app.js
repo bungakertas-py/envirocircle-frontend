@@ -1240,7 +1240,7 @@ let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
 /* Layer yang dipakai sebagai ALAS waktu layer di kirinya sedang aktif.
    Cuma berlaku untuk sumber satelit. Lihat komentar pane "satatas". */
-const ATAS_SATELIT = { cloudtop_temp: "amv_angin" };
+const ATAS_SATELIT = { cloudtop_temp: "amv_angin", citra_tampak: "amv_angin" };
 let satAtasLayer = null;
 // Jarak antar langkah waktu, dalam JAM. GFS 3 jam, WRF 9 km 1 jam.
 // Dipakai untuk mengubah laju hujan (mm/jam) jadi akumulasi. Dulu dipatok 3

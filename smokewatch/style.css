@@ -1034,14 +1034,41 @@ html, body {
 }
 .pw-input:focus { box-shadow: 3px 3px 0 0 var(--ink); }
 .pw-err { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #e8342c; }
-/* ---- KETERANGAN UJI COBA, model privat saja. Blok ini identik dengan
-   yang di Atmosight. Kartunya menumpang .pw-card supaya tepi, bayang, dan
-   warnanya dijamin sama dengan gerbang sandi selamanya. */
-.uji-card { max-width: 440px; padding-right: 44px; gap: 8px; }
-.uji-teks { font-family: var(--font-ui); font-size: 13px; line-height: 1.6;
-  color: var(--variant); margin: 0; }
-.uji-card .pw-act { margin-top: 6px; }
-/* Tombol tanda serunya ikut .zoom, jadi dia mewarisi ukuran, tepi, dan
+/* ---- KARTU DISCLAIMER, model privat saja. Blok ini IDENTIK dengan
+   yang di Atmosight, setel dua duanya kalau salah satu diubah. ----
+   Kartunya menumpang .pw-card supaya tepi, bayang, dan warnanya dijamin
+   sama dengan gerbang sandi selamanya.
+
+   DIBESARKAN KIRA KIRA TIGA KALI, 19 Oktober 2026, diminta pemilik. Isinya
+   dipangkas jadi judul dan satu kalimat saja, dua alinea penjelas dibuang
+   berikut lencana UJI COBA di atasnya. Dengan isi sependek itu dia berhenti
+   jadi kartu keterangan dan jadi pernyataan, jadi semuanya rata tengah dan
+   hurufnya ikut dibesarkan supaya perbandingannya tetap.
+
+   Lebarnya dibatasi 860px dan menyusut sendiri di layar sempit. Ukuran
+   hurufnya yang perlu diturunkan sendiri di HP, 52px tidak masuk akal di
+   layar 390 piksel. */
+.uji-card {
+  /* width 100 persen, BUKAN 92vw. Kartunya duduk di dalam overlay yang
+     sudah punya padding 20px, jadi 92vw akan melebihi ruang yang tersedia di
+     layar sempit. Di layar 390 piksel itu meluber 9 piksel. Persen menghitung
+     dari kotak isi overlay, jadi dia tidak bisa meluber berapa pun lebarnya. */
+  max-width: 860px; width: 100%;
+  padding: 56px 56px 48px; gap: 26px;
+  align-items: center; text-align: center;
+}
+.uji-card .pw-title { font-size: 52px; line-height: 1.1; letter-spacing: .12em; margin: 0; }
+.uji-teks { font-family: var(--font-ui); font-size: 26px; line-height: 1.5;
+  color: var(--variant); margin: 0; max-width: 34ch; }
+.uji-card .pw-act { justify-content: center; margin-top: 12px; }
+.uji-card .pw-btn { font-size: 17px; padding: 14px 34px; }
+
+@media (max-width: 640px) {
+  .uji-card { padding: 34px 22px 28px; gap: 18px; }
+  .uji-card .pw-title { font-size: 28px; letter-spacing: .1em; }
+  .uji-teks { font-size: 16px; }
+  .uji-card .pw-btn { font-size: 14px; padding: 11px 24px; }
+}/* Tombol tanda serunya ikut .zoom, jadi dia mewarisi ukuran, tepi, dan
    bayang tombol layar penuh di sebelahnya. Cuma muncul di model privat.
 
    PEMILIHNYA SENGAJA PANJANG. Bentuk pendek `.zoom--uji` KALAH, sebab ada

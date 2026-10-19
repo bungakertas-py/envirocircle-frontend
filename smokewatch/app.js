@@ -974,7 +974,7 @@ let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
 /* Layer yang dipakai sebagai ALAS waktu layer di kirinya sedang aktif.
    Cuma berlaku untuk sumber satelit. Lihat komentar pane "satatas". */
-const ATAS_SATELIT = { cloudtop_temp: "amv_angin" };
+const ATAS_SATELIT = { cloudtop_temp: "amv_angin", citra_tampak: "amv_angin" };
 let satAtasLayer = null;
 let dataBounds = null;      // L.latLngBounds domain data (pusat sel; utk klik & geolokasi)
 let imageBounds = null;     // L.latLngBounds TEPI sel — hanya untuk menempatkan pratinjau
