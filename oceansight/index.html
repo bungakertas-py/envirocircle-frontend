@@ -101,6 +101,15 @@
               </span>
               <span class="material-symbols-outlined fresh-chev">chevron_right</span>
             </div>
+            <!-- Parameter yang sedang tampil. Dipindah ke sini 19 Oktober 2026
+                 atas permintaan pemilik, dulu namanya di kepala legenda tepat di
+                 atas bilah warna. Gayanya sama persis dengan badge Last update di
+                 atasnya, dan dia IKUT BERPINDAH bersama badge itu waktu layar
+                 menyempit, lihat penempat badge di app.js. -->
+            <div id="par-badge" class="fresh-badge par-badge" hidden>
+              <span class="material-symbols-outlined fresh-ico" id="par-badge-ico">tune</span>
+              <span id="par-badge-text"></span>
+            </div>
           </div>
 
         <!-- Rel kiri. Dua kartu bertumpuk tegak dengan jarak di antaranya. -->
@@ -313,7 +322,6 @@
       <div class="lowbar-grip"></div>
       <div id="lowbar-body" class="lowbar-body"></div>
     </div>
-    <div id="par-chip" class="par-chip" hidden></div>
     <div id="ket-stack" class="ket-stack" hidden>
       <div id="ket-body" class="ket-body"></div>
       <button id="ket-toggle" class="ket-toggle" aria-label="Sembunyikan keterangan">

@@ -1445,16 +1445,32 @@ function setLowbar(buka) {
 }
 
 // Chip nama parameter aktif di tengah atas.
+/* Badge parameter aktif, di bawah badge Last update.
+   Dulu chip mengambang yang CUMA ada di HP. Dipindah dan dihidupkan di
+   semua ukuran layar 19 Oktober 2026 atas permintaan pemilik, sekalian
+   supaya nama parameter punya satu rumah, bukan dua tempat berbeda
+   tergantung lebar layar. Sama persis dengan Atmosight dan Smokewatch. */
 function updateParChip() {
-  const el = _q("par-chip");
+  const el = _q("par-badge");
   if (!el) return;
-  if (!HP()) { el.hidden = true; return; }
   const src = document.querySelector(".layer-btn.active");
   if (!src) { el.hidden = true; return; }
   el.hidden = false;
-  const ik = _ikonDari(src);
-  el.innerHTML = (ik ? `<span class="material-symbols-outlined">${ik}</span>` : "")
-               + _labelDari(src);
+  /* BERDIRI SENDIRI, tidak memanggil pembantu ikonDari atau labelDari.
+     Dua pembantu itu cuma ada di Atmosight, dan versi pertama yang menyalin
+     begitu saja ke Smokewatch melempar ReferenceError tepat sesudah badge
+     dibuat terlihat. Akibatnya badge muncul sebagai pil kosong tanpa teks,
+     dan tidak ada yang kelihatan salah selain itu. */
+  const ik = _q("par-badge-ico"), tx = _q("par-badge-text");
+  const ikon = src.querySelector(".material-symbols-outlined");
+  if (ik) ik.textContent = ikon ? ikon.textContent.trim() : "tune";
+  const lbl = src.querySelector(".lb-txt");
+  if (tx) {
+    // innerHTML untuk yang punya .lb-txt, sebab nama polutan membawa tulisan
+    // bawah seperti SO<sub>2</sub> yang akan jadi "SO2" kalau dipaksa teks.
+    if (lbl) tx.innerHTML = "Parameter : " + lbl.innerHTML.trim();
+    else tx.textContent = "Parameter : " + src.textContent.trim();
+  }
 }
 
 // Keterangan dikumpulkan ke kiri bawah. Elemen ASLINYA yang dipindah, bukan

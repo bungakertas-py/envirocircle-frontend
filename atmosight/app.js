@@ -451,28 +451,26 @@ const LEGENDS = {
     cells: [["< 400 hPa", "#c5ff95", 0], ["400-700", "#5debd7", 0], ["> 700 hPa", "#4fa8d8", 1]],
   },
   /* BRIGHTNESS TEMPERATURE kanal 13 Himawari-9, 10,4 mikrometer. Ini
-     PENGAMATAN, bukan ramalan, satu satunya layer di Atmosight yang
-     menunjukkan keadaan yang sedang terjadi.
+     PENGAMATAN, bukan ramalan.
 
      Namanya DISENGAJA bukan "Puncak Awan". Yang dihitung suhu kecerahan
-     kanalnya, bukan produk turunan Cloud Top Temperature. Di langit cerah
-     yang terukur permukaan laut, bukan awan. Yang membuat layarnya tetap
-     terbaca sebagai awan itu skalanya, di atas 20 derajat alfanya nol dan
-     di 10 derajat tinggal 40 dari 255, jadi laut tropis yang 28 derajat
-     bening total dan yang berwarna memang tinggal awannya.
+     kanalnya, bukan produk turunan Cloud Top Temperature.
 
-     Angkanya WAJIB sama dengan SKALA di backend/pipeline/himawari.py.
+     SKALANYA INFERNO, sepuluh tingkat berjarak 6 derajat dari -70 sampai
+     -16, lalu bening di -10. Diminta pemilik 19 Okt, menggantikan abu dan
+     kelabu yang dulu membuat sebagian besar awan terbaca kelabu rata.
 
-     Yang hangat sengaja BENING, sebab di situ memang tidak ada awan tinggi
-     dan peta di bawahnya lebih berguna daripada warna rata. Pergantian ke
-     kuning di minus 40 bukan selera, itu ambang yang biasa dipakai untuk
-     menandai konveksi dalam. */
+     Rentangnya dipilih dari data. Percobaan -90 sampai -70 diukur dulu di
+     tiga hari dan ternyata nyaris kosong, jadi batas dinginnya jadi -70.
+     Yang sekarang mewarnai 11 sampai 14 persen domain.
+
+     Angkanya WAJIB sama dengan SKALA di backend/pipeline/himawari.py. */
   cloudtop_temp: {
-    head: "°C",
-    cells: [["-90", "#2e1c7d", 1], ["-80", "#75248a", 1], ["-70", "#c2415c", 1],
-            ["-60", "#e05a41", 1], ["-50", "#fcac1c", 0], ["-40", "#f9dc5c", 0],
-            ["-32", "#5a6e82", 1], ["-20", "#96a5b4", 0], ["0", "#c8d2dc", 0],
-            ["10", "transparent", 0]],
+    head: "\u00b0C",
+    cells: [["-70", "#360961", 1], ["-64", "#550f69", 1], ["-58", "#73196e", 1],
+            ["-52", "#912668", 1], ["-46", "#ae365c", 1], ["-40", "#cb484b", 1],
+            ["-34", "#e26233", 0], ["-28", "#f48116", 0], ["-22", "#fbaa12", 0],
+            ["-16", "#fccd3e", 0], ["-10", "transparent", 0]],
   },
   temp_surface: {
     head: "°C",
@@ -1086,10 +1084,10 @@ let VIEW_CORE = L.latLngBounds([-28, 68], [28, 174]);
    Label tidak ikut berubah. Lapisan nama tempat berdiri di pane sendiri
    dan yang dipakai di tema gelap sudah yang bertulisan putih berhalo,
    jadi dia tetap terbaca di atas citra. */
-const ALAS_SATELIT_URL =
+const ATAS_SATELIT_URL =
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const PAKAI_CITRA = !!(MODEL && MODEL.satelit);
-L.tileLayer(PAKAI_CITRA ? ALAS_SATELIT_URL
+L.tileLayer(PAKAI_CITRA ? ATAS_SATELIT_URL
     : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
   attribution: PAKAI_CITRA
     ? 'Tiles &copy; Esri, Maxar, Earthstar Geographics | Data: Himawari-9 (NOAA)'
@@ -1158,9 +1156,13 @@ speedPane.style.pointerEvents = "none";
    sudah digambar server. Tanpa alas, layer AMV cuma panah
    melayang di atas peta hitam, dan panah tanpa awan itu kehilangan
    separuh ceritanya, sebab angin ini memang DIUKUR dari gerak awan. */
-const satAlasPane = map.createPane("satalas");
-satAlasPane.style.zIndex = 340;
-satAlasPane.style.pointerEvents = "none";
+const satAtasPane = map.createPane("satatas");
+// 360, tepat DI ATAS pane kecepatan yang 350. Dulu 340, di bawahnya,
+// sebab dulu yang ditumpangkan citra awan di bawah panah. Sejak panah
+// AMV dilebur jadi bagian Brightness Temperature, yang ditumpangkan
+// justru panahnya, jadi dia harus di atas.
+satAtasPane.style.zIndex = 360;
+satAtasPane.style.pointerEvents = "none";
 
 // Pane batas administrasi (garis negara & provinsi): di atas partikel
 // (overlayPane z400), di bawah label (z650).
@@ -1237,9 +1239,9 @@ let velocityLayer = null;
 let velSeq = 0;
 let speedLayer = null;      // heatmap (imageOverlay preview PNG) — dipakai kedua layer
 /* Layer yang dipakai sebagai ALAS waktu layer di kirinya sedang aktif.
-   Cuma berlaku untuk sumber satelit. Lihat komentar pane "satalas". */
-const ALAS_SATELIT = { amv_angin: "cloudtop_temp" };
-let satAlasLayer = null;
+   Cuma berlaku untuk sumber satelit. Lihat komentar pane "satatas". */
+const ATAS_SATELIT = { cloudtop_temp: "amv_angin" };
+let satAtasLayer = null;
 // Jarak antar langkah waktu, dalam JAM. GFS 3 jam, WRF 9 km 1 jam.
 // Dipakai untuk mengubah laju hujan (mm/jam) jadi akumulasi. Dulu dipatok 3
 // dan itu benar selama cuma ada GFS; begitu WRF masuk, patokan itu melebihkan
@@ -1274,7 +1276,16 @@ let activeLayer = "wind_surface";
    wajib ada jalan mundur, kalau tidak app-nya membuka layer yang tidak ada.
    Tautan berisi ?l=... tetap menang, itu diurus restoreFromHash. */
 function layerAwal(cat, avail) {
-  if (MODEL && MODEL.satelit) return cat.layers["citra_tampak"] ? "citra_tampak" : avail[0];
+  /* SATELIT membuka Brightness Temperature, dan panah AMV ikut tergambar di
+     atasnya sendiri. Sempat True Color, lalu diganti pemilik 19 Okt sebab
+     pasangan citra awan plus panah itu yang paling banyak bercerita sekali
+     lihat. True Color tetap ada di rel parameter.
+
+     MODEL membuka HUJAN, bukan angin. Juga diminta pemilik hari yang sama.
+     Hujan yang paling dicari orang begitu peta terbuka, dan kartu Showcase
+     di landing ikut memakai tampilan ini. */
+  if (MODEL && MODEL.satelit) return cat.layers["cloudtop_temp"] ? "cloudtop_temp" : avail[0];
+  if (cat.layers["rain_surface"]) return "rain_surface";
   return cat.layers["wind_surface"] ? "wind_surface" : avail[0];
 }
 let activeBase = "wind_surface";   // tombol layer aktif (kunci PERMUKAAN); di strato dipetakan ke varian _strato
@@ -1553,17 +1564,20 @@ function tombolLayer(layerKey) {
           : null);
 }
 function isiKepalaLegenda(head, layerKey, satuan) {
+  /* SATUANNYA SAJA. Nama parameter pindah ke badge di kiri atas 19 Oktober
+     2026, jadi menuliskannya lagi di sini cuma mengulang.
+
+     Kecualinya layer yang satuannya memang namanya sendiri, ISPU dan AQI,
+     dan layer tanpa satuan. Untuk itu namanya yang dipakai, kalau tidak
+     kepala legendanya kosong melompong di atas bilah warna. */
   const t = tombolLayer(layerKey)?.querySelector(".lb-txt");
   const nama = t ? t.textContent.trim() : "";
   let sat = String(satuan || "");
-  if (!nama) { head.textContent = sat; return; }
-  // Nama yang sudah tertulis di satuan tidak diulang. "ISPU" tetap "ISPU",
-  // "CAPE, J/kg" jadi "CAPE · J/kg".
   const N = nama.toUpperCase(), S = sat.toUpperCase();
-  if (S === N) sat = "";
-  else if (S.startsWith(N + ",")) sat = sat.slice(nama.length + 1).trim();
-  head.innerHTML = `<span class="lh-nama">${t.innerHTML.trim()}</span>` +
-    (sat ? `<span class="lh-sep">·</span><span class="lh-sat">${escHtml(sat)}</span>` : "");
+  // "CAPE, J/kg" -> "J/kg". Namanya dibuang, satuannya disisakan.
+  if (nama && S.startsWith(N + ",")) sat = sat.slice(nama.length + 1).trim();
+  if (sat && S !== N) { head.innerHTML = `<span class="lh-sat">${escHtml(sat)}</span>`; return; }
+  head.innerHTML = t ? `<span class="lh-nama">${t.innerHTML.trim()}</span>` : escHtml(sat);
 }
 // Tombol ISPU dan AQI tidak punya ikon, jadi untuk dua layer itu spine tetap
 // memakai ikon pengatur umum.
@@ -1580,7 +1594,7 @@ function tandaiSpineParameter(layerKey) {
 function renderLegendaAlas() {
   const baris = $("legend-alas");
   if (!baris) return;
-  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+  const dasar = (MODEL && MODEL.satelit) ? ATAS_SATELIT[activeLayer] : null;
   const def = dasar && LEGENDS[dasar];
   if (!def) { baris.hidden = true; return; }
   baris.hidden = false;
@@ -1636,7 +1650,7 @@ function setActiveLayer(layerKey) {
   // Alas satelit ikut dibuang. Kalau dibiarkan, pindah dari AMV ke
   // Brightness Temperature menyisakan satu citra tembus pandang di bawah citra
   // awan yang baru, dan dua duanya kelihatan.
-  if (satAlasLayer) { map.removeLayer(satAlasLayer); satAlasLayer = null; }
+  if (satAtasLayer) { map.removeLayer(satAtasLayer); satAtasLayer = null; }
   buildTicks();
   const slider = $("time-slider");
   if (slider) slider.max = String(frames.length - 1);
@@ -1702,26 +1716,26 @@ function muatDuluBingkaiBerikut() {
   const im = new Image(); im.decoding = "async"; im.src = url;
   // Alasnya ikut, kalau tidak yang mulus cuma panahnya dan awan di
   // belakangnya tetap tersendat.
-  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+  const dasar = (MODEL && MODEL.satelit) ? ATAS_SATELIT[activeLayer] : null;
   const def = dasar && catalog && catalog.layers[dasar];
   const fa = def && def.frames.find((f) => f.valid_time === b.valid_time);
   if (fa) { const ia = new Image(); ia.decoding = "async"; ia.src = DATA_BASE + fa.preview_image; }
 }
 
-function pasangAlasSatelit(frame) {
-  const dasar = (MODEL && MODEL.satelit) ? ALAS_SATELIT[activeLayer] : null;
+function pasangPanahSatelit(frame) {
+  const dasar = (MODEL && MODEL.satelit) ? ATAS_SATELIT[activeLayer] : null;
   const def = dasar && catalog && catalog.layers[dasar];
   const fa = def && def.frames.find((f) => f.valid_time === frame.valid_time);
   if (!fa || !imageBounds) {
-    if (satAlasLayer) { map.removeLayer(satAlasLayer); satAlasLayer = null; }
+    if (satAtasLayer) { map.removeLayer(satAtasLayer); satAtasLayer = null; }
     return;
   }
   const url = DATA_BASE + fa.preview_image;
-  if (!satAlasLayer) {
-    satAlasLayer = L.imageOverlay(url, imageBounds,
-      { pane: "satalas", opacity: 0.85, interactive: false }).addTo(map);
+  if (!satAtasLayer) {
+    satAtasLayer = L.imageOverlay(url, imageBounds,
+      { pane: "satatas", opacity: 1, interactive: false }).addTo(map);
   } else {
-    satAlasLayer.setUrl(url);
+    satAtasLayer.setUrl(url);
   }
 }
 
@@ -1739,7 +1753,7 @@ async function showFrame(i) {
   }
   const isVector = catalog.layers[activeLayer]?.kind === "vector";
   speedLayer.setOpacity(isVector ? 0.92 : 1); // scalar opaque; angin semi
-  pasangAlasSatelit(frame);                   // citra awan di bawah panah AMV
+  pasangPanahSatelit(frame);                   // panah AMV di atas citra awan
 
   // Partikel angin PUTIH — SELALU ada (angin & hujan), dari medan angin waktu sama.
   // Ikut LEVEL: di stratosfer pakai medan angin 70 hPa agar konsisten dengan heatmap.
@@ -4303,11 +4317,17 @@ function timeIndexOf(times) {
    dengan langkah 3 jam, WRF sampai 42 jam dengan langkah 1 jam, dan kalau
    backend mengubah jangkauannya alarm ini ikut sendiri. Juga diminta user.
 
-   KONSEKUENSINYA SUDAH DIUKUR DAN DITERIMA USER. Dengan jendela penuh dan
-   ambang 0,5 mm, yang berdenyut 24,5 persen kota di GFS dan 35,4 persen di
-   WRF. Itu banyak. Kalau suatu saat terasa terlalu ramai, yang disetel
-   ALARM_AMBANG atau jendelanya dipendekkan, bukan tandanya yang dikecilkan. */
-var ALARM_AMBANG = 0.5;   // mm, batas disebut hujan. Sama dengan cityCondition.
+   AMBANGNYA DINAIKKAN JADI 5 mm, 19 Oktober 2026, diminta pemilik.
+
+   Dengan 0,5 mm dan jendela penuh, yang berdenyut 24,5 persen kota di GFS
+   dan 35,4 persen di WRF. Itu memang terlalu ramai, dan 0,5 mm itu rintik
+   yang tidak membuat siapa pun mengubah rencana. Di 5 mm yang tersisa hujan
+   yang betul betul terasa, dan alarmnya kembali berarti.
+
+   SENGAJA TIDAK LAGI SAMA dengan cityCondition. Ikon kondisi kota memang
+   harus menyebut rintik sebagai hujan, sebab dia menggambarkan cuaca.
+   Alarm tidak, dia menyuruh orang bersiap. */
+var ALARM_AMBANG = 5;   // mm, batas hujan yang pantas diberi alarm
 /* Bisa dimatikan, pola yang sama dengan Siklon, ITCZ, dan Fenomena.
    Menyala sejak awal, sebab ini alarm, tapi tiap lapisan di app ini punya
    saklarnya sendiri dan yang satu ini tidak boleh jadi kekecualian.
@@ -6287,6 +6307,12 @@ async function init() {
     }
     if (!avail.length) throw new Error("catalog.json tidak punya layer");
     activeLayer = layerAwal(cat, avail);
+    /* activeBase IKUT DISETEL di sini. Dulu tidak, dan nilainya tertinggal di
+       bawaan "wind_surface" sampai orang mengklik tombol parameter pertama
+       kalinya. Itu tidak kelihatan selama activeBase cuma dipakai menyalakan
+       tombol, tapi sejak badge Parameter memakainya juga, badge-nya menulis
+       "Angin" di peta yang sedang menampilkan Brightness Temperature. */
+    activeBase = BASE_OF[activeLayer] || activeLayer;
     frames = cat.layers[activeLayer].frames;
 
     // Tiga kotak yang beda peran, jangan tertukar.
@@ -6826,15 +6852,32 @@ function setLowbar(buka) {
   setTimeout(() => map && map.invalidateSize({ animate: false }), 300);
 }
 
-// Chip nama parameter aktif di tengah atas.
+/* Badge parameter aktif, di bawah badge Last update.
+   Dulu chip mengambang yang CUMA ada di HP. Dipindah dan dihidupkan di
+   semua ukuran layar 19 Oktober 2026 atas permintaan pemilik, sekalian
+   supaya nama parameter punya satu rumah, bukan dua tempat berbeda
+   tergantung lebar layar. */
 function updateParChip() {
-  const el = $("par-chip");
+  const el = $("par-badge");
   if (!el) return;
-  if (!HP()) { el.hidden = true; return; }
   const src = document.querySelector(`.layer-btn[data-layer="${activeBase}"]`);
   if (!src) { el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = `<span class="material-symbols-outlined">${ikonDari(src)}</span>${labelDari(src)}`;
+  /* BERDIRI SENDIRI, tidak memanggil pembantu ikonDari atau labelDari.
+     Dua pembantu itu cuma ada di Atmosight, dan versi pertama yang menyalin
+     begitu saja ke Smokewatch melempar ReferenceError tepat sesudah badge
+     dibuat terlihat. Akibatnya badge muncul sebagai pil kosong tanpa teks,
+     dan tidak ada yang kelihatan salah selain itu. */
+  const ik = $("par-badge-ico"), tx = $("par-badge-text");
+  const ikon = src.querySelector(".material-symbols-outlined");
+  if (ik) ik.textContent = ikon ? ikon.textContent.trim() : "tune";
+  const lbl = src.querySelector(".lb-txt");
+  if (tx) {
+    // innerHTML untuk yang punya .lb-txt, sebab nama polutan membawa tulisan
+    // bawah seperti SO<sub>2</sub> yang akan jadi "SO2" kalau dipaksa teks.
+    if (lbl) tx.innerHTML = "Parameter : " + lbl.innerHTML.trim();
+    else tx.textContent = "Parameter : " + src.textContent.trim();
+  }
 }
 
 // Keterangan (Kondisi, Siklon, ITCZ, Fenomena) dikumpulkan ke kiri bawah.

@@ -845,7 +845,12 @@ html, body {
    lawan display:flex, jadi aturan [hidden] di bawah WAJIB ada kalau suatu
    saat baris ini diberi display. */
 .legend-alas-baris[hidden] { display: none; }
-.legend-alas-baris .legend-cell { width: 36px; min-height: 26px; font-size: 11px; }
+/* Lebarnya IKUT ISI, bukan dipatok. Dulu 36px tetap, dan itu cukup
+   selama yang duduk di baris ini tangga angka seperti -70. Sejak panah
+   AMV yang jadi pasangan, labelnya kata seperti "< 400 hPa" dan di
+   36px dia terpotong. */
+.legend-alas-baris .legend-cell { min-width: 36px; width: auto; padding: 0 7px;
+  min-height: 26px; font-size: 11px; white-space: nowrap; }
 /* Sel legenda yang artinya TIDAK ADA NILAI digambar kotak catur, bukan
    dibiarkan kosong. Tanpa ini labelnya mengambang sendirian di atas peta
    dan terbaca seperti tulisan yang nyasar. Untuk sekarang yang memakainya
@@ -1320,6 +1325,12 @@ body.model-private .alat .zoom.zoom--uji { display: flex; }
      cukup ikon "!" (hemat ruang). Tap → tampil teks + panah; tap lagi → ciut. */
   .fresh-badge { position: static; align-self: flex-end; cursor: pointer; gap: 0; padding: 6px 7px; }
   .fresh-badge #fresh-text { display: none; }
+  /* Badge parameter TIDAK ikut pindah bersama badge Last update. Di HP badge
+     itu menciut jadi lingkaran di pojok dan tinggal di legend-col yang duduk
+     di dasar layar, jadi apa pun yang menempel padanya terdorong keluar
+     layar. Dicoba sekali dan memang hilang. Badge parameter tinggal di blok
+     status di kiri atas, persis tempat chip parameter yang lama berdiri. */
+  .status .par-badge { align-self: flex-start; gap: 6px; padding: 5px 10px; cursor: default; }
   .fresh-badge.open { gap: 6px; padding: 5px 6px 5px 8px; }
   .fresh-badge.open #fresh-text { display: inline; }
   .fresh-badge.open .fresh-chev { display: inline; }
@@ -3489,7 +3500,10 @@ body { font-weight: 200; }
 .legend-head .lh-nama { text-transform: uppercase; font-weight: 400; }
 .legend-head .lh-sep { opacity: .55; margin: 0 .6em; }
 @media (max-width: 640px) {
-  .legend-head .lh-nama, .legend-head .lh-sep { display: none; }
+  /* Aturan lama yang menyembunyikan nama parameter di HP DIBUANG 19 Okt.
+     Dulu perlu sebab namanya diulang di chip mengambang. Sekarang kepala
+     legenda memang cuma berisi satuan, dan kalau dia terpaksa memakai
+     nama seperti ISPU, nama itulah satu satunya isi kepalanya. */
 }
 
 /* =====================================================================

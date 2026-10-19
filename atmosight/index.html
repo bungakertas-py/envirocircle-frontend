@@ -97,6 +97,15 @@
             </span>
             <span class="material-symbols-outlined fresh-chev">chevron_right</span>
           </div>
+          <!-- Parameter yang sedang tampil. Dipindah ke sini 19 Oktober 2026
+               atas permintaan pemilik, dulu namanya menempel di kepala legenda
+               tepat di atas bilah warna. Gayanya sengaja sama persis dengan
+               badge Last update di atasnya, dan dia IKUT BERPINDAH bersama
+               badge itu waktu layar menyempit, lihat penempat badge di app.js. -->
+          <div id="par-badge" class="fresh-badge par-badge" hidden>
+            <span class="material-symbols-outlined fresh-ico" id="par-badge-ico">tune</span>
+            <span id="par-badge-text"></span>
+          </div>
           <!-- Akurasi model, cuma tampil di model yang punya verifikasi (WRF).
                Gaya sama persis dengan badge arsip, cuma rata KIRI. -->
           <div id="acc-badge" class="fresh-badge acc-badge" hidden>
@@ -180,7 +189,6 @@
                    jadi garis waktunya mundur ke belakang bukan maju. -->
               <button class="layer-btn" data-layer="citra_tampak" data-khusus="hima" data-tip="Citra warna asli Himawari, kanal tampak 0,47, 0,51, 0,64, dan 0,86 mikrometer. Ini satu satunya layer yang memperlihatkan ASAP, sebab asap memang cuma terlihat di cahaya tampak. SIANG SAJA, malamnya kosong"><span class="material-symbols-outlined">photo_camera</span> <span class="lb-txt">True Color RGB</span></button>
               <button class="layer-btn" data-layer="cloudtop_temp" data-khusus="hima" data-tip="Brightness temperature kanal 13 Himawari, 10,4 mikrometer. Yang hangat sengaja bening, jadi yang berwarna di layar memang puncak awan. Pengamatan, bukan ramalan"><span class="material-symbols-outlined">satellite_alt</span> <span class="lb-txt">Brightness Temperature</span></button>
-              <button class="layer-btn" data-layer="amv_angin" data-khusus="hima" data-tip="Atmospheric Motion Vectors, angin yang diukur dari perpindahan puncak awan antar dua citra satelit berurutan. Warnanya lapisan tekanan, ditaksir dari suhu puncak awan"><span class="material-symbols-outlined">near_me</span> <span class="lb-txt">Atmospheric Motion Vectors (AMV)</span></button>
             </div>
             <button id="layer-next" class="layer-nav" aria-label="Variabel berikutnya"><span class="material-symbols-outlined">chevron_right</span></button>
             <!-- Buka-tutup panel kiri (Parameter + Model). Menempel di sisi kontainer
@@ -523,9 +531,6 @@
       <div id="lowbar-body" class="lowbar-body"></div>
     </div>
 
-    <!-- Nama parameter aktif, mengambang di tengah atas. Pengganti deretan
-         tombol, supaya layar HP bersih tapi tetap jelas sedang melihat apa. -->
-    <div id="par-chip" class="par-chip" hidden></div>
 
     <!-- Tumpukan keterangan (Kondisi, Siklon, ITCZ, Fenomena) di kiri bawah,
          bisa diciutkan keluar bingkai lewat panah di sisinya. -->

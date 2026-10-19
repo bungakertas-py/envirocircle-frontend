@@ -1001,6 +1001,12 @@ html, body {
      cukup ikon "!" (hemat ruang). Tap → tampil teks + panah; tap lagi → ciut. */
   .fresh-badge { position: static; align-self: flex-end; cursor: pointer; gap: 0; padding: 6px 7px; }
   .fresh-badge #fresh-text { display: none; }
+  /* Badge parameter TIDAK ikut pindah bersama badge Last update. Di HP badge
+     itu menciut jadi lingkaran di pojok dan tinggal di legend-col yang duduk
+     di dasar layar, jadi apa pun yang menempel padanya terdorong keluar
+     layar. Dicoba sekali dan memang hilang. Badge parameter tinggal di blok
+     status di kiri atas, persis tempat chip parameter yang lama berdiri. */
+  .status .par-badge { align-self: flex-start; gap: 6px; padding: 5px 10px; cursor: default; }
   .fresh-badge.open { gap: 6px; padding: 5px 6px 5px 8px; }
   .fresh-badge.open #fresh-text { display: inline; }
   .fresh-badge.open .fresh-chev { display: inline; }
