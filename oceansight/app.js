@@ -1450,17 +1450,7 @@ function setLowbar(buka) {
    semua ukuran layar 19 Oktober 2026 atas permintaan pemilik, sekalian
    supaya nama parameter punya satu rumah, bukan dua tempat berbeda
    tergantung lebar layar. Sama persis dengan Atmosight dan Smokewatch. */
-function updateParChip() {
-  const el = _q("par-badge");
-  if (!el) return;
-  const src = document.querySelector(".layer-btn.active");
-  if (!src) { el.hidden = true; return; }
-  el.hidden = false;
-  /* BERDIRI SENDIRI, tidak memanggil pembantu ikonDari atau labelDari.
-     Dua pembantu itu cuma ada di Atmosight, dan versi pertama yang menyalin
-     begitu saja ke Smokewatch melempar ReferenceError tepat sesudah badge
-     dibuat terlihat. Akibatnya badge muncul sebagai pil kosong tanpa teks,
-     dan tidak ada yang kelihatan salah selain itu. */
+function isiParBadge(src) {
   const ik = _q("par-badge-ico"), tx = _q("par-badge-text");
   const ikon = src.querySelector(".material-symbols-outlined");
   if (ik) ik.textContent = ikon ? ikon.textContent.trim() : "tune";
@@ -1471,6 +1461,51 @@ function updateParChip() {
     if (lbl) tx.innerHTML = "Parameter : " + lbl.innerHTML.trim();
     else tx.textContent = "Parameter : " + src.textContent.trim();
   }
+}
+
+function updateParChip() {
+  const el = _q("par-badge");
+  if (!el) return;
+  const src = document.querySelector(".layer-btn.active");
+  if (!src) { el.hidden = true; return; }
+  el.hidden = false;
+  isiParBadge(src);
+}
+
+/* NAMA DI BADGE IKUT KURSOR selagi orang memilih di panel parameter, lalu
+   kembali ke yang sedang tampil begitu kursornya keluar. Diminta pemilik 19
+   Okt sore. Gunanya, nama parameter sering lebih panjang daripada yang muat
+   di tombolnya, jadi menyorotnya sudah cukup untuk tahu itu apa tanpa harus
+   mengkliknya dulu.
+
+   PENGUNCIANNYA TIDAK PERLU KODE TAMBAHAN. Begitu orang benar benar memilih,
+   setActiveLayer memanggil updateParChip dan badge-nya terisi dari layer
+   yang aktif, jadi sorotan berikutnya cuma menimpa sementara lalu kembali ke
+   pilihan itu.
+
+   Dipasang di document dengan penyaringan, bukan di tiap tombol, sebab
+   tombolnya tersebar di lebih dari satu wadah. Pemulihannya menunggu kursor
+   betul betul keluar dari semua tombol, kalau tidak badge-nya berkedip tiap
+   kali kursor melintas dari satu tombol ke tetangganya.
+
+   HANYA DI ALAT BERTETIKUS. Di layar sentuh mouseover ikut terpicu oleh
+   ketukan, dan itu membuat badge-nya berganti sekejap sebelum pilihannya
+   diterapkan. */
+if (window.matchMedia("(hover: hover)").matches) {
+  const sorot = (e) => {
+    const b = e.target.closest && e.target.closest(".layer-btn[data-layer]");
+    if (!b || b.classList.contains("disabled") || b.classList.contains("sembunyi")) return b;
+    const el = _q("par-badge");
+    if (el && !el.hidden) isiParBadge(b);
+    return b;
+  };
+  document.addEventListener("mouseover", sorot);
+  document.addEventListener("mouseout", (e) => {
+    if (!e.target.closest || !e.target.closest(".layer-btn[data-layer]")) return;
+    const ke = e.relatedTarget && e.relatedTarget.closest
+      && e.relatedTarget.closest(".layer-btn[data-layer]");
+    if (!ke) updateParChip();
+  });
 }
 
 // Keterangan dikumpulkan ke kiri bawah. Elemen ASLINYA yang dipindah, bukan

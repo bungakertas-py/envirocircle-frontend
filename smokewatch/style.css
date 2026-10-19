@@ -3862,11 +3862,17 @@ body { font-weight: 200; }
    terlalu tinggi, badge akurasi di bawahnya yang akan menabrak rel itu
    duluan. Diukur sesudah disetel, dan jaraknya masih cukup. */
 .status .par-badge {
-  font-size: 15px; padding: 8px 18px; gap: 9px;
-  color: #fff; border-color: rgba(255, 255, 255, .45);
-  letter-spacing: .04em;
+  font-size: 15px; padding: 8px 18px; gap: 9px; letter-spacing: .04em;
+  /* BERBIDANG, bukan bergaris saja. Warnanya var(--ink), sama persis dengan
+     tulang punggung panel Parameter di tepi kiri, jadi dua benda yang
+     bercerita tentang hal yang sama memakai warna yang sama. Diminta
+     pemilik 19 Okt sore, yang bergaris tipis kurang kelihatan. */
+  background: var(--ink); color: var(--paper); border-color: var(--ink);
 }
-.status .par-badge .fresh-ico { font-size: 19px; color: rgba(255, 255, 255, .9); }
+.status .par-badge .fresh-ico { font-size: 19px; color: var(--paper); }
+/* Badge ini BUKAN tombol, jadi sorotan tetikus tidak boleh mengubahnya.
+   Tanpa aturan ini dia mewarisi sorotan badge Last update di atasnya. */
+.status .par-badge:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 /* Rel kiri turun dari 154 ke 190, 19 Okt sore. Badge Parameter dibesarkan
    atas permintaan pemilik, tumpukan status jadi lebih tinggi, dan badge
    Akurasi di bawahnya MENABRAK tulang rel ini. Terukur, akurasi berakhir di

@@ -4141,17 +4141,22 @@ body { font-weight: 200; }
    terlalu tinggi, badge akurasi di bawahnya yang akan menabrak rel itu
    duluan. Diukur sesudah disetel, dan jaraknya masih cukup. */
 .status .par-badge {
-  font-size: 15px; padding: 8px 18px; gap: 9px;
-  color: #fff; border-color: rgba(255, 255, 255, .45);
-  letter-spacing: .04em;
+  font-size: 15px; padding: 8px 18px; gap: 9px; letter-spacing: .04em;
+  /* BERBIDANG, bukan bergaris saja. Warnanya var(--ink), sama persis dengan
+     tulang punggung panel Parameter di tepi kiri, jadi dua benda yang
+     bercerita tentang hal yang sama memakai warna yang sama. Diminta
+     pemilik 19 Okt sore, yang bergaris tipis kurang kelihatan. */
+  background: var(--ink); color: var(--paper); border-color: var(--ink);
 }
-.status .par-badge .fresh-ico { font-size: 19px; color: rgba(255, 255, 255, .9); }
-/* Rel kiri turun dari 154 ke 190, 19 Okt sore. Badge Parameter dibesarkan
-   atas permintaan pemilik, tumpukan status jadi lebih tinggi, dan badge
-   Akurasi di bawahnya MENABRAK tulang rel ini. Terukur, akurasi berakhir di
-   y 175 sedangkan rel mulai di 154, jadi tumpang tindih 21 piksel.
-   Dipindah relnya, bukan badge-nya dikecilkan lagi. */
-.rel--kiri { top: 190px; }
+.status .par-badge .fresh-ico { font-size: 19px; color: var(--paper); }
+/* Badge ini BUKAN tombol, jadi sorotan tetikus tidak boleh mengubahnya.
+   Tanpa aturan ini dia mewarisi sorotan badge Last update di atasnya. */
+.status .par-badge:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* Rel kiri 154 jadi 164. Sempat 190 waktu badge Akurasi masih ikut di
+   tumpukan status dan menabrak tulang rel ini. Akurasi sudah pindah ke
+   deretan kontrol peta, jadi yang tersisa Last update dan Parameter, dan
+   Parameter berakhir di y 146. Sepuluh piksel di bawahnya sudah cukup. */
+.rel--kiri { top: 164px; }
 
 /* Di layar sempit ruangnya tidak ada, jadi pembesaran ini dibatalkan dan
    angkanya dikembalikan ke ukuran lama. */
@@ -4528,6 +4533,18 @@ body { font-weight: 200; }
    isian, bukan kotak putih pekat.
    ===================================================================== */
 .zoom-baris { display: flex; align-items: stretch; gap: 8px; pointer-events: auto; }
+/* Akurasi di deretan ini melar mengikuti teksnya, bukan dipatok kotak
+   46px seperti tombol ikon di sebelahnya. Pemilihnya sengaja memakai
+   .col.items-end di depan, sebab aturan HP yang mengecilkan tombol zoom
+   jadi 34px memakai pemilih sepanjang itu dan akan menang kalau tidak
+   diimbangi. */
+.zoom--akr { flex: none; }
+.zoom--akr button, .col.items-end .zoom--akr button {
+  width: auto; padding: 0 14px; gap: 7px; white-space: nowrap;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 200; letter-spacing: .06em;
+}
+.zoom--akr .material-symbols-outlined,
+.col.items-end .zoom--akr button .material-symbols-outlined { font-size: 16px; }
 /* Satu tombol saja, jadi tidak ada pemisah di dalamnya. */
 .zoom--fs { flex: none; }
 

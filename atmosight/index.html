@@ -106,12 +106,6 @@
             <span class="material-symbols-outlined fresh-ico" id="par-badge-ico">tune</span>
             <span id="par-badge-text"></span>
           </div>
-          <!-- Akurasi model, cuma tampil di model yang punya verifikasi (WRF).
-               Gaya sama persis dengan badge arsip, cuma rata KIRI. -->
-          <div id="acc-badge" class="fresh-badge acc-badge" hidden>
-            <span class="material-symbols-outlined fresh-ico">target</span>
-            <span class="mono" id="acc-text"></span>
-          </div>
         </div>
 
         <div class="ident">
@@ -300,6 +294,25 @@
                  berganti jadi putih tembus pandang. Menulis gaya tandingan
                  untuk satu tombol berarti dua tempat yang harus diingat
                  tiap kali gaya bilah ini disetel. -->
+            <!-- Akurasi model. PINDAH KE SINI 19 Oktober 2026 sore, diminta
+                 pemilik, dulu dia di tumpukan status bersama Last update. Dia
+                 memang keterangan tentang PETANYA, bukan tentang kapan
+                 datanya datang, jadi tempatnya di deretan kontrol peta.
+
+                 Dibungkus .zoom dengan alasan yang sama persis dengan tombol
+                 tanda seru di bawahnya, supaya tepi, tinggi, dan warnanya
+                 dijamin ikut deretan ini selamanya. Yang dilepas cuma
+                 lebarnya, sebab isinya teks bukan ikon.
+
+                 Id-nya TETAP acc-badge, sebab updateAkurasi memakai id itu
+                 untuk menyembunyikannya waktu katalog belum punya angka
+                 akurasi, dan pendengar kliknya juga menempel di situ. -->
+            <div class="zoom zoom--akr" id="acc-badge" hidden>
+              <button type="button" aria-label="Akurasi model" title="Akurasi model">
+                <span class="material-symbols-outlined">target</span>
+                <span class="mono" id="acc-text"></span>
+              </button>
+            </div>
             <div class="zoom zoom--fs">
               <button id="fs-btn" aria-label="Layar penuh" title="Layar penuh"><span class="material-symbols-outlined">fullscreen</span></button>
             </div>
