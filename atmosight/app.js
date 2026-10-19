@@ -1055,14 +1055,36 @@ let VIEW_CORE = L.latLngBounds([-28, 68], [28, 174]);
 // datanya transparan (mis. hujan saat kering).
 // Basemap Esri World Dark Gray (GRATIS, tanpa API key). CARTO menghentikan akses
 // tanpa-key (tile bertempel watermark "API key required"), jadi pindah ke Esri.
-L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-  attribution: 'Tiles &copy; Esri | Data: NOAA GFS',
+/* ALAS CITRA untuk sumber SATELIT, diminta pemilik.
+
+   Yang ditayangkan sumber ini memang citra satelit, jadi alas kartografi
+   abu abu terasa salah tempat di bawahnya. Esri World Imagery dipakai
+   sebab dia sekeluarga dengan alas yang sudah ada, tanpa kunci API, dan
+   pola ubinnya sama persis.
+
+   Label tidak ikut berubah. Lapisan nama tempat berdiri di pane sendiri
+   dan yang dipakai di tema gelap sudah yang bertulisan putih berhalo,
+   jadi dia tetap terbaca di atas citra. */
+const ALAS_SATELIT_URL =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const PAKAI_CITRA = !!(MODEL && MODEL.satelit);
+L.tileLayer(PAKAI_CITRA ? ALAS_SATELIT_URL
+    : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+  attribution: PAKAI_CITRA
+    ? 'Tiles &copy; Esri, Maxar, Earthstar Geographics | Data: Himawari-9 (NOAA)'
+    : 'Tiles &copy; Esri | Data: NOAA GFS',
   // Dinaikkan dari 12 jadi 16. Zoom-in maksimum peta sekarang ikut kerapatan
   // grid model dan bisa lewat 12, dan kalau alasnya berhenti duluan yang
   // kelihatan cuma latar hitam polos. Esri World Dark Gray native sampai 16.
   maxZoom: 16, maxNativeZoom: 16,
   updateWhenZooming: false, // tunda muat tile sampai zoom selesai → animasi mulus
   keepBuffer: 4,
+  /* Citra aslinya terlalu ramai untuk jadi alas. Hijau daratan dan biru
+     lautnya langsung bersaing dengan panah lime dan panah biru di atasnya,
+     dan panah lapisan rendah nyaris hilang di atas laut. Diredupkan lewat
+     kelas, bukan lewat opacity, sebab opacity akan ikut memudarkan nama
+     tempat yang digambar lapisan lain. */
+  className: PAKAI_CITRA ? "alas-citra" : "",
 }).addTo(map);
 
 /* ---------------------------------------------------------------------

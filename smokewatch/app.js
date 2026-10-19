@@ -787,7 +787,9 @@ const _alasOpts = {
   // Basemap Esri World Gray Canvas (GRATIS, tanpa API key). CARTO menghentikan
   // akses tanpa-key (tile bertempel watermark "API key required"), jadi pindah
   // ke Esri. Tanpa subdomain/{r}; nativenya sampai zoom 16.
-  attribution: 'Tiles &copy; Esri | Data: CAMS (Copernicus/ECMWF)',
+  attribution: (MODEL && MODEL.satelit)
+    ? 'Tiles &copy; Esri, Maxar, Earthstar Geographics | Data: Himawari-9 (NOAA)'
+    : 'Tiles &copy; Esri | Data: CAMS (Copernicus/ECMWF)',
   // Dinaikkan dari 12 jadi 16. Zoom-in maksimum peta sekarang ikut kerapatan
   // grid model dan bisa lewat 12, dan kalau alasnya berhenti duluan yang
   // kelihatan cuma latar polos. Alas Esri native sampai 16.
@@ -797,7 +799,24 @@ const _alasOpts = {
 };
 // Dua alas. Gelap untuk enam layer polutan, terang khusus ISPU yang kategori
 // tertingginya berwarna hitam. Ditukar oleh applyTheme().
-const darkBase = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", _alasOpts).addTo(map);
+/* ALAS CITRA untuk sumber SATELIT, diminta pemilik.
+
+   Yang ditayangkan sumber ini memang citra satelit, jadi alas kartografi
+   abu abu terasa salah tempat di bawahnya. Esri World Imagery dipakai
+   sebab dia sekeluarga dengan alas yang sudah ada, tanpa kunci API, dan
+   pola ubinnya sama persis.
+
+   Label tidak ikut berubah. Lapisan nama tempat berdiri di pane sendiri
+   dan yang dipakai di tema gelap sudah yang bertulisan putih berhalo,
+   jadi dia tetap terbaca di atas citra. */
+const ALAS_SATELIT_URL =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const PAKAI_CITRA = !!(MODEL && MODEL.satelit);
+const darkBase = L.tileLayer(PAKAI_CITRA ? ALAS_SATELIT_URL
+  : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+  /* Diredupkan lewat kelas waktu alasnya citra, alasan sama dengan di
+     Atmosight, citra mentah terlalu ramai untuk duduk di bawah data. */
+  { ..._alasOpts, className: PAKAI_CITRA ? "alas-citra" : "" }).addTo(map);
 const lightBase = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", _alasOpts);
 
 /* ---------------------------------------------------------------------

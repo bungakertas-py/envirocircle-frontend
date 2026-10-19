@@ -4488,3 +4488,14 @@ body { font-weight: 200; }
   .ausmi-kartu { max-width: calc(100vw - 24px); }
   .ausmi-besar { font-size: 22px; }
 }
+
+/* =====================================================================
+   ALAS CITRA SATELIT
+   Dipakai cuma waktu sumber datanya satelit. Citra mentah Esri terlalu
+   terang dan terlalu jenuh untuk jadi alas, hijau daratan dan biru lautnya
+   bersaing langsung dengan warna data di atasnya. Diredupkan dan
+   dikurangi jenuhnya supaya dia kembali jadi latar, bukan isi.
+   Yang diredupkan HANYA ubin alasnya. Nama tempat, batas wilayah, dan
+   lapisan data punya pane sendiri dan tidak ikut terkena.
+   ===================================================================== */
+.alas-citra { filter: brightness(.62) saturate(.72); }
