@@ -630,6 +630,7 @@ const LAYER_THEME = {
   wind_surface: "dark", rain_surface: "dark", rain_accum_surface: "dark",
   temp_surface: "dark", humidity_surface: "dark", cloud_surface: "dark", pressure_surface: "dark",
   storm_potential: "dark", cin_surface: "dark", wind_strato: "dark", temp_strato: "dark",
+  debu_abu: "dark", titik_panas: "dark", citra_tampak: "dark",
 };
 
 // Override warna border batas administrasi per-layer (selain default tema).
@@ -1246,6 +1247,12 @@ function tandaiSpineParameter(layerKey) {
 function renderLegend(layerKey) {
   const def = LEGENDS[layerKey];
   const head = $("legend-head"), cells = $("legend-cells");
+  /* Layer yang TIDAK punya skala, untuk sekarang cuma citra warna asli,
+     panel legendanya disembunyikan. Tanpa ini yang tertinggal di layar
+     legenda layer sebelumnya, dan tangga warna yang tidak berhubungan
+     dengan apa pun di peta itu lebih menyesatkan daripada tidak ada. */
+  const panel = document.querySelector(".legend-col > .legend-panel");
+  if (panel) panel.style.display = def ? "" : "none";
   if (!def || !head || !cells) return;
   isiKepalaLegenda(head, layerKey, def.head);
   tandaiSpineParameter(layerKey);
