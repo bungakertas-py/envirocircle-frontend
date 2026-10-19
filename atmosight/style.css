@@ -4141,22 +4141,27 @@ body { font-weight: 200; }
    terlalu tinggi, badge akurasi di bawahnya yang akan menabrak rel itu
    duluan. Diukur sesudah disetel, dan jaraknya masih cukup. */
 .status .par-badge {
-  font-size: 15px; padding: 8px 18px; gap: 9px; letter-spacing: .04em;
+  /* SATU TINGKAT di atas badge Last update, yang 10px. Sempat 15px lalu
+     12,5px dan dua duanya kegedean menurut pemilik. Yang dicari memang
+     sekadar lebih menonjol daripada dua tetangganya, bukan mendominasi
+     pojok kiri atas. Yang membuatnya menonjol sebenarnya BIDANG BIRUNYA,
+     bukan ukuran hurufnya. */
+  font-size: 11px; padding: 5px 13px; gap: 8px; letter-spacing: .04em;
   /* BERBIDANG, bukan bergaris saja. Warnanya var(--ink), sama persis dengan
      tulang punggung panel Parameter di tepi kiri, jadi dua benda yang
      bercerita tentang hal yang sama memakai warna yang sama. Diminta
      pemilik 19 Okt sore, yang bergaris tipis kurang kelihatan. */
   background: var(--ink); color: var(--paper); border-color: var(--ink);
 }
-.status .par-badge .fresh-ico { font-size: 19px; color: var(--paper); }
+.status .par-badge .fresh-ico { font-size: 14px; color: var(--paper); }
 /* Badge ini BUKAN tombol, jadi sorotan tetikus tidak boleh mengubahnya.
    Tanpa aturan ini dia mewarisi sorotan badge Last update di atasnya. */
 .status .par-badge:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-/* Rel kiri 154 jadi 164. Sempat 190 waktu badge Akurasi masih ikut di
-   tumpukan status dan menabrak tulang rel ini. Akurasi sudah pindah ke
-   deretan kontrol peta, jadi yang tersisa Last update dan Parameter, dan
-   Parameter berakhir di y 146. Sepuluh piksel di bawahnya sudah cukup. */
-.rel--kiri { top: 164px; }
+/* Rel kiri KEMBALI KE 154, angka aslinya. Sempat 190 lalu 164 waktu badge
+   Parameter masih besar dan badge Akurasi masih ikut di tumpukan status.
+   Akurasi sudah pindah ke deretan kontrol peta dan Parameter sudah
+   dikecilkan, jadi tumpukan ini berakhir di y 136 lagi. */
+.rel--kiri { top: 154px; }
 
 /* Di layar sempit ruangnya tidak ada, jadi pembesaran ini dibatalkan dan
    angkanya dikembalikan ke ukuran lama. */

@@ -456,8 +456,9 @@ const LEGENDS = {
      Namanya DISENGAJA bukan "Puncak Awan". Yang dihitung suhu kecerahan
      kanalnya, bukan produk turunan Cloud Top Temperature.
 
-     SKALANYA INFERNO, sebelas tingkat berjarak 6 derajat dari -70 sampai
-     -10, lalu bening di -5. Diminta pemilik 19 Okt, menggantikan abu dan
+     SKALANYA INFERNO, TUJUH tingkat dari -70 sampai -5, lalu bening di
+     -3. Jaraknya 11 derajat, bukan angka bulat, sebab dua ujungnya yang
+     dipatok pemilik lalu dibagi tujuh. Diminta pemilik 19 Okt, menggantikan abu dan
      kelabu yang dulu membuat sebagian besar awan terbaca kelabu rata.
 
      Rentangnya dipilih dari data. Percobaan -90 sampai -70 diukur dulu di
@@ -467,10 +468,9 @@ const LEGENDS = {
      Angkanya WAJIB sama dengan SKALA di backend/pipeline/himawari.py. */
   cloudtop_temp: {
     head: "\u00b0C",
-    cells: [["-70", "#360961", 1], ["-64", "#550f69", 1], ["-58", "#73196e", 1],
-            ["-52", "#912668", 1], ["-46", "#ae365c", 1], ["-40", "#cb484b", 1],
-            ["-34", "#e26233", 0], ["-28", "#f48116", 0], ["-22", "#fbaa12", 0],
-            ["-16", "#fccd3e", 0], ["-10", "#fbe17a", 0], ["-5", "transparent", 0]],
+    cells: [["-70", "#360961", 1], ["-59", "#69166e", 1], ["-48", "#952867", 1],
+            ["-37", "#c4434f", 1], ["-26", "#e8692c", 0], ["-15", "#fba10e", 0],
+            ["-5", "#fade72", 0], ["-3", "transparent", 0]],
   },
   temp_surface: {
     head: "°C",
