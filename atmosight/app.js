@@ -477,10 +477,23 @@ const LEGENDS = {
     cells: [["0", "#2450b4", 1], ["8", "#4a97dc", 1], ["16", "#cfe4f2", 0], ["22", "#ffe08a", 0],
             ["28", "#fbaa4a", 0], ["32", "#ee7233", 0], ["36", "#d43325", 1], ["42", "#7d0d1a", 1]],
   },
+  /* KELEMBAPAN, tabelnya DISAMAKAN dengan suite WRF Python milik Will
+     Hatheway, 20 Okt 2026. Divergen cokelat ke hijau, sisi kering dari BrBG
+     ColorBrewer dan sisi basah dari PiYG, netral #f5f5f5 di tengah.
+
+     Dari sebelas paletnya yang diadu dengan data domain kita, cuma yang ini
+     yang rentangnya memang pas, 9 dari 10 sel terpakai. Yang lain ujungnya
+     di luar jangkauan tropis.
+
+     Angkanya WAJIB sama dengan _HUM_SCALE di backend/pipeline/process.py,
+     DAN dengan yang dipakai backend di server. Lihat catatan di dokumen
+     untuk backend, sebab merekalah yang merender gambarnya. */
   humidity_surface: {
     head: "%",
-    cells: [["0", "#7a450a", 1], ["25", "#b9843a", 1], ["50", "#88b055", 0], ["70", "#359a86", 1],
-            ["85", "#216bb0", 1], ["100", "#123f86", 1]],
+    cells: [["0", "#8c510a", 1], ["10", "#bf812d", 1], ["20", "#dfc27d", 0],
+            ["30", "#f6e8c3", 0], ["40", "#f5f5f5", 0], ["50", "#e6f5d0", 0],
+            ["60", "#b8e186", 0], ["70", "#7fbc41", 0], ["80", "#4d9221", 1],
+            ["90", "#3d741a", 1]],
   },
   // Inferno dibalik. Angkanya WAJIB sama dengan _CLOUD_SCALE di process.py.
   // Sel 0% sengaja "transparent": dirender jadi kotak-kotak catur, bukan warna,
