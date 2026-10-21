@@ -41,11 +41,32 @@
 // yang dapat keterangan uji coba. `satelit` menentukan siapa yang
 // menyembunyikan parameter yang tidak dipunyainya, menyembunyikan pilihan
 // level, dan tidak punya panel titik.
+//
+// `pemasok` menyebut SIAPA YANG MEMASAK data di base path model itu, dan dia
+// dibaca chip sumber di bilah bawah. Dulu chip itu memakai satu kata untuk
+// seluruh halaman, "cirrus" kalau datanya dari hostingan ini dan "GitAction"
+// kalau dari cadangan. Itu benar selama semua model dimasak di tempat yang
+// sama, dan BERHENTI BENAR begitu ada model yang tidak. Model yang dimasak
+// GitHub Actions lalu disalin ke sini akan diberi label cirrus, dan chip yang
+// salah lebih buruk daripada chip yang tidak ada, sebab chip inilah satu
+// satunya tempat orang memeriksa kiriman siapa yang sedang macet.
+//
+// Nilainya nama tempat masak, bukan nama tempat simpan. ECMWF sekarang
+// "gitaction" sebab alur kamilah yang memasaknya, walau berkasnya duduk di
+// hostingan ini juga. Begitu server mengambil alih, ubah satu kata ini.
 const MODELS = {
-  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true,  dx: 0.25  },
-  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false, dx: 0.108, privat: true },
-  hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true },
+  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true,  dx: 0.25,  pemasok: "cirrus" },
+  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false, dx: 0.108, privat: true, pemasok: "cirrus" },
+  hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true, pemasok: "cirrus" },
 };
+
+/* Nama tempat masak model yang sedang dibuka, dan bagaimana menyebutnya.
+   Bawaannya cirrus, jadi model lama tidak berubah sama sekali. */
+const PEMASOK = {
+  cirrus:    { chip: "cirrus",   nama: "server cirrus" },
+  gitaction: { chip: "GitAction", nama: "GitHub Actions" },
+};
+const pemasokModel = () => PEMASOK[MODEL.pemasok] || PEMASOK.cirrus;
 
 // ================= SAKLAR MODEL =================
 // Atmosight tahap awal SENGAJA cuma menampilkan GFS. Model lain tidak dihapus,
@@ -3817,7 +3838,13 @@ function tandaiSumber() {
      data cadangan, tapi kiriman cirrus sudah mendarat dan tinggal dimuat
      ulang. Chipnya jadi tombol, sebab toast cuma lewat sekejap sedangkan
      chip ini tinggal di bilah bawah. Lihat intaiCirrus(). */
-  el.textContent = cirrusSiap ? "cirrus siap" : SUMBER_CADANGAN ? "GitAction" : "cirrus";
+  /* CHIPNYA IKUT MODEL, bukan satu kata untuk seluruh halaman. Lihat
+     `pemasok` di tabel MODELS. Model yang dimasak GitHub Actions akan
+     menulis GitAction di sini walau berkasnya duduk di hostingan ini,
+     sebab yang ditanya chip ini kiriman SIAPA yang sedang dipakai, bukan
+     berkasnya diambil dari alamat mana. */
+  const pm = pemasokModel();
+  el.textContent = cirrusSiap ? "cirrus siap" : SUMBER_CADANGAN ? "GitAction" : pm.chip;
   const wadah = $("fresh-src");
   if (wadah) {
     if (cirrusSiap) {
@@ -3827,11 +3854,13 @@ function tandaiSumber() {
     } else {
       wadah.title = SUMBER_CADANGAN
         ? "Kiriman server cirrus belum masuk lebih dari 24 jam, jadi situs memakai cadangan yang dimasak GitHub Actions"
-        : "Data dari server cirrus, lewat hostingan ini sendiri";
+        : `Data ${MODEL.label} dimasak ${pm.nama}, lewat hostingan ini sendiri`;
+      wadah.style.cursor = "";
+      wadah.onclick = null;
     }
   }
   const badge = $("data-fresh");
-  if (badge) badge.dataset.sumber = SUMBER_CADANGAN ? "cadangan" : "cirrus";
+  if (badge) badge.dataset.sumber = SUMBER_CADANGAN ? "cadangan" : MODEL.pemasok || "cirrus";
 }
 
 // Dot HIJAU kalau data MENDARAT di path kita dalam 24 JAM terakhir, MERAH
