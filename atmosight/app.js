@@ -2803,18 +2803,55 @@ function modelBanding() {
     /* Satelit TIDAK IKUT. Dia pengamatan, bukan ramalan, tidak punya
        panel titik, dan garis waktunya garis waktu yang berbeda jenis. */
     if (m.satelit) return false;
-    /* Model privat ikut cuma kalau orangnya memang berhak melihatnya, yaitu
-       sedang membuka model itu sendiri, atau di tab ini sandinya sudah
-       pernah benar. Tanpa syarat ini, siapa pun yang membuka GFS akan
-       melihat garis WRF tanpa pernah melewati gerbang, dan gerbangnya jadi
-       tidak ada artinya.
-
-       Sengaja TIDAK memakai ambilTiket(), sebab tiket itu sekali pakai dan
-       memeriksanya di sini justru menghanguskannya, sehingga model privat
-       menanyakan sandi lagi di tengah jalan. */
-    if (m.privat && id !== MODEL_ID && !pernahLewatGerbang()) return false;
     return true;
   });
+}
+
+/* Model yang ada di daftar tapi TIDAK BOLEH digambar, berikut sebabnya.
+
+   Model privat cuma boleh ikut kalau orangnya memang berhak melihatnya,
+   yaitu sedang membuka model itu sendiri, atau di tab ini sandinya sudah
+   pernah benar. Tanpa syarat ini siapa pun yang membuka GFS akan melihat
+   garis WRF tanpa pernah melewati gerbang, dan gerbangnya jadi tidak ada
+   artinya.
+
+   Tapi dia TETAP DISEBUT di legenda, tidak dihilangkan diam diam. Dulu
+   dilewati begitu saja, dan akibatnya orang yang membuka plot dari GFS
+   melihat dua garis tanpa penjelasan apa apa soal WRF, lalu wajar saja
+   bertanya kenapa garisnya tidak ada. Legenda yang bilang "perlu sandi"
+   menjawab pertanyaan itu sebelum sempat ditanya.
+
+   Sengaja TIDAK memakai ambilTiket(), sebab tiket itu sekali pakai dan
+   memeriksanya di sini justru menghanguskannya, sehingga model privat
+   menanyakan sandi lagi di tengah jalan. */
+function alasanDigerbang(id) {
+  const m = MODELS[id];
+  if (m.privat && id !== MODEL_ID && !pernahLewatGerbang()) return "perlu sandi";
+  return null;
+}
+
+/* Alamat yang BETUL BETUL berisi data model itu.
+
+   Tidak bisa sekadar MODELS[id].base, dan itu bug yang kena betulan 21
+   Oktober 2026. Begitu ECMWF hidup, folder di hostingan masih kosong dan
+   datanya ada di cadangan GitAction. Peta tetap jalan sebab ambilKatalog
+   sudah memilih sumber lalu menyimpannya di DATA_BASE, tapi plot banding
+   membaca base mentah dari tabel, kena 404, dan melaporkan "data belum
+   ada" untuk model yang justru sedang ditampilkan di layar.
+
+   Untuk model yang sedang dibuka, jawabannya DATA_BASE, yaitu sumber yang
+   sudah menang. Untuk model lain belum ada yang memilihkan, jadi dicoba
+   sendiri, yang dekat dulu baru cadangannya. */
+async function baseBerisi(id) {
+  if (id === MODEL_ID) return DATA_BASE;
+  const m = MODELS[id];
+  try { await loadPointMeta(false, m.base); return m.base; } catch (_) { /* coba cadangan */ }
+  if (DATA_CADANGAN && m.cadangan) {
+    const c = DATA_CADANGAN + m.cadangan;
+    await loadPointMeta(false, c);
+    return c;
+  }
+  throw new Error("point_meta tidak ada di dekat maupun cadangan");
 }
 
 /* Titik di luar domain sebuah model DILEWATI, bukan digambar.
@@ -2833,12 +2870,15 @@ function didalamDomain(meta, lat, lon) {
 async function deretBanding(lat, lon) {
   const hasil = await Promise.all(modelBanding().map(async (id) => {
     const m = MODELS[id];
+    const gerbang = alasanDigerbang(id);
+    if (gerbang) return { id, label: m.label, warna: m.warna, lewat: gerbang };
     try {
-      const meta = await loadPointMeta(false, m.base);
+      const base = await baseBerisi(id);
+      const meta = await loadPointMeta(false, base);
       if (!didalamDomain(meta, lat, lon)) {
         return { id, label: m.label, warna: m.warna, lewat: "di luar domain" };
       }
-      const pd = await ambilTitik(lat, lon, m.base);
+      const pd = await ambilTitik(lat, lon, base);
       const s = chartSeries(pd, lat, lon);
       if (!s || !s.values || !s.values.length || s.values.some((v) => !isFinite(v)))
         return { id, label: m.label, warna: m.warna, lewat: "parameter ini tidak ada" };
