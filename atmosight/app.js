@@ -3560,12 +3560,28 @@ function namaModelGlobal() {
 
    Dipasang SEKALI waktu init, sebab model tidak berganti tanpa memuat ulang
    halaman, MODEL_ID dibaca dari ?model= di alamat. */
+/* Pita "Basis GFS" di pojok tombol MJO dan AUSMI.
+
+   DIPASANG CUMA KALAU INDEKSNYA MEMANG DIPINJAM, dan itu diperbaiki 21
+   Oktober 2026 setelah pemilik menanyakannya. Versi lama memasangnya ke
+   SETIAP model yang bukan GFS, tanpa memeriksa apa pun. Itu benar selama
+   satu satunya model lain adalah WRF, yang memang tidak menghitung MJO dan
+   AUSMI sendiri sehingga membacanya dari folder GFS.
+
+   Begitu ECMWF masuk, pitanya jadi keterangan yang SALAH. Pipeline ECMWF
+   menghitung MJO dan AUSMI dari analisis ECMWF sendiri, riwayatnya pun
+   berkas terpisah, jadi angkanya memang bukan angka GFS. Pita yang
+   mengaku sebaliknya lebih buruk daripada tidak ada pita, sebab dia
+   membuat orang mengira dua model menampilkan angka yang sama.
+
+   Pemeriksaannya per tombol, sebab sebuah model bisa saja punya salah satu
+   tanpa punya yang lain. Pola "mana yang akhirnya dipakai" ini sama dengan
+   lencanaSumber() di panel titik, yang sejak awal memang sudah memeriksa
+   basenya. */
 function pasangPitaGlobal() {
   if (MODEL_ID === MODEL_GLOBAL) return;
   const nama = namaModelGlobal();
-  /* Ditempel di TOMBOLNYA, bukan di kotak pembungkusnya. Diminta pemilik,
-     pita sudut 45 derajat di pojok kanan atas tombol. */
-  ["mjo-toggle", "ausmi-toggle"].forEach((id) => {
+  const pasang = (id) => {
     const w = $(id);
     if (!w || w.querySelector(".pita-global")) return;
     w.classList.add("pita-induk");
@@ -3575,7 +3591,35 @@ function pasangPitaGlobal() {
     p.title = "Indeks global, dihitung dari analisis " + nama +
       ", bukan keluaran model yang sedang ditampilkan. Angkanya sama di model mana pun.";
     w.appendChild(p);
-  });
+  };
+  /* MJO: ADANYA BERKAS TIDAK CUKUP, isinya yang menentukan.
+
+     Folder WRF punya mjo.json sendiri, tapi isinya indeks GFS. Sumbernya
+     menyatakan sendiri "indeks dari GFS (62-180BT); WRF 12km utk amplop
+     halus", dan fase serta amplitudonya memang sama persis dengan GFS.
+     Yang dihitung dari WRF cuma amplop selubungnya, bukan angkanya. Jadi
+     pita Basis GFS di situ BENAR dan harus tetap ada.
+
+     Yang dibaca `sumber`, dan patokannya apakah dia menyebut model global
+     sebagai asal indeks. ECMWF menulis "angin analisis ECMWF" sehingga
+     tidak kena, WRF menulis "indeks dari GFS" sehingga kena.
+
+     Ini membaca kalimat, dan kalimat bisa berubah sewaktu waktu di sisi
+     backend. Yang benar benar dibutuhkan satu field tegas di mjo.json,
+     misalnya nama model yang indeksnya dipakai. Sudah masuk daftar untuk
+     backend. Sampai itu ada, kalau kalimatnya berubah akibat terburuknya
+     cuma pita yang hilang atau muncul keliru, bukan angka yang salah. */
+  const polaGlobal = new RegExp("\\b" + namaModelGlobal() + "\\b", "i");
+  fetchUlang(DATA_BASE + "mjo.json", { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => {
+      // Tidak ada mjo.json sendiri, berarti nanti dipinjam dari folder global.
+      if (!j) return pasang("mjo-toggle");
+      if (polaGlobal.test(String(j.sumber || ""))) pasang("mjo-toggle");
+    })
+    .catch(() => pasang("mjo-toggle"));
+  // AUSMI: cariAusmi memulangkan folder yang akhirnya memuatnya.
+  cariAusmi().then((base) => { if (base && base !== DATA_BASE) pasang("ausmi-toggle"); });
 }
 
 function lencanaSumber(base) {
