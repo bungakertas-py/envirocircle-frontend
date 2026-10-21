@@ -54,10 +54,31 @@
 // Nilainya nama tempat masak, bukan nama tempat simpan. ECMWF sekarang
 // "gitaction" sebab alur kamilah yang memasaknya, walau berkasnya duduk di
 // hostingan ini juga. Begitu server mengambil alih, ubah satu kata ini.
+//
+// `warna` dipakai GARIS MODEL di plot banding, dan cuma di situ. Ditaruh di
+// tabel ini supaya tidak ada angka warna yang harus dicocokkan di dua tempat
+// waktu model baru masuk. Tiga warna ini sengaja berjauhan di roda warna dan
+// semuanya gelap, sebab latarnya putih dan garisnya setipis 1,6 px. Dua di
+// antaranya memang di luar palet merek, dan itu disengaja: palet kita cuma
+// punya satu biru gelap yang terbaca, sedangkan di sini yang dibedakan tiga
+// hal yang setara.
+//
+// `cadangan` menyebut SUBFOLDER model ini di GitAction, dan model yang tidak
+// punya baris itu memang tidak punya cadangan. Dulu pilihannya ditulis
+// sebagai cabang `if` di basisCadangan(), satu cabang per model, dan itu
+// berarti tiap model baru menambah cabang di tempat yang jauh dari sini.
+// GFS tidak memakainya sebab katalognya duduk di AKAR keluaran, bukan di
+// subfolder, lihat MODEL_GLOBAL.
+//
+// ECMWF `ekstra: false` walau pipelinenya menulis isobar, siklon, ITCZ,
+// monsun, MJO, AUSMI, dan profil. Dengan false tiap fitur diperiksa dulu
+// berkasnya ada atau tidak, jadi kalau satu run gugur di tengah dan satu
+// berkas tidak tertulis, tombolnya hilang sendiri alih alih mengejar 404.
 const MODELS = {
-  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true,  dx: 0.25,  pemasok: "cirrus" },
-  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false, dx: 0.108, privat: true, pemasok: "cirrus" },
-  hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true, pemasok: "cirrus" },
+  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true,  dx: 0.25,  pemasok: "cirrus",    warna: "#1679AB" },
+  ec9:         { base: "../backend/atmosight/data/output/ecmwf_9km/",           label: "ECMWF - 9 km",        ekstra: false, dx: 0.1,   pemasok: "gitaction", warna: "#7a3fb0", cadangan: "ecmwf_9km/" },
+  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false, dx: 0.108, privat: true, pemasok: "cirrus", warna: "#e4572e" },
+  hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true, pemasok: "cirrus", cadangan: "himawari/" },
 };
 
 /* Nama tempat masak model yang sedang dibuka, dan bagaimana menyebutnya.
@@ -93,6 +114,11 @@ const pemasokModel = () => PEMASOK[MODEL.pemasok] || PEMASOK.cirrus;
 // kalau suatu saat diperlukan lagi.
 const MODEL_AKTIF = {
   gfs: true,
+  /* ECMWF DINYALAKAN 21 Oktober 2026. Datanya belum ada di hostingan, yang
+     mengisinya untuk sekarang alur kerja kita sendiri di GitAction, dan
+     ambilKatalog() otomatis memakai cadangan selama folder di hostingan
+     masih kosong. Begitu server mengirimnya, dia pindah sendiri ke sana. */
+  ec9: true,
   wrf9: true,          // keluaran meteorologi WRF-Chem 9 km dari server ITERA
   hima: true,          // citra Himawari-9, PENGAMATAN bukan ramalan
 };
@@ -127,7 +153,6 @@ const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 // model sungguhan di MODELS, bukan pajangan lagi. Kalau dibiarkan di sini, dia
 // muncul dua kali di dropdown, sekali hidup dan sekali mati.
 const MODEL_PAJANGAN = [
-  { label: "ECMWF - 9 km" },
   { label: "WRFDA - 9 km" },
 ];
 
@@ -273,7 +298,11 @@ const AMBANG_PINDAH_MS = 6 * 60 * 60 * 1000;
 function basisCadangan() {
   if (!DATA_CADANGAN) return null;
   if (MODEL_ID === MODEL_GLOBAL) return DATA_CADANGAN;
-  if (MODEL && MODEL.satelit) return DATA_CADANGAN + "himawari/";
+  /* Dibaca dari tabel MODELS, bukan dari cabang per model yang dulu ada di
+     sini. Model yang tidak punya `cadangan` memulangkan null, dan itu benar
+     untuk model privat: WRF dijalankan di server itu sendiri dan tidak ada
+     tempat lain yang menghitungnya. */
+  if (MODEL && MODEL.cadangan) return DATA_CADANGAN + MODEL.cadangan;
   return null;
 }
 
@@ -708,6 +737,28 @@ function ambilTiket() {
 }
 function tulisTiket() {
   try { sessionStorage.setItem(WRF_KUNCI, "1"); } catch { /* mode privat, abaikan */ }
+  tandaiPernahLewat();
+}
+
+/* PENANDA "SUDAH PERNAH LEWAT GERBANG", terpisah dari tiket dan TIDAK
+   hangus. Dipasang 21 Oktober 2026 untuk plot banding antar model.
+
+   Tiket di atas sengaja sekali pakai, jadi dia tidak bisa dipakai menjawab
+   pertanyaan "orang ini sudah pernah menyebut sandinya atau belum",
+   memeriksanya justru menghanguskannya dan membuat model privat menanyakan
+   sandi lagi di tengah jalan.
+
+   Bedanya tegas. Tiket itu IZIN SEKALI MASUK ke halaman model privat.
+   Penanda ini CATATAN bahwa di tab ini sandinya sudah pernah benar, dan
+   dia cuma dipakai memutuskan boleh tidaknya WRF ikut jadi garis pembanding
+   di model lain. Dua duanya di sessionStorage, jadi dua duanya hilang
+   begitu tabnya ditutup, dan tab baru menanyakan sandi lagi. */
+const WRF_PERNAH = "kertas-cuaca:wrf-pernah";
+function tandaiPernahLewat() {
+  try { sessionStorage.setItem(WRF_PERNAH, "1"); } catch { /* mode privat, abaikan */ }
+}
+function pernahLewatGerbang() {
+  try { return sessionStorage.getItem(WRF_PERNAH) === "1"; } catch { return false; }
 }
 
 // Tampilkan modal, kembalikan janji true kalau sandinya benar.
@@ -1914,15 +1965,27 @@ async function fetchUlang(url, opt) {
   }
 }
 
-let pointMeta = null, pointMetaLoading = null;
-async function loadPointMeta(segar) {
-  if (pointMeta && !segar) return pointMeta;
-  if (pointMetaLoading && !segar) return pointMetaLoading;
-  pointMetaLoading = fetchUlang(DATA_BASE + "point_meta.json", segar ? { cache: "reload" } : {})
+/* CACHE META PER BASE, bukan satu untuk seluruh halaman. Dipisah waktu plot
+   banding masuk, sebab plot itu membaca titik yang sama dari BEBERAPA MODEL
+   sekaligus. Dengan satu cache bersama, meta model pertama yang mendarat
+   akan dipakai membaca berkas model kedua, dan karena `nx`, `stride`, serta
+   `cells.bytes` tiap model berbeda, yang terbaca adalah offset yang salah di
+   berkas yang benar. Itu tidak melempar galat, cuma memulangkan angka ngawur.
+
+   Kuncinya base path, jadi model aktif tetap memakai satu entri dan tidak
+   ada permintaan tambahan untuk jalur yang sudah ada. */
+const metaCache = new Map();       // base -> { nilai, janji }
+async function loadPointMeta(segar, base) {
+  const b = base || DATA_BASE;
+  let c = metaCache.get(b);
+  if (!c) { c = { nilai: null, janji: null }; metaCache.set(b, c); }
+  if (c.nilai && !segar) return c.nilai;
+  if (c.janji && !segar) return c.janji;
+  c.janji = fetchUlang(b + "point_meta.json", segar ? { cache: "reload" } : {})
     .then((r) => { if (!r.ok) throw new Error("point_meta.json HTTP " + r.status); return r.json(); })
-    .then((m) => { pointMeta = m; return m; });
-  pointMetaLoading.catch(() => { pointMetaLoading = null; });   // gagal → klik berikutnya mencoba lagi
-  return pointMetaLoading;
+    .then((m) => { c.nilai = m; return m; });
+  c.janji.catch(() => { c.janji = null; });   // gagal → klik berikutnya mencoba lagi
+  return c.janji;
 }
 
 /* JALUR LAMA, blob utuh. Sejak 12 Oktober 2026 hanya dipakai kalau meta
@@ -1978,23 +2041,35 @@ async function loadPointData() {
    renderPoint tidak perlu tahu dari mana datanya datang. Posisi pecahan
    titik di dalam selnya tetap sama persis, jadi angkanya identik dengan
    jalur lama. */
-const selCache = new Map();        // DATA_BASE|x0,y0 -> Promise pd kisi kecil
-async function ambilTitik(lat, lon) {
-  let meta = await loadPointMeta();
-  if (!meta.cells) return loadPointData();
+const selCache = new Map();        // base|x0,y0 -> Promise pd kisi kecil
+/* `base` dipakai plot banding untuk membaca model SELAIN yang sedang dibuka.
+   Tanpa argumen dia model aktif, jadi semua pemanggil lama tidak berubah.
+   Jalur mundur ke loadPointData() SENGAJA cuma untuk model aktif: berkas
+   blob lama itu puluhan megabita dan menariknya untuk model yang cuma jadi
+   garis pembanding tidak sepadan. Model tanpa point_cells dilewati saja. */
+async function ambilTitik(lat, lon, base) {
+  const b = base || DATA_BASE;
+  let meta = await loadPointMeta(false, b);
+  if (!meta.cells) {
+    if (base && base !== DATA_BASE) throw new Error("model ini belum punya point_cells");
+    return loadPointData();
+  }
   const kotak = selSekitar(meta, lat, lon);
-  const kunci = DATA_BASE + "|" + kotak.x0 + "," + kotak.y0;
+  const kunci = b + "|" + kotak.x0 + "," + kotak.y0;
   if (!selCache.has(kunci)) {
     const p = (async () => {
-      try { return await bacaSel(meta, kotak); }
+      try { return await bacaSel(meta, kotak, b); }
       catch (e) {
         /* Ukuran berkas di server tidak cocok dengan meta, berarti meta di
            tangan sudah basi, data baru mendarat di antara dua permintaan.
            Tarik meta segar lalu coba sekali lagi. */
         if (!e.basi) throw e;
-        meta = await loadPointMeta(true);
-        if (!meta.cells) return loadPointData();
-        return bacaSel(meta, selSekitar(meta, lat, lon));
+        meta = await loadPointMeta(true, b);
+        if (!meta.cells) {
+          if (base && base !== DATA_BASE) throw e;
+          return loadPointData();
+        }
+        return bacaSel(meta, selSekitar(meta, lat, lon), b);
       }
     })();
     p.catch(() => selCache.delete(kunci));
@@ -2013,11 +2088,11 @@ function selSekitar(meta, lat, lon) {
   return { x0, x1: Math.min(x0 + 1, nx - 1), y0, y1: Math.min(y0 + 1, ny - 1) };
 }
 
-async function bacaSel(meta, { x0, x1, y0, y1 }) {
+async function bacaSel(meta, { x0, x1, y0, y1 }, base) {
   const c = meta.cells, nkol = x1 - x0 + 1, baris = y1 === y0 ? [y0] : [y0, y1];
   const potongan = await Promise.all(baris.map(async (y) => {
     const awal = (y * meta.nx + x0) * c.stride, akhir = awal + nkol * c.stride - 1;
-    const r = await fetchUlang(DATA_BASE + c.file, { headers: { Range: "bytes=" + awal + "-" + akhir } });
+    const r = await fetchUlang((base || DATA_BASE) + c.file, { headers: { Range: "bytes=" + awal + "-" + akhir } });
     if (r.status !== 206) {
       /* Server yang mengabaikan Range membalas 200 berikut SELURUH berkas.
          Jangan ditelan, putuskan dan laporkan. */
@@ -2689,6 +2764,304 @@ function chartLegend(color) {
   return `<div class="chart-legend">` +
     `<span class="chl-key">${line(false)}Kondisi Sekarang</span>` +
     `<span class="chl-key">${line(true)}<i>Forecast</i></span></div>`;
+}
+
+/* =====================================================================
+   PLOT BANDING ANTAR MODEL. 21 Oktober 2026, diminta pemilik.
+
+   Satu plot, satu parameter, beberapa model bersebelahan. Dipanggil dari
+   tombol di samping CSV di kepala panel titik.
+
+   DIBANGUN DI ATAS chartSeries DAN chartSVG YANG SUDAH ADA, dua duanya
+   peninggalan grafik sidebar lama yang sejak panel pindah ke bawah tidak
+   dipanggil siapa pun lagi. Yang dipakai ulang chartSeries, sebab dia yang
+   tahu variabel mana yang mewakili tiap layer, bagaimana angin dihitung
+   dari u dan v, dan bagaimana hujan diakumulasi per hari. Menulis ulang
+   switch itu di sini berarti dua tempat yang harus disunting tiap ada layer
+   baru, dan yang kedua pasti terlupa.
+
+   Yang TIDAK dipakai ulang chartSVG, dan ini sebabnya. Sumbu X chartSVG
+   berbasis INDEKS, titik ke-i diletakkan di i/(n-1). Itu benar selama cuma
+   ada satu deret, tapi di sini model panjangnya beda beda. WRF biasanya
+   berhenti jauh lebih awal daripada GFS. Dengan sumbu indeks, langkah
+   terakhir WRF akan ditarik ke ujung kanan dan sejajar dengan langkah
+   terakhir GFS, padahal jam dindingnya berbeda setengah hari. Dua garis
+   yang beda panjang akan terbaca seolah olah sama panjang, dan itu
+   kesalahan yang tidak kelihatan sebagai kesalahan.
+
+   Jadi sumbu X di sini WAKTU BETULAN, dalam milidetik. Model yang lebih
+   pendek garisnya memang berhenti lebih awal di tengah bidang plot, dan
+   itu memang yang diminta pemilik.
+   ===================================================================== */
+
+/* Model yang boleh ikut. Urutannya ikut urutan di MODELS, jadi warnanya
+   konsisten dari satu titik ke titik berikutnya. */
+function modelBanding() {
+  return Object.keys(MODELS).filter((id) => {
+    const m = MODELS[id];
+    if (!modelHidup(id) || !m.base) return false;
+    /* Satelit TIDAK IKUT. Dia pengamatan, bukan ramalan, tidak punya
+       panel titik, dan garis waktunya garis waktu yang berbeda jenis. */
+    if (m.satelit) return false;
+    /* Model privat ikut cuma kalau orangnya memang berhak melihatnya, yaitu
+       sedang membuka model itu sendiri, atau di tab ini sandinya sudah
+       pernah benar. Tanpa syarat ini, siapa pun yang membuka GFS akan
+       melihat garis WRF tanpa pernah melewati gerbang, dan gerbangnya jadi
+       tidak ada artinya.
+
+       Sengaja TIDAK memakai ambilTiket(), sebab tiket itu sekali pakai dan
+       memeriksanya di sini justru menghanguskannya, sehingga model privat
+       menanyakan sandi lagi di tengah jalan. */
+    if (m.privat && id !== MODEL_ID && !pernahLewatGerbang()) return false;
+    return true;
+  });
+}
+
+/* Titik di luar domain sebuah model DILEWATI, bukan digambar.
+
+   Tanpa penjaga ini garisnya tetap muncul dan kelihatan masuk akal.
+   sampleVar menjepit posisi pecahan ke tepi kisi, jadi titik di luar
+   domain memulangkan nilai SEL TEPI, bukan null dan bukan galat. Untuk
+   model berdomain sempit itu berarti seluruh deretnya diambil dari pojok
+   domain yang bisa ribuan kilometer dari titik yang diklik. */
+function didalamDomain(meta, lat, lon) {
+  const [w, s, e, n] = meta.bounds;
+  return lon >= Math.min(w, e) && lon <= Math.max(w, e)
+      && lat >= Math.min(s, n) && lat <= Math.max(s, n);
+}
+
+async function deretBanding(lat, lon) {
+  const hasil = await Promise.all(modelBanding().map(async (id) => {
+    const m = MODELS[id];
+    try {
+      const meta = await loadPointMeta(false, m.base);
+      if (!didalamDomain(meta, lat, lon)) {
+        return { id, label: m.label, warna: m.warna, lewat: "di luar domain" };
+      }
+      const pd = await ambilTitik(lat, lon, m.base);
+      const s = chartSeries(pd, lat, lon);
+      if (!s || !s.values || !s.values.length || s.values.some((v) => !isFinite(v)))
+        return { id, label: m.label, warna: m.warna, lewat: "parameter ini tidak ada" };
+      return { id, label: m.label, warna: m.warna || warnaDeret(),
+               judul: s.label, satuan: s.unit, yDomain: s.yDomain, daily: s.daily,
+               times: s.times, values: s.values };
+    } catch (e) {
+      /* Satu model yang gagal TIDAK menjatuhkan plotnya. Yang paling sering
+         terjadi model itu memang belum punya kirimannya, dan plot dua garis
+         tetap berguna. Sebabnya ditulis ke console buat yang mencari tahu,
+         dan ke legenda buat yang cuma melihat. */
+      console.info("[banding] " + id + " dilewati: " + (e && e.message));
+      return { id, label: m.label, warna: m.warna, lewat: "data belum ada" };
+    }
+  }));
+  return hasil;
+}
+
+/* SVG beberapa garis pada satu sumbu waktu. */
+function chartBandingSVG(deret) {
+  const isi = deret.filter((d) => !d.lewat);
+  if (!isi.length) return "";
+  const W = 760, H = 330, padL = 46, padR = 14, padT = 16, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB, y0 = padT + plotH;
+
+  // Sumbu X dibentang dari waktu paling awal sampai paling akhir DI SELURUH
+  // model, jadi model yang pendek berhenti di tengah bidang.
+  const ms = (t) => new Date(t).getTime();
+  let t0 = Infinity, t1 = -Infinity;
+  for (const d of isi) for (const t of d.times) {
+    const v = ms(t); if (v < t0) t0 = v; if (v > t1) t1 = v;
+  }
+  if (!(t1 > t0)) t1 = t0 + 3600e3;
+
+  /* Sumbu Y dari RENTANG DATA, bukan dari yDomain layernya, dan itu beda
+     dengan grafik satu deret.
+
+     yDomain dipakai di peta supaya skalanya tetap dari satu titik ke titik
+     berikutnya, jadi orang bisa membandingkan dua tempat. Di sini yang
+     dibandingkan bukan tempat, tapi MODEL di satu tempat yang sama, dan
+     selisih antar model itu kecil. Suhu di Jakarta terukur 25,6 sampai
+     34,1 untuk ketiga model digabung, sedangkan yDomain suhu 0 sampai 50.
+     Dengan skala itu ketiga garisnya berdesakan di seperlima tengah bidang
+     dan selisih dua derajat antar model praktis tidak kelihatan, padahal
+     justru itu yang mau dilihat.
+
+     Rentangnya dihitung dari SEMUA model digabung, bukan per model. Kalau
+     per model, dua garis yang nilainya jauh berbeda akan sama sama
+     memenuhi bidang dan terbaca seolah olah berimpit. */
+  let vmin = Infinity, vmax = -Infinity;
+  for (const d of isi) for (const v of d.values) { if (v < vmin) vmin = v; if (v > vmax) vmax = v; }
+  if (!isFinite(vmin)) { vmin = 0; vmax = 1; }
+  let lo, hi;
+  if (vmax === vmin) { lo = vmin - 1; hi = vmax + 1; }
+  else {
+    const margin = (vmax - vmin) * 0.08;
+    /* Dasarnya TIDAK ditarik ke bawah nol untuk besaran yang memang tidak
+       pernah negatif, kalau tidak hujan dan CAPE kehilangan bidang di bawah
+       garisnya tanpa ada yang digambar di situ. */
+    lo = vmin >= 0 && vmin - margin < 0 ? 0 : vmin - margin;
+    hi = vmax + margin;
+  }
+  /* LANGKAH SUMBU DIBULATKAN KE ANGKA YANG ENAK DIBACA, lalu lo dan hi
+     ditarik ke kelipatannya. Tanpa ini sumbunya berlabel 26.06, 26.56,
+     27.05, 27.54, 28.04, yaitu lima angka yang semuanya benar dan tidak
+     satu pun mudah dibaca.
+
+     Percobaan sebelumnya membulatkan desimal menurut lebar rentang, dan itu
+     memang menghapus label kembar seperti 28, 28, 27, 27, 26 yang sempat
+     muncul waktu rentangnya cuma dua derajat. Tapi yang hilang cuma
+     kembarnya, bukan angka ganjilnya.
+
+     Langkahnya dipilih dari 1, 2, 2,5, dan 5 dikali pangkat sepuluh, pola
+     yang sama dipakai hampir semua pustaka grafik. Banyaknya desimal ikut
+     langkah, jadi langkah 0,5 memberi satu desimal dan langkah 5 memberi
+     nol, tanpa perlu aturan terpisah. */
+  const kasar = Math.abs(hi - lo) / 4 || 1;
+  const pangkat = Math.pow(10, Math.floor(Math.log10(kasar)));
+  const langkah = [1, 2, 2.5, 5, 10].map((m) => m * pangkat).find((v) => v >= kasar) || pangkat * 10;
+  lo = Math.floor(lo / langkah) * langkah;
+  hi = Math.ceil(hi / langkah) * langkah;
+  if (hi === lo) hi = lo + langkah;
+  /* yDomain tidak dipakai sebagai rentang tampil, tapi MASIH BERGUNA sebagai
+     batas fisik. Kelembapan 70 sampai 100 persen dibulatkan ke atas jadi
+     110, dan sumbu kelembapan yang berlabel 110 persen terbaca seperti
+     kesalahan hitung.
+
+     Dijepit HANYA kalau tidak memotong datanya sendiri. CAPE punya yDomain
+     0 sampai 4000 sedangkan nilainya di sini terukur sampai 6424, jadi
+     menjepitnya ke 4000 akan membuang puncak yang justru paling penting.
+     Batas yang membuang data bukan batas, itu kesalahan. */
+  const dom = isi[0].yDomain;
+  if (dom) {
+    const dmin = Math.min(dom[0], dom[1]), dmax = Math.max(dom[0], dom[1]);
+    if (dmax >= vmax && hi > dmax) hi = dmax;
+    if (dmin <= vmin && lo < dmin) lo = dmin;
+    if (hi <= lo) { lo = Math.floor(vmin / langkah) * langkah; hi = lo + langkah; }
+  }
+  /* Desimalnya harus cukup untuk menulis LANGKAHNYA SENDIRI dengan tepat,
+     bukan sekadar mengikuti pangkat sepuluhnya. Langkah 2,5 punya pangkat
+     sepuluh nol, jadi aturan pangkat memberi nol desimal dan sumbunya
+     keluar sebagai 25, 28, 30, 32, 35. Kelimanya berjarak sama persis,
+     tapi dibaca jaraknya naik turun, dan sumbu yang berbohong soal
+     jaraknya sendiri lebih buruk daripada sumbu yang angkanya panjang. */
+  let des = 0;
+  while (des < 3 && Math.abs(parseFloat(langkah.toFixed(des)) - langkah) > 1e-9) des++;
+  des = Math.max(des, Math.min(3, Math.max(0, -Math.floor(Math.log10(langkah)))));
+  const x = (t) => padL + plotW * ((t - t0) / (t1 - t0));
+  const y = (v) => y0 - plotH * ((v - lo) / (hi - lo));
+  const fmt = (v) => v.toFixed(des);
+  const nowT = nowMs();
+  const sx = Math.max(padL, Math.min(padL + plotW, x(nowT)));
+
+  // ---- sumbu ----
+  const AX = `stroke="rgba(7,65,115,.35)" stroke-width="1"`;
+  let axes = `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${y0}" ${AX}/>` +
+             `<line x1="${padL}" y1="${y0}" x2="${padL + plotW}" y2="${y0}" ${AX}/>`;
+  const tandaY = [];
+  for (let v = lo; v <= hi + langkah * 0.001; v += langkah) tandaY.push(v);
+  for (const tv of tandaY) {
+    const yy = y(tv);
+    axes += `<line x1="${padL - 3}" y1="${yy.toFixed(1)}" x2="${padL}" y2="${yy.toFixed(1)}" ${AX}/>` +
+            `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${(padL + plotW).toFixed(1)}" y2="${yy.toFixed(1)}" stroke="rgba(7,65,115,.08)" stroke-width="1"/>` +
+            `<text x="${padL - 6}" y="${(yy + 3).toFixed(1)}" class="pt-ax" text-anchor="end">${fmt(tv)}</text>`;
+  }
+  // Label waktu tiap tengah malam WIB, ditambah ujung kiri dan kanan.
+  const SEHARI = 86400e3;
+  const tandaX = [t0];
+  for (let t = t0; t <= t1; t += 3600e3) {
+    const w = toWIB(new Date(t).toISOString());
+    if (w.getUTCHours() === 0 && t - tandaX[tandaX.length - 1] > SEHARI * 0.4) tandaX.push(t);
+  }
+  if (t1 - tandaX[tandaX.length - 1] > SEHARI * 0.4) tandaX.push(t1);
+  tandaX.forEach((t, k) => {
+    const xx = x(t), w = toWIB(new Date(t).toISOString());
+    const lbl = w.getUTCDate() + "/" + (w.getUTCMonth() + 1);
+    const anchor = k === 0 ? "start" : k === tandaX.length - 1 ? "end" : "middle";
+    axes += `<line x1="${xx.toFixed(1)}" y1="${y0}" x2="${xx.toFixed(1)}" y2="${y0 + 3}" ${AX}/>` +
+            `<text x="${xx.toFixed(1)}" y="${y0 + 15}" class="pt-ax" text-anchor="${anchor}">${lbl}</text>`;
+  });
+
+  // ---- garis per model ----
+  let body = "";
+  isi.forEach((d, k) => {
+    const pts = d.values.map((v, i) => `${i ? "L" : "M"}${x(ms(d.times[i])).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    /* Klip dibuat PER MODEL dengan id sendiri. Dengan satu id bersama,
+       dokumen berisi beberapa clipPath bernama sama dan peramban memakai
+       yang pertama untuk semuanya, jadi garis kedua dan ketiga terpotong
+       di tempat yang salah. */
+    const idP = "bdP" + k, idF = "bdF" + k;
+    body += `<clipPath id="${idP}"><rect x="0" y="0" width="${sx.toFixed(1)}" height="${H}"/></clipPath>` +
+            `<clipPath id="${idF}"><rect x="${sx.toFixed(1)}" y="0" width="${(W - sx).toFixed(1)}" height="${H}"/></clipPath>`;
+    body += `<path d="${pts}" fill="none" stroke="${d.warna}" stroke-width="1.8" stroke-linejoin="round" clip-path="url(#${idP})"/>`;
+    body += `<path d="${pts}" fill="none" stroke="${d.warna}" stroke-width="1.8" stroke-linejoin="round" stroke-dasharray="5 4" opacity="0.65" clip-path="url(#${idF})"/>`;
+    // Titik di ujung kanan tiap garis, supaya model yang berhenti lebih
+    // awal kelihatan BERHENTI, bukan terpotong tepi gambar.
+    const tAkhir = ms(d.times[d.times.length - 1]);
+    body += `<circle cx="${x(tAkhir).toFixed(1)}" cy="${y(d.values[d.values.length - 1]).toFixed(1)}" r="2.6" fill="${d.warna}"/>`;
+  });
+
+  // Garis tegak penanda jam sekarang, digambar PALING ATAS supaya tidak
+  // tertimbun garis model.
+  let kini = "";
+  if (sx > padL + 1 && sx < padL + plotW - 1)
+    kini = `<line class="pt-kini" x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke-width="1" stroke-dasharray="3 3"/>` +
+           `<text x="${(sx + 4).toFixed(1)}" y="${padT + 10}" class="pt-ax">sekarang</text>`;
+
+  return `<svg class="bd-svg" viewBox="0 0 ${W} ${H}" width="100%" role="img">` +
+    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="#ffffff" stroke="rgba(7,65,115,.2)" stroke-width="1"/>` +
+    axes + body + kini + `</svg>`;
+}
+
+// Legenda: satu baris per model, plus arti garis solid dan putus putus.
+function bandingLegenda(deret) {
+  const garis = (warna, dash) => `<svg width="26" height="8" viewBox="0 0 26 8">` +
+    `<line x1="1" y1="4" x2="25" y2="4" stroke="${warna}" stroke-width="1.8"` +
+    (dash ? ` stroke-dasharray="5 4"` : "") + `/></svg>`;
+  const model = deret.map((d) => d.lewat
+    ? `<span class="bd-key bd-mati">${garis("rgba(7,65,115,.25)", false)}${escHtml(d.label)}` +
+      `<i class="bd-sebab">${escHtml(d.lewat)}</i></span>`
+    : `<span class="bd-key">${garis(d.warna, false)}${escHtml(d.label)}</span>`).join("");
+  return `<div class="bd-legenda">${model}</div>` +
+    `<div class="bd-legenda bd-legenda-2">` +
+      /* Abu netral, SENGAJA bukan warna tinta. Tinta kita biru tua dan di
+         legenda sekecil ini dia terbaca seperti warna salah satu model,
+         sehingga baris yang menerangkan BENTUK garis malah ikut terbaca
+         sebagai keterangan warna. */
+      `<span class="bd-key">${garis("rgba(7,65,115,.45)", false)}Sudah terjadi</span>` +
+      `<span class="bd-key">${garis("rgba(7,65,115,.45)", true)}<i>Prakiraan</i></span>` +
+    `</div>`;
+}
+
+async function bukaPlotBanding(lat, lon, nama) {
+  const ov = $("bd-overlay"), isi = $("bd-card")?.querySelector(".bd-isi");
+  if (!ov || !isi) return;
+  ov.classList.add("show");
+  isi.innerHTML = `<div class="bd-load">Mengambil deret dari tiap model…</div>`;
+  let deret;
+  try { deret = await deretBanding(lat, lon); }
+  catch (e) { isi.innerHTML = `<div class="bd-load">Gagal mengambil datanya.</div>`; return; }
+  if (!ov.classList.contains("show")) return;            // keburu ditutup
+  const ada = deret.filter((d) => !d.lewat);
+  if (!ada.length) {
+    isi.innerHTML = `<div class="bd-load">Tidak ada model yang punya data di titik ini.</div>`;
+    return;
+  }
+  const judul = ada[0].judul, satuan = ada[0].satuan;
+  isi.innerHTML =
+    `<div class="bd-kepala">` +
+      `<span class="bd-tag">Banding Model</span>` +
+      `<span class="bd-koord mono">` +
+        (nama ? `<b class="bd-nama">${escHtml(nama)}</b> · ` : "") +
+        `${fmtCoord(lat, lon)}</span>` +
+    `</div>` +
+    `<div class="bd-param">${escHtml(judul)}<span class="bd-sat">${escHtml(satuan || "")}</span></div>` +
+    chartBandingSVG(deret) +
+    bandingLegenda(deret) +
+    `<div class="bd-note">Tiap model punya run dan jangkauannya sendiri, jadi garis yang ` +
+    `lebih pendek memang berhenti lebih awal, bukan terpotong.</div>`;
+}
+
+function tutupBanding() {
+  $("bd-overlay")?.classList.remove("show");
 }
 
 /* =====================================================================
@@ -6619,12 +6992,15 @@ async function init() {
       b.addEventListener("click", () => setHovParam(b.dataset.hov)));
     $("skt-close")?.addEventListener("click", tutupSkewT);
     $("skt-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupSkewT(); });
+    $("bd-close")?.addEventListener("click", tutupBanding);
+    $("bd-overlay")?.addEventListener("click", (e) => { if (e.target === e.currentTarget) tutupBanding(); });
     /* Escape mematikan modenya kalau kartunya belum terbuka, dan menutup
        kartunya kalau sudah. Dua duanya jalan keluar yang orang harapkan. */
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if ($("hov-overlay")?.classList.contains("show")) tutupHovmoller();
       if ($("ausmi-overlay")?.classList.contains("show")) tutupAusmi();
+      if ($("bd-overlay")?.classList.contains("show")) tutupBanding();
       if ($("skt-overlay")?.classList.contains("show")) tutupSkewT();
       else if (skewtMode) setSkewtMode(false);
     });
@@ -6667,6 +7043,14 @@ async function init() {
     })();
     $("pt-close")?.addEventListener("click", closePoint);
     $("pt-export")?.addEventListener("click", exportCSV);
+    /* Titiknya diambil dari lastPoint, SAMA dengan exportCSV, bukan dari
+       sharedPoint. sharedPoint cuma terisi kalau titiknya datang dari
+       tautan atau dari pencarian kota, sedangkan panel ini juga terbuka
+       lewat klik biasa di peta. */
+    $("pt-plot")?.addEventListener("click", () => {
+      if (!lastPoint) return;
+      bukaPlotBanding(lastPoint.lat, lastPoint.lon, sharedPoint && sharedPoint.name);
+    });
     $("pt-hide")?.addEventListener("click", hidePoint);
     $("pt-reopen")?.addEventListener("click", reopenPoint);
     $("share-btn")?.addEventListener("click", shareCurrent);

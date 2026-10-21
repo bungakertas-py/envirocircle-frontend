@@ -678,6 +678,25 @@
       </div>
     </div>
 
+    <!-- ============ PLOT BANDING ANTAR MODEL ============
+         21 Oktober 2026, diminta pemilik. Satu parameter, beberapa model
+         dalam satu bidang, dengan garis tegak penanda jam sekarang dan
+         bagian prakiraan digambar putus putus.
+
+         Lapisannya memakai .about-overlay yang sudah ada, jadi cara
+         menutupnya sama dengan Skew-T dan kartu akurasi, dan tidak ada
+         perilaku baru yang perlu dihafal.
+
+         Isinya DIBANGUN app.js, di sini cuma cangkangnya. Daftar modelnya
+         dibaca dari tabel MODELS waktu tombolnya ditekan, jadi model yang
+         nanti ditambahkan ikut sendiri tanpa menyentuh berkas ini. -->
+    <div id="bd-overlay" class="about-overlay">
+      <div id="bd-card" class="bd-kartu" role="dialog" aria-modal="true">
+        <button id="bd-close" class="about-close" aria-label="Tutup"><span class="material-symbols-outlined">close</span></button>
+        <div class="bd-isi"></div>
+      </div>
+    </div>
+
     <!-- ============ KARTU AKURASI ============
          4 Oktober 2026, diminta user. Dulu rincian verifikasi cuma ada di
          atribut title badge, jadi dia tidak pernah terbaca di HP dan tidak
@@ -773,6 +792,7 @@
         </div>
         <div class="mb-btns">
           <button id="pt-export" class="mb-btn" title="Unduh data titik ini sebagai CSV"><span class="material-symbols-outlined">download</span><span class="mb-btn-t">CSV</span></button>
+          <button id="pt-plot" class="mb-btn" title="Bandingkan parameter ini antar model dalam satu grafik"><span class="material-symbols-outlined">ssid_chart</span><span class="mb-btn-t">Banding Model</span></button>
           <button id="pt-hide" class="mb-btn" title="Kecilkan"><span class="material-symbols-outlined">expand_more</span></button>
           <button id="pt-close" class="mb-btn" title="Tutup"><span class="material-symbols-outlined">close</span></button>
         </div>
