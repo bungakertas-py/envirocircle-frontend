@@ -737,28 +737,6 @@ function ambilTiket() {
 }
 function tulisTiket() {
   try { sessionStorage.setItem(WRF_KUNCI, "1"); } catch { /* mode privat, abaikan */ }
-  tandaiPernahLewat();
-}
-
-/* PENANDA "SUDAH PERNAH LEWAT GERBANG", terpisah dari tiket dan TIDAK
-   hangus. Dipasang 21 Oktober 2026 untuk plot banding antar model.
-
-   Tiket di atas sengaja sekali pakai, jadi dia tidak bisa dipakai menjawab
-   pertanyaan "orang ini sudah pernah menyebut sandinya atau belum",
-   memeriksanya justru menghanguskannya dan membuat model privat menanyakan
-   sandi lagi di tengah jalan.
-
-   Bedanya tegas. Tiket itu IZIN SEKALI MASUK ke halaman model privat.
-   Penanda ini CATATAN bahwa di tab ini sandinya sudah pernah benar, dan
-   dia cuma dipakai memutuskan boleh tidaknya WRF ikut jadi garis pembanding
-   di model lain. Dua duanya di sessionStorage, jadi dua duanya hilang
-   begitu tabnya ditutup, dan tab baru menanyakan sandi lagi. */
-const WRF_PERNAH = "kertas-cuaca:wrf-pernah";
-function tandaiPernahLewat() {
-  try { sessionStorage.setItem(WRF_PERNAH, "1"); } catch { /* mode privat, abaikan */ }
-}
-function pernahLewatGerbang() {
-  try { return sessionStorage.getItem(WRF_PERNAH) === "1"; } catch { return false; }
 }
 
 // Tampilkan modal, kembalikan janji true kalau sandinya benar.
@@ -2807,28 +2785,17 @@ function modelBanding() {
   });
 }
 
-/* Model yang ada di daftar tapi TIDAK BOLEH digambar, berikut sebabnya.
+/* GERBANG SANDI TIDAK BERLAKU DI PLOT INI, diputuskan pemilik 21 Oktober
+   2026. Model privat ikut jadi garis pembanding tanpa diminta sandi dulu.
 
-   Model privat cuma boleh ikut kalau orangnya memang berhak melihatnya,
-   yaitu sedang membuka model itu sendiri, atau di tab ini sandinya sudah
-   pernah benar. Tanpa syarat ini siapa pun yang membuka GFS akan melihat
-   garis WRF tanpa pernah melewati gerbang, dan gerbangnya jadi tidak ada
-   artinya.
+   Alasannya yang dibagi di sini cuma SATU DERET ANGKA untuk satu titik
+   pada satu parameter, bukan petanya, bukan arsipnya, dan bukan pilihan
+   modelnya di dropdown. Gerbang di dropdown tetap utuh, jadi membuka WRF
+   sebagai model tetap menuntut sandi seperti biasa.
 
-   Tapi dia TETAP DISEBUT di legenda, tidak dihilangkan diam diam. Dulu
-   dilewati begitu saja, dan akibatnya orang yang membuka plot dari GFS
-   melihat dua garis tanpa penjelasan apa apa soal WRF, lalu wajar saja
-   bertanya kenapa garisnya tidak ada. Legenda yang bilang "perlu sandi"
-   menjawab pertanyaan itu sebelum sempat ditanya.
-
-   Sengaja TIDAK memakai ambilTiket(), sebab tiket itu sekali pakai dan
-   memeriksanya di sini justru menghanguskannya, sehingga model privat
-   menanyakan sandi lagi di tengah jalan. */
-function alasanDigerbang(id) {
-  const m = MODELS[id];
-  if (m.privat && id !== MODEL_ID && !pernahLewatGerbang()) return "perlu sandi";
-  return null;
-}
+   Versi pertama memasang gerbangnya di sini juga, dan akibatnya plot yang
+   dibuka dari GFS cuma punya dua garis sedangkan yang paling ingin diadu
+   justru tiga. */
 
 /* Alamat yang BETUL BETUL berisi data model itu.
 
@@ -2870,8 +2837,6 @@ function didalamDomain(meta, lat, lon) {
 async function deretBanding(lat, lon) {
   const hasil = await Promise.all(modelBanding().map(async (id) => {
     const m = MODELS[id];
-    const gerbang = alasanDigerbang(id);
-    if (gerbang) return { id, label: m.label, warna: m.warna, lewat: gerbang };
     try {
       const base = await baseBerisi(id);
       const meta = await loadPointMeta(false, base);
