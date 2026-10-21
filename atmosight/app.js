@@ -82,18 +82,31 @@ const modelHidup = (id) => !!MODELS[id] && MODEL_AKTIF[id] === true;
 // data, tidak ada base path. Kalau nanti salah satunya betul betul digarap,
 // pindahkan dia ke MODELS di atas lalu nyalakan lewat MODEL_AKTIF.
 // Daftarnya dipatok user. ECMWF dipasang lagi, dan angkanya BUKAN taksiran.
-// Dicek langsung ke data.ecmwf.int pada 4 Sep 2026, open data yang gratis
-// cuma menyediakan SATU resolusi, ifs/0p25, yaitu 0,25 derajat atau sekitar
-// 28 km. Tidak ada 0p4 lagi, dan HRES 9 km itu berbayar jadi tidak bisa
-// dipakai. Angka 28 km juga sebasis dengan GFS di daftar ini, dua duanya
-// 0,25 derajat.
-// Aliran yang dipakai nanti "oper", berkasnya
-// https://data.ecmwf.int/forecasts/<YYYYMMDD>/<HH>z/ifs/0p25/oper/
+//
+// ANGKANYA BERUBAH 21 Oktober 2026, dari 28 km jadi 9 km. Catatan lama di
+// sini bilang HRES 9 km berbayar sehingga yang gratis cuma ifs/0p25, dan itu
+// memang benar waktu dicek 4 September. ECMWF membukanya jadi gratis pada
+// 20 Oktober 2026, latensi dua jam, lisensi CC-BY-4.0 wajib menyebut ECMWF.
+// Sudah diperiksa langsung ke servernya, folder 0p1 betul betul ada dan bisa
+// diambil tanpa akun.
+// https://data.ecmwf.int/forecasts/<YYYYMMDD>/<HH>z/ifs/0p1/oper/
+//
+// MASIH PAJANGAN, dan itu disengaja. Layanannya baru sehari dan belum tiap
+// run membawa folder 0p1, jadi belum ada yang mengisi base path-nya. Uji
+// cobanya ada di repo atmosight, .github/workflows/ecmwf-uji.yml, dan dia
+// sengaja TIDAK menerbitkan apa apa, hasilnya cuma artefak. Kalau sudah
+// terbukti stabil, pindahkan barisnya ke MODELS lalu nyalakan lewat
+// MODEL_AKTIF.
+//
+// LABELNYA "ECMWF - 9 km", bukan "ECMWF HRES" atau "IFS - 9 km". Pola di
+// daftar ini nama lalu resolusi, dan HRES serta IFS itu istilah dalam yang
+// tidak dikenal pembaca awam. Keterangan itu tempatnya di lencana sumber
+// data, bukan di dropdown.
 // "WRF - 9 km" DIKELUARKAN dari daftar ini 5 September 2026. Dia sudah jadi
 // model sungguhan di MODELS, bukan pajangan lagi. Kalau dibiarkan di sini, dia
 // muncul dua kali di dropdown, sekali hidup dan sekali mati.
 const MODEL_PAJANGAN = [
-  { label: "ECMWF - 28 km" },
+  { label: "ECMWF - 9 km" },
   { label: "WRFDA - 9 km" },
 ];
 
@@ -2432,7 +2445,12 @@ async function bukaSkewT(lat, lon, nama) {
           window.SkewT.hodo(d, { W: 196, H: 196 }) +
           window.SkewT.thetaePanel(d, { W: 196, H: 196 }) +
         `</div>` +
-        `<div class="skt-note">Profil ${fmtValid(pd.meta.times[ti])} · indikasi model GFS (grid ~1°), bukan sounding asli.</div>` +
+        /* NAMA MODELNYA IKUT, jangan dipatok GFS. Sejak ada ECMWF 9 km,
+           Skew-T bisa datang dari model mana pun yang punya
+           profile_meta.json, dan catatan yang menyebut GFS di sounding
+           ECMWF itu keterangan yang SALAH tentang asal data, bukan sekadar
+           label yang kurang rapi. */
+        `<div class="skt-note">Profil ${fmtValid(pd.meta.times[ti])} · indikasi ${MODEL.label} (grid ~1°), bukan sounding asli.</div>` +
         skewtTabel(d) +
         `<div class="skt-exp-row"><button type="button" class="skt-export" id="skt-export">` +
         `<span class="material-symbols-outlined">image</span> Export PNG</button></div>` +
