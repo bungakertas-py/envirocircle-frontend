@@ -1782,20 +1782,39 @@ function pasangAngin(data) {
 
    Gagalnya diabaikan. Ini ancang ancang, bukan pemuatan datanya sendiri. */
 let praMuatUrl = null;
+/* BERAPA BINGKAI KE DEPAN yang diambil lebih dulu, ikut kecepatan putar.
+
+   Dulu selalu SATU. Pada jeda 1100 ms itu cukup, satu bingkai 700 KB punya
+   satu detik penuh untuk mendarat. Pada deret 288 bingkai jedanya 156 ms,
+   dan satu bingkai ke depan berarti menuntut 4,5 MB per detik cuma supaya
+   tidak tersendat. Tidak akan tercapai, dan animasinya akan tersentak di
+   tiap bingkai yang belum sempat turun.
+
+   Angkanya diturunkan dari jeda, jadi MODEL TIDAK BERUBAH SAMA SEKALI:
+   jeda 1100 memberi 1, persis seperti sebelumnya. Dibatasi enam supaya
+   tidak membuka belasan permintaan sekaligus dan justru memperlambat yang
+   sedang ditunggu. */
+function praMuatBerapa() {
+  return Math.max(1, Math.min(6, Math.round(1100 / jedaPutar())));
+}
+
 function muatDuluBingkaiBerikut() {
   if (!frames.length || !DATA_BASE) return;
-  const b = frames[(current + 1) % frames.length];
-  if (!b || !b.preview_image) return;
-  const url = DATA_BASE + b.preview_image;
-  if (url === praMuatUrl) return;
-  praMuatUrl = url;
-  const im = new Image(); im.decoding = "async"; im.src = url;
-  // Alasnya ikut, kalau tidak yang mulus cuma panahnya dan awan di
-  // belakangnya tetap tersendat.
+  const n = praMuatBerapa();
+  const kunci = current + "|" + n + "|" + DATA_BASE + "|" + activeLayer;
+  if (kunci === praMuatUrl) return;
+  praMuatUrl = kunci;
   const dasar = (MODEL && MODEL.satelit) ? ATAS_SATELIT[activeLayer] : null;
   const def = dasar && catalog && catalog.layers[dasar];
-  const fa = def && def.frames.find((f) => f.valid_time === b.valid_time);
-  if (fa) { const ia = new Image(); ia.decoding = "async"; ia.src = DATA_BASE + fa.preview_image; }
+  for (let k = 1; k <= n; k++) {
+    const b = frames[(current + k) % frames.length];
+    if (!b || !b.preview_image) continue;
+    const im = new Image(); im.decoding = "async"; im.src = DATA_BASE + b.preview_image;
+    // Alasnya ikut, kalau tidak yang mulus cuma panahnya dan awan di
+    // belakangnya tetap tersendat.
+    const fa = def && def.frames.find((f) => f.valid_time === b.valid_time);
+    if (fa) { const ia = new Image(); ia.decoding = "async"; ia.src = DATA_BASE + fa.preview_image; }
+  }
 }
 
 function pasangPanahSatelit(frame) {
@@ -1908,7 +1927,29 @@ function setPlay(on) {
   const ic = $("play-icon");
   if (ic) ic.textContent = playing ? "pause" : "play_arrow";
   if (playTimer) { clearInterval(playTimer); playTimer = null; }
-  if (playing) playTimer = setInterval(() => { showFrame(current + 1); }, 1100);
+  if (playing) playTimer = setInterval(() => { showFrame(current + 1); }, jedaPutar());
+}
+
+/* LAMA SATU PUTARAN yang dijaga, bukan lama satu bingkai.
+
+   Dulu jedanya dipatok 1100 ms. Itu pas untuk model, yang bingkainya 25
+   sampai 33 sehingga satu putaran 28 sampai 36 detik. Begitu Himawari jadi
+   tiap sepuluh menit, bingkainya 288 dan satu putaran jadi 5,3 MENIT. Tidak
+   ada yang akan menunggu selama itu, jadi fitur putarnya praktis mati
+   justru di layer yang paling pantas dianimasikan.
+
+   Jadi yang dipatok sekarang lama putarannya, sekitar 45 detik, lalu
+   jedanya dibagi dari situ. Dijepit di 1100 ms supaya MODEL TIDAK BERUBAH
+   SAMA SEKALI: 25 bingkai memberi 1800 ms yang langsung kena jepit atas,
+   jadi GFS, WRF, dan ECMWF tetap persis seperti sebelumnya. Jepit bawah 120
+   ms supaya deret yang sangat panjang tidak berubah jadi kedipan.
+
+   288 bingkai memberi 156 ms, dan itu kira kira kecepatan film awan satelit
+   yang biasa dilihat orang. */
+const PUTAR_MS = 45000, PUTAR_MIN = 120, PUTAR_MAKS = 1100;
+function jedaPutar() {
+  const n = (frames && frames.length) || 1;
+  return Math.max(PUTAR_MIN, Math.min(PUTAR_MAKS, Math.round(PUTAR_MS / n)));
 }
 function togglePlay() { setPlay(!playing); }
 
