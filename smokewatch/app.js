@@ -1564,11 +1564,27 @@ async function showFrame(i) {
   updateHash();
 }
 
+/* LAMA SATU PUTARAN yang dijaga, bukan lama satu bingkai. Disalin dari
+   Atmosight, sebab dua app ini memakai daftar parameter satelit yang sama
+   persis sehingga Himawari di sini juga punya 288 bingkai.
+
+   Jedanya dulu dipatok 1100 ms. Itu pas untuk CAMS dan WRF yang bingkainya
+   puluhan, tapi dengan 288 bingkai satu putaran jadi 5,3 MENIT dan tombol
+   putarnya praktis mati justru di layer yang paling pantas dianimasikan.
+
+   Dijepit di 1100 ms supaya LAYER MODEL TIDAK BERUBAH SAMA SEKALI, dan di
+   120 ms supaya deret yang sangat panjang tidak berubah jadi kedipan. */
+const PUTAR_MS = 45000, PUTAR_MIN = 120, PUTAR_MAKS = 1100;
+function jedaPutar() {
+  const n = (frames && frames.length) || 1;
+  return Math.max(PUTAR_MIN, Math.min(PUTAR_MAKS, Math.round(PUTAR_MS / n)));
+}
+
 function togglePlay() {
   playing = !playing;
   $("play-icon").textContent = playing ? "pause" : "play_arrow";
   if (playing) {
-    playTimer = setInterval(async () => { await showFrame(current + 1); }, 1100);
+    playTimer = setInterval(async () => { await showFrame(current + 1); }, jedaPutar());
   } else {
     clearInterval(playTimer);
   }
