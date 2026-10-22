@@ -1922,12 +1922,65 @@ async function showFrame(i) {
    Sekarang keadaannya disetel, bukan dibalik, dan timer lama SELALU dicabut
    lebih dulu, hidup atau mati. Jadi tidak mungkin ada dua timer berjalan
    bersamaan, dan tidak mungkin ada `playing` true tanpa timer. */
+/* PEMUTAR MENUNGGU GAMBARNYA MENDARAT, tidak lagi memakai pewaktu tetap.
+
+   Dilaporkan pemilik 22 Oktober 2026: di Himawari, gambar tertinggal jauh
+   di belakang slider waktu diputar, padahal kalau bingkainya diklik satu
+   per satu citranya ikut dengan benar. Itu memang bukan salah slidernya.
+
+   Sebabnya setInterval tidak peduli pada apa pun. Dia memajukan bingkai
+   tiap sekian milidetik entah gambarnya sudah mendarat atau belum. Di GFS
+   itu tidak pernah terasa, bingkainya 25 sampai 33 dengan jeda 1100 ms dan
+   gambar selalu siap jauh sebelum giliran berikutnya. Di Himawari jedanya
+   158 ms sedangkan satu langkah menarik citra 750 KB plus panah 240 KB,
+   yang menuntut sekitar 6 MB per detik. Slidernya terus berjalan, gambarnya
+   tertinggal, dan yang terlihat di layar jam yang sama sekali lain.
+
+   Sekarang tiap langkah MENUNGGU lapisan gambarnya selesai dimuat lalu
+   menghabiskan sisa jedanya. Di jaringan cepat hasilnya persis sama dengan
+   sebelumnya, sebab gambar siap sebelum jeda habis dan sisa waktunya tetap
+   ditunggu. Di jaringan lambat animasinya melambat sendiri, dan itu jauh
+   lebih baik daripada slider yang berbohong.
+
+   GFS, WRF, dan ECMWF tidak berubah sama sekali: jeda mereka 1100 ms dan
+   gambarnya selalu mendarat lebih dulu. */
+const PUTAR_SABAR_MS = 4000;
+
+function gambarSiap() {
+  const im = Array.prototype.slice.call(document.querySelectorAll(".leaflet-image-layer"));
+  const belum = im.filter((x) => !x.complete || x.naturalWidth === 0);
+  if (!belum.length) return Promise.resolve();
+  /* Batas sabar WAJIB ada. Gambar yang 404 atau putus di tengah tidak
+     pernah memicu load, dan tanpa batas ini pemutarnya berhenti selamanya
+     di satu bingkai tanpa ada yang tahu kenapa. */
+  return new Promise((selesai) => {
+    let sisa = belum.length, sudah = false;
+    const habis = () => { if (!sudah) { sudah = true; selesai(); } };
+    const satu = () => { if (--sisa <= 0) habis(); };
+    belum.forEach((x) => {
+      x.addEventListener("load", satu, { once: true });
+      x.addEventListener("error", satu, { once: true });
+    });
+    setTimeout(habis, PUTAR_SABAR_MS);
+  });
+}
+
+async function langkahPutar() {
+  if (!playing) return;
+  const mulai = (performance && performance.now) ? performance.now() : Date.now();
+  showFrame(current + 1);
+  await gambarSiap();
+  if (!playing) return;                       // keburu dijeda orangnya
+  const lewat = ((performance && performance.now) ? performance.now() : Date.now()) - mulai;
+  playTimer = setTimeout(langkahPutar, Math.max(0, jedaPutar() - lewat));
+}
+
 function setPlay(on) {
   playing = !!on;
   const ic = $("play-icon");
   if (ic) ic.textContent = playing ? "pause" : "play_arrow";
-  if (playTimer) { clearInterval(playTimer); playTimer = null; }
-  if (playing) playTimer = setInterval(() => { showFrame(current + 1); }, jedaPutar());
+  if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+  if (playing) langkahPutar();
 }
 
 /* LAMA SATU PUTARAN yang dijaga, bukan lama satu bingkai.

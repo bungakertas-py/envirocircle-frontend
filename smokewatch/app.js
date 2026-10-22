@@ -1580,14 +1580,52 @@ function jedaPutar() {
   return Math.max(PUTAR_MIN, Math.min(PUTAR_MAKS, Math.round(PUTAR_MS / n)));
 }
 
+/* PEMUTAR MENUNGGU GAMBARNYA MENDARAT, disalin dari Atmosight.
+
+   setInterval memajukan bingkai tiap sekian milidetik entah gambarnya sudah
+   mendarat atau belum. Di CAMS itu tidak pernah terasa, jedanya 1100 ms dan
+   gambar selalu siap jauh sebelum giliran berikutnya. Di Himawari jedanya
+   158 ms untuk 284 bingkai sedangkan satu langkah menarik citra 750 KB plus
+   panah 240 KB, jadi slidernya terus berjalan sementara gambarnya
+   tertinggal dan yang terlihat jam yang sama sekali lain.
+
+   Sekarang tiap langkah menunggu lapisan gambarnya selesai lalu
+   menghabiskan sisa jedanya. Di jaringan cepat hasilnya sama persis dengan
+   sebelumnya. Batas sabar wajib ada, sebab gambar yang 404 tidak pernah
+   memicu load dan tanpa itu pemutarnya berhenti selamanya di satu bingkai. */
+const PUTAR_SABAR_MS = 4000;
+
+function gambarSiap() {
+  const im = Array.prototype.slice.call(document.querySelectorAll(".leaflet-image-layer"));
+  const belum = im.filter((x) => !x.complete || x.naturalWidth === 0);
+  if (!belum.length) return Promise.resolve();
+  return new Promise((selesai) => {
+    let sisa = belum.length, sudah = false;
+    const habis = () => { if (!sudah) { sudah = true; selesai(); } };
+    const satu = () => { if (--sisa <= 0) habis(); };
+    belum.forEach((x) => {
+      x.addEventListener("load", satu, { once: true });
+      x.addEventListener("error", satu, { once: true });
+    });
+    setTimeout(habis, PUTAR_SABAR_MS);
+  });
+}
+
+async function langkahPutar() {
+  if (!playing) return;
+  const mulai = (performance && performance.now) ? performance.now() : Date.now();
+  await showFrame(current + 1);
+  await gambarSiap();
+  if (!playing) return;                       // keburu dijeda orangnya
+  const lewat = ((performance && performance.now) ? performance.now() : Date.now()) - mulai;
+  playTimer = setTimeout(langkahPutar, Math.max(0, jedaPutar() - lewat));
+}
+
 function togglePlay() {
   playing = !playing;
   $("play-icon").textContent = playing ? "pause" : "play_arrow";
-  if (playing) {
-    playTimer = setInterval(async () => { await showFrame(current + 1); }, jedaPutar());
-  } else {
-    clearInterval(playTimer);
-  }
+  if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+  if (playing) langkahPutar();
 }
 
 // ================= POINT DETAIL =================
