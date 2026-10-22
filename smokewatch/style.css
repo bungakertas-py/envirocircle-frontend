@@ -3055,9 +3055,23 @@ body { font-weight: 200; }
 }
 
 /* Jam berlaku DI LUAR kotak, mengambang tepat di atasnya. Diminta user.
-   Ditempel absolut supaya tidak ikut menambah tinggi kotaknya. */
+   Ditempel absolut supaya tidak ikut menambah tinggi kotaknya.
+
+   LEFT 48, BUKAN 0, sejak 22 Oktober 2026. Dengan left 0 label ini duduk di
+   pojok kiri bilah waktu, dan di situ juga berdiri tulang rel panel Model &
+   Satelit yang lebarnya 40 px. Keduanya tumpang tindih, dan yang kalah
+   labelnya: huruf pertamanya tertutup sehingga "KAM, 22 OKT" terbaca "M, 22
+   OKT". Dilaporkan pemilik, dan terukur tumpang tindih 19 px.
+
+   48 itu 40 px lebar tulang rel ditambah 8 px jarak, sama dengan jarak yang
+   sudah dipakai label ini ke kotak di bawahnya.
+
+   Atmosight tidak kena sebab di sana label ini MENGIKUTI GAGANG SLIDER
+   lewat --tl-isi, jadi dia hampir tidak pernah berada di tepi kiri. Cara itu
+   tidak disalin ke sini sebab Smokewatch belum punya --tl-isi sama sekali,
+   dan memasangnya berarti ikut mengubah rupa slidernya. */
 .tl-cur {
-  position: absolute; left: 0; bottom: calc(100% + 8px);
+  position: absolute; left: 48px; bottom: calc(100% + 8px);
   margin: 0; display: block; white-space: nowrap;
 }
 .tl-cur .mono {
@@ -3469,6 +3483,9 @@ body { font-weight: 200; }
    ===================================================================== */
 @media (max-width: 640px) {
   .rel, .alat { display: none; }
+  /* Tulang rel hilang di sini, jadi label jam tidak perlu digeser
+     menghindarinya dan boleh kembali rata tepi kiri. */
+  .tl-cur { left: 0; }
   /* Rel KANAN dihidupkan lagi, tapi isinya cuma Kartu Udara. Parameter,
      Model, dan Fitur memang sudah diwakili bilah bawah di HP, sedangkan
      kartu ini tidak punya wakil di sana. Tanpa ini kartunya hilang sama
