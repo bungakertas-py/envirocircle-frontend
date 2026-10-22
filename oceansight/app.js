@@ -55,8 +55,16 @@ const LAYER_LEGEND = {
 const FRAME_SRC = { sst: "sst", anom: "anom", clim: "clim", index: "anom", sal: "sal" };
 
 let state = null;
-let activeLayer = "sst";
-let lastLayer = "sst";   // layer parameter terakhir sebelum masuk mode Indeks (buat tombol matikan)
+/* ANOMALI SST yang dibuka duluan, diputuskan pemilik 22 Oktober 2026,
+   menggantikan Suhu Muka Laut.
+
+   Alasannya soal apa yang terbaca sekejap. Peta SST mentah di Indonesia
+   hampir seluruhnya hangat merata, 28 sampai 31 derajat, jadi yang terlihat
+   pertama kali itu pita warna yang nyaris seragam dan tidak memberi tahu
+   apa apa. Anomali menunjukkan SELISIHNYA dari biasa, dan di situlah El
+   Nino, La Nina, dan kolam hangat kelihatan tanpa perlu diklik dulu. */
+let activeLayer = "anom";
+let lastLayer = "anom";   // layer parameter terakhir sebelum masuk mode Indeks (buat tombol matikan)
 let frames = [];
 let frameIdx = 0;
 let overlay = null;
@@ -798,7 +806,7 @@ function selectIndex(key) {
 }
 function exitIndexMode() {
   const bar = $("index-toggle").parentElement; if (bar) bar.classList.remove("open");
-  setLayer(lastLayer || "sst");   // balik ke layer parameter semula (bersihkan index-opt, zona, tutup panel)
+  setLayer(lastLayer || "anom");  // balik ke layer parameter semula (bersihkan index-opt, zona, tutup panel)
 }
 function renderIndexDetail() {
   const box = $("ip-detail"); if (!box) return;
@@ -1323,7 +1331,7 @@ ambilManifes().then((res) => {
   if (state.currents && state.currents.label) $("cur-model-opt").textContent = state.currents.label;
   document.querySelector('.layer-btn[data-layer="current"]').classList.toggle("disabled", !(state.currents && state.currents.frames && state.currents.frames.length));
   document.querySelector('.layer-btn[data-layer="sal"]').classList.toggle("disabled", !(state.layers.sal && state.layers.sal.frames && state.layers.sal.frames.length));
-  setLayer("sst");   // mulai di SST; panel indeks dibangun saat pilih dari dropdown
+  setLayer("anom");  // mulai di Anomali SST; panel indeks dibangun saat pilih dari dropdown
   renderBrief();     // ringkasan awam kondisi iklim kini
   frameRegion();
   map.on("resize", frameRegion);
