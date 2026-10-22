@@ -719,13 +719,67 @@ function tulisTiket() {
   try { sessionStorage.setItem(WRF_KUNCI, "1"); } catch { /* mode privat, abaikan */ }
 }
 
+// ---- TAUTAN SURAT DI KAKI KARTU SANDI ----
+//
+// Dibuka ke JENDELA TULIS GMAIL, bukan mailto:. Alasannya diukur dari
+// kenyataan, bukan selera: mailto: menyerahkan urusannya ke aplikasi surat
+// bawaan, dan di laptop yang tidak punya satu pun yang terpasang, mengklik
+// tautannya TIDAK MENGHASILKAN APA APA. Di situ orang berhenti, dan kartu
+// sandi memang sudah jalan buntu tanpa itu. Alamat tujuannya sendiri alamat
+// Gmail, dan hampir semua yang memakai situs ini sudah masuk Gmail di
+// perambannya, jadi jendela tulisnya langsung terbuka siap diketik. Di HP,
+// tautan mail.google.com dibelokkan sendiri ke aplikasi Gmail.
+//
+// Yang terlihat di kartu TETAP alamat emailnya, bukan tulisan lain, supaya
+// yang lebih suka memakai aplikasi suratnya sendiri masih bisa menyorot dan
+// menyalinnya. Atribut title-nya juga alamat polos itu.
+//
+// Perihalnya ikut pintu yang sedang terkunci, jadi yang menerima surat
+// langsung tahu akses apa yang diminta tanpa perlu bertanya balik.
+const KONTAK_EMAIL = "envirocircleind@gmail.com";
+function tautanSurat(perihal, isi) {
+  return "https://mail.google.com/mail/?view=cm&fs=1"
+       + "&to=" + encodeURIComponent(KONTAK_EMAIL)
+       + "&su=" + encodeURIComponent(perihal)
+       + "&body=" + encodeURIComponent(isi);
+}
+function pasangSurat(perihal, isi) {
+  const a = $("pw-surat");
+  if (a) a.href = tautanSurat(perihal, isi);
+}
+
+// Kalimat kartu untuk tiap pintu. SATU kartu dipakai dua pintu, jadi
+// kalimatnya ikut dikirim waktu memanggil, bukan dipatok di markup.
+const GERBANG_MODEL = {
+  judul: "Model terkunci",
+  catatan: "Masukkan sandi untuk menampilkan model ini.",
+  perihal: "Permintaan akses model privat Atmosight",
+  isi: "Halo tim Envirocircle,\n\nSaya ingin meminta akses untuk membuka model privat di Atmosight.\n\nNama:\nAsal instansi:\nKeperluan:\n\nTerima kasih.",
+};
+const GERBANG_CSV = {
+  judul: "Unduhan terkunci",
+  catatan: "Masukkan sandi untuk mengunduh data titik ini sebagai CSV.",
+  perihal: "Permintaan akses unduhan data titik Atmosight",
+  isi: "Halo tim Envirocircle,\n\nSaya ingin meminta akses untuk mengunduh data titik Atmosight dalam bentuk CSV.\n\nNama:\nAsal instansi:\nKeperluan:\n\nTerima kasih.",
+};
+
 // Tampilkan modal, kembalikan janji true kalau sandinya benar.
-function mintaSandi(label) {
+//
+// Dulu fungsi ini menerima nama model dan menulis "Buka <nama>" ke #pw-title,
+// tapi h2 itu TIDAK PUNYA id waktu itu, jadi barisnya tidak pernah jalan dan
+// kartunya selalu berbunyi "Model terkunci". Sekarang idnya ada, dan judul
+// serta catatannya DITULIS ULANG tiap kali dibuka, bukan cuma kalau ada yang
+// dikirim. Kalau yang kosong dibiarkan apa adanya, pintu kedua akan memakai
+// kalimat pintu yang dibuka sebelumnya.
+function mintaSandi(teks) {
+  const t = teks || GERBANG_MODEL;
   return new Promise((selesai) => {
     const ov = $("pw-overlay"), inp = $("pw-input"), err = $("pw-err");
     if (!ov || !inp) { selesai(false); return; }
-    const judul = $("pw-title");
-    if (judul && label) judul.textContent = "Buka " + label;
+    const judul = $("pw-title"), catatan = $("pw-note");
+    if (judul) judul.textContent = t.judul;
+    if (catatan) catatan.textContent = t.catatan;
+    pasangSurat(t.perihal, t.isi);
     ov.classList.add("show");
     inp.value = "";
     err.hidden = true;
@@ -868,7 +922,7 @@ function setupModelSelect() {
     const id = sel.value;
     if (id === MODEL_ID) return;
     if (MODELS[id] && MODELS[id].privat) {
-      const boleh = await mintaSandi(MODELS[id].label);
+      const boleh = await mintaSandi(GERBANG_MODEL);
       if (!boleh) { sel.value = MODEL_ID; return; }   // batal, kembalikan pilihan
       tulisTiket();                                   // tiket sekali pakai
     }
@@ -4220,9 +4274,32 @@ $("mb-body")?.addEventListener("click", (e) => {
   if (i >= 0 && i !== current) showFrame(i);
 });
 
-function exportCSV() {
+/* UNDUHAN CSV LEWAT GERBANG SANDI. Diminta pemilik 22 Oktober 2026.
+
+   Sandinya SENGAJA sama dengan sandi model privat, juga permintaan pemilik,
+   supaya tidak ada sandi kedua yang harus diingat dan dibagikan. Jadi di
+   sini tidak ada tetapan sandi sendiri, yang dipakai WRF_SANDI yang itu juga.
+   Peringatan yang sama berlaku: ini di sisi browser, jadi penghalang sopan,
+   bukan pengaman. Berkas data titiknya sendiri tetap bisa diambil langsung.
+
+   DITANYA TIAP KALI DIKLIK, tidak ada tiket yang disimpan. Seirama dengan
+   gerbang model yang tiketnya sekali pakai dan langsung hangus. Kalau nanti
+   terasa terlalu sering, yang perlu diubah cuma satu baris di sini, bukan
+   gerbangnya.
+
+   `a.click()` di bawah tetap memulai unduhan walaupun ada await di atasnya.
+   Janjinya baru selesai di dalam penangan klik tombol Buka, jadi aktivasi
+   pengguna dari klik itu masih hidup waktu unduhannya dimulai. Kalau
+   urutannya dibalik, berkas dirakit dulu baru sandi diminta, pekerjaannya
+   terbuang tiap kali orang membatalkan. */
+async function exportCSV() {
   if (!lastPoint) return;
+  if (!(await mintaSandi(GERBANG_CSV))) return;
+  // Dibaca ULANG sesudah gerbang, bukan sebelumnya. Kartunya menutupi
+  // seluruh layar jadi titiknya tidak bisa diganti selagi terbuka, tapi
+  // menyandarkan kebenaran pada itu rapuh kalau kartunya nanti dikecilkan.
   const p = lastPoint;
+  if (!p) return;
   let csv = "waktu_wib,suhu_C,angin_kt,arah,hujan_mmjam,kelembapan_pct,awan_pct,tekanan_hpa\n";
   for (let i = 0; i < p.times.length; i++) {
     const w = toWIB(p.times[i]);
@@ -6803,7 +6880,7 @@ async function init() {
   // Yang digerbangi CUMA model privat. Dulu syaratnya "bukan gfs", dan itu
   // ikut menggerbangi satelit yang datanya justru terbuka untuk umum.
   if (MODEL && MODEL.privat && !ambilTiket()) {
-    const boleh = await mintaSandi(MODEL.label);
+    const boleh = await mintaSandi(GERBANG_MODEL);
     if (!boleh) { location.replace(location.pathname); return; }
   }
   /* Keterangan uji coba menyusul SESUDAH gerbang sandi, bukan sebelumnya.

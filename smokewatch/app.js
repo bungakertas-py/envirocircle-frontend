@@ -589,10 +589,41 @@ function ujiTiapMasuk() {
   if (ov) ov.classList.add("show");
 }
 
+// ---- TAUTAN SURAT DI KAKI KARTU SANDI ----
+//
+// Dibuka ke JENDELA TULIS GMAIL, bukan mailto:. Alasannya diukur dari
+// kenyataan, bukan selera: mailto: menyerahkan urusannya ke aplikasi surat
+// bawaan, dan di laptop yang tidak punya satu pun yang terpasang, mengklik
+// tautannya TIDAK MENGHASILKAN APA APA. Di situ orang berhenti, dan kartu
+// sandi memang sudah jalan buntu tanpa itu. Alamat tujuannya sendiri alamat
+// Gmail, dan hampir semua yang memakai situs ini sudah masuk Gmail di
+// perambannya, jadi jendela tulisnya langsung terbuka siap diketik. Di HP,
+// tautan mail.google.com dibelokkan sendiri ke aplikasi Gmail.
+//
+// Yang terlihat di kartu TETAP alamat emailnya, bukan tulisan lain, supaya
+// yang lebih suka memakai aplikasi suratnya sendiri masih bisa menyorot dan
+// menyalinnya. Atribut title-nya juga alamat polos itu.
+//
+// Perihalnya ikut pintu yang sedang terkunci, jadi yang menerima surat
+// langsung tahu akses apa yang diminta tanpa perlu bertanya balik.
+const KONTAK_EMAIL = "envirocircleind@gmail.com";
+function tautanSurat(perihal, isi) {
+  return "https://mail.google.com/mail/?view=cm&fs=1"
+       + "&to=" + encodeURIComponent(KONTAK_EMAIL)
+       + "&su=" + encodeURIComponent(perihal)
+       + "&body=" + encodeURIComponent(isi);
+}
+function pasangSurat(perihal, isi) {
+  const a = $("pw-surat");
+  if (a) a.href = tautanSurat(perihal, isi);
+}
+
 function mintaSandiDT() {
   return new Promise((selesai) => {
     const ov = $("pw-overlay"), inp = $("pw-input"), err = $("pw-err");
     if (!ov || !inp) { selesai(false); return; }
+    pasangSurat("Permintaan akses layer Daya Tampung Smokewatch",
+                "Halo tim Envirocircle,\n\nSaya ingin meminta akses untuk membuka layer Daya Tampung di Smokewatch.\n\nNama:\nAsal instansi:\nKeperluan:\n\nTerima kasih.");
     ov.classList.add("show");
     inp.value = "";
     err.hidden = true;

@@ -2213,6 +2213,31 @@ body { font-weight: 200; }
 }
 .pw-btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
+/* ---- Baris kontak di kaki kartu sandi ----
+   Dipasang 22 Oktober 2026 atas permintaan pemilik, di SEMUA gerbang sandi
+   di dua app: model privat, unduhan CSV panel titik, dan layer Daya Tampung.
+   Alasannya kartu sandi itu jalan buntu bagi yang belum punya sandinya, dan
+   tanpa baris ini tidak ada petunjuk harus minta ke mana.
+
+   Dia duduk di BAWAH tombol, bukan di atasnya, supaya tidak menyela urutan
+   baca judul, catatan, kotak sandi, tombol. Garis rambut di atasnya yang
+   memisahkan, bukan jarak, sebab kartunya sudah memakai gap 10px dan jarak
+   saja tidak terbaca sebagai bagian yang lain. */
+.pw-hubungi {
+  align-self: stretch; margin: 2px 0 0; padding-top: 10px;
+  border-top: 0.7px solid var(--ink-20);
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 200;
+  letter-spacing: .04em; color: var(--ink-50);
+}
+/* Tautan mailto-nya ikut warna kalimatnya, cuma digarisbawahi. Warna aksen di
+   sini akan menarik mata lebih kuat daripada tombol Buka, dan tombol itu yang
+   seharusnya jadi tujuan utama kartunya. */
+.pw-hubungi a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.pw-hubungi a:hover { color: var(--ink); }
+/* Kartu disclaimer menumpang .pw-card tapi TIDAK punya baris ini, jadi tidak
+   ada yang perlu dimatikan di sana. Kalau nanti dia ikut dipasangi, ingat
+   .uji-card rata tengah sedangkan baris ini rata kiri. */
+
 /* ---- Batang gulir, sama resepnya dengan landing ---- */
 .pt-body::-webkit-scrollbar, .pt-table-wrap::-webkit-scrollbar,
 .search-results::-webkit-scrollbar, .about-card::-webkit-scrollbar,

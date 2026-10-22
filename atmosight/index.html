@@ -557,21 +557,30 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <!-- Kartu Tentang -->
-    <!-- Gerbang sandi model WRF. CATATAN: ini di sisi browser, jadi cuma
-         penghalang sopan, BUKAN pengaman. Sandinya ada di app.js yang bisa
-         dibaca siapa saja, dan berkas datanya sendiri tetap publik. -->
+    <!-- Gerbang sandi, dipakai DUA pintu: model privat dan unduhan CSV panel
+         titik. Judul dan catatannya ditulis ulang mintaSandi() tiap kali
+         dibuka, jadi jangan mengandalkan kalimat yang tertulis di sini.
+         CATATAN: ini di sisi browser, jadi cuma penghalang sopan, BUKAN
+         pengaman. Sandinya ada di app.js yang bisa dibaca siapa saja, dan
+         berkas datanya sendiri tetap publik. -->
     <div id="pw-overlay" class="about-overlay">
       <div class="pw-card">
         <span class="about-tag">TERKUNCI</span>
-        <h2 class="pw-title">Model terkunci</h2>
-        <p class="pw-note">Masukkan sandi untuk menampilkan model ini.</p>
+        <h2 id="pw-title" class="pw-title">Model terkunci</h2>
+        <p id="pw-note" class="pw-note">Masukkan sandi untuk menampilkan model ini.</p>
         <input id="pw-input" class="pw-input" type="password" autocomplete="off"
-               spellcheck="false" placeholder="Sandi" aria-label="Sandi model WRF" />
+               spellcheck="false" placeholder="Sandi" aria-label="Sandi" />
         <div id="pw-err" class="pw-err" hidden>Sandi salah.</div>
         <div class="pw-act">
           <button id="pw-cancel" type="button" class="pw-btn">Batal</button>
           <button id="pw-ok" type="button" class="pw-btn pw-btn-primary">Buka</button>
         </div>
+        <!-- Tautannya DIISI app.js, bukan dipatok di sini, sebab perihal
+             suratnya ikut pintu mana yang sedang terkunci. href di bawah
+             cuma bekal kalau skripnya belum sempat jalan. -->
+        <p class="pw-hubungi">Hubungi: <a id="pw-surat" class="pw-surat"
+           href="mailto:envirocircleind@gmail.com" target="_blank" rel="noopener"
+           title="Tulis surat ke envirocircleind@gmail.com">envirocircleind@gmail.com</a></p>
       </div>
     </div>
 
@@ -791,7 +800,7 @@
           <span class="mb-nama mono" id="pt-coords">—</span>
         </div>
         <div class="mb-btns">
-          <button id="pt-export" class="mb-btn" title="Unduh data titik ini sebagai CSV"><span class="material-symbols-outlined">download</span><span class="mb-btn-t">CSV</span></button>
+          <button id="pt-export" class="mb-btn" title="Unduh data titik ini sebagai CSV, perlu sandi"><span class="material-symbols-outlined">download</span><span class="mb-btn-t">CSV</span><span class="material-symbols-outlined mb-gembok" aria-hidden="true">lock</span></button>
           <button id="pt-plot" class="mb-btn" title="Bandingkan parameter ini antar model dalam satu grafik"><span class="material-symbols-outlined">ssid_chart</span><span class="mb-btn-t">Banding Model</span></button>
           <button id="pt-hide" class="mb-btn" title="Kecilkan"><span class="material-symbols-outlined">expand_more</span></button>
           <button id="pt-close" class="mb-btn" title="Tutup"><span class="material-symbols-outlined">close</span></button>
