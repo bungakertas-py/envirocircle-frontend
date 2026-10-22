@@ -3878,12 +3878,20 @@ body { font-weight: 200; }
 /* Badge ini BUKAN tombol, jadi sorotan tetikus tidak boleh mengubahnya.
    Tanpa aturan ini dia mewarisi sorotan badge Last update di atasnya. */
 .status .par-badge:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-/* Rel kiri turun dari 154 ke 190, 19 Okt sore. Badge Parameter dibesarkan
-   atas permintaan pemilik, tumpukan status jadi lebih tinggi, dan badge
-   Akurasi di bawahnya MENABRAK tulang rel ini. Terukur, akurasi berakhir di
-   y 175 sedangkan rel mulai di 154, jadi tumpang tindih 21 piksel.
-   Dipindah relnya, bukan badge-nya dikecilkan lagi. */
-.rel--kiri { top: 190px; }
+/* Rel kiri KEMBALI KE 154, 22 Oktober 2026, menyusul Atmosight.
+
+   Sempat 190 sejak 19 Okt sore, waktu badge Parameter dibesarkan sehingga
+   tumpukan status memanjang dan badge Akurasi di bawahnya menabrak tulang
+   rel ini. Keadaan itu SUDAH TIDAK ADA LAGI. Badge Parameter sudah
+   dikecilkan kembali ke 11 px, sama persis dengan Atmosight, dan sekarang
+   tumpukan status di dua app sama sama berakhir di y 135. Terukur 22
+   Oktober 2026.
+
+   Yang membuatnya harus turun lagi: dengan 190, tulang rel berakhir di y
+   657 dan MENABRAK tombol putar di tepi kiri bawah. Terukur bertabrakan di
+   layar setinggi 704 dan 804, sedangkan Atmosight yang relnya 154 sudah
+   aman di dua tinggi itu. Pemilik melaporkannya sendiri. */
+.rel--kiri { top: 154px; }
 
 /* Di layar sempit ruangnya tidak ada, jadi pembesaran ini dibatalkan dan
    angkanya dikembalikan ke ukuran lama. */
