@@ -116,8 +116,21 @@ fi
 # Kalau folder ini kosong, situsnya tetap tampil, cuma masuk mode kosong
 # yang menjelaskan datanya belum ada. Itu bukan kerusakan.
 # ---------------------------------------------------------------------
-MODEL_ATMOSIGHT="gfs wrfchem_9km_meteo"
-MODEL_SMOKEWATCH="cams wrfchem_9km_kimia"
+# ecmwf_9km dan himawari DITAMBAHKAN 22 Oktober 2026. Dua duanya sudah
+# hidup di app.js, jadi menurut aturan di atas foldernya memang harus ada.
+#
+# Untuk sekarang dua folder ini akan KOSONG, dan itu bukan kerusakan.
+# Datanya sedang dimasak alur kerja kita sendiri dan terbit ke GitAction,
+# dan situs mengambilnya dari sana selama folder di sini masih kosong.
+#
+# Yang disiapkan di sini tempat mendaratnya nanti, supaya waktu server
+# mulai mengirim dia tidak perlu menebak nama folder dan tidak gagal
+# gara gara folder tujuannya belum ada. Tidak akan bertabrakan dengan
+# GitAction, sebab GitAction menerbitkan ke GitHub Pages sedangkan ini
+# hostingan, dua tempat yang berbeda. Begitu folder di sini terisi, situs
+# berpindah sendiri ke sini dan GitAction turun jadi cadangan.
+MODEL_ATMOSIGHT="gfs ecmwf_9km wrfchem_9km_meteo himawari"
+MODEL_SMOKEWATCH="cams wrfchem_9km_kimia himawari"
 
 for m in $MODEL_ATMOSIGHT;  do mkdir -p "$SITUS/backend/atmosight/data/output/$m";  done
 for m in $MODEL_SMOKEWATCH; do mkdir -p "$SITUS/backend/smokewatch/data/output/$m"; done

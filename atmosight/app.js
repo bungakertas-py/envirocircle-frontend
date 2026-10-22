@@ -42,19 +42,6 @@
 // menyembunyikan parameter yang tidak dipunyainya, menyembunyikan pilihan
 // level, dan tidak punya panel titik.
 //
-// `pemasok` menyebut SIAPA YANG MEMASAK data di base path model itu, dan dia
-// dibaca chip sumber di bilah bawah. Dulu chip itu memakai satu kata untuk
-// seluruh halaman, "cirrus" kalau datanya dari hostingan ini dan "GitAction"
-// kalau dari cadangan. Itu benar selama semua model dimasak di tempat yang
-// sama, dan BERHENTI BENAR begitu ada model yang tidak. Model yang dimasak
-// GitHub Actions lalu disalin ke sini akan diberi label cirrus, dan chip yang
-// salah lebih buruk daripada chip yang tidak ada, sebab chip inilah satu
-// satunya tempat orang memeriksa kiriman siapa yang sedang macet.
-//
-// Nilainya nama tempat masak, bukan nama tempat simpan. ECMWF sekarang
-// "gitaction" sebab alur kamilah yang memasaknya, walau berkasnya duduk di
-// hostingan ini juga. Begitu server mengambil alih, ubah satu kata ini.
-//
 // `warna` dipakai GARIS MODEL di plot banding, dan cuma di situ. Ditaruh di
 // tabel ini supaya tidak ada angka warna yang harus dicocokkan di dua tempat
 // waktu model baru masuk. Tiga warna ini sengaja berjauhan di roda warna dan
@@ -75,19 +62,12 @@
 // berkasnya ada atau tidak, jadi kalau satu run gugur di tengah dan satu
 // berkas tidak tertulis, tombolnya hilang sendiri alih alih mengejar 404.
 const MODELS = {
-  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "NOAA/NCEP GFS - 28 km",         ekstra: true,  dx: 0.25,  pemasok: "cirrus",    warna: "#1679AB" },
-  ec9:         { base: "../backend/atmosight/data/output/ecmwf_9km/",           label: "ECMWF IFS - 9 km",        ekstra: false, dx: 0.1,   pemasok: "gitaction", warna: "#7a3fb0", cadangan: "ecmwf_9km/" },
-  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "Envirocircle WRF - 12 km",         ekstra: false, dx: 0.108, privat: true, pemasok: "cirrus", warna: "#e4572e" },
-  hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true, pemasok: "cirrus", cadangan: "himawari/" },
+  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "NOAA/NCEP GFS - 28 km",         ekstra: true,  dx: 0.25,  warna: "#1679AB" },
+  ec9:         { base: "../backend/atmosight/data/output/ecmwf_9km/",           label: "ECMWF IFS - 9 km",        ekstra: false, dx: 0.1,   warna: "#7a3fb0", cadangan: "ecmwf_9km/" },
+  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "Envirocircle WRF - 12 km",         ekstra: false, dx: 0.108, privat: true, warna: "#e4572e" },
+  hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true, cadangan: "himawari/" },
 };
 
-/* Nama tempat masak model yang sedang dibuka, dan bagaimana menyebutnya.
-   Bawaannya cirrus, jadi model lama tidak berubah sama sekali. */
-const PEMASOK = {
-  cirrus:    { chip: "cirrus",   nama: "server cirrus" },
-  gitaction: { chip: "GitAction", nama: "GitHub Actions" },
-};
-const pemasokModel = () => PEMASOK[MODEL.pemasok] || PEMASOK.cirrus;
 
 // ================= SAKLAR MODEL =================
 // Atmosight tahap awal SENGAJA cuma menampilkan GFS. Model lain tidak dihapus,
@@ -4354,13 +4334,21 @@ function tandaiSumber() {
      data cadangan, tapi kiriman cirrus sudah mendarat dan tinggal dimuat
      ulang. Chipnya jadi tombol, sebab toast cuma lewat sekejap sedangkan
      chip ini tinggal di bilah bawah. Lihat intaiCirrus(). */
-  /* CHIPNYA IKUT MODEL, bukan satu kata untuk seluruh halaman. Lihat
-     `pemasok` di tabel MODELS. Model yang dimasak GitHub Actions akan
-     menulis GitAction di sini walau berkasnya duduk di hostingan ini,
-     sebab yang ditanya chip ini kiriman SIAPA yang sedang dipakai, bukan
-     berkasnya diambil dari alamat mana. */
-  const pm = pemasokModel();
-  el.textContent = cirrusSiap ? "cirrus siap" : SUMBER_CADANGAN ? "GitAction" : pm.chip;
+  /* CHIPNYA IKUT SUMBER YANG MENANG, dan itu memang sudah benar sejak awal.
+     Sempat diganti jadi kolom `pemasok` per model 21 Oktober 2026, dengan
+     anggapan ECMWF dimasak GitHub Actions tapi berkasnya duduk di hostingan.
+     Anggapan itu KELIRU. ECMWF memang tinggal di GitAction, jadi dia sudah
+     terbaca sebagai cadangan dan chipnya sudah menulis GitAction tanpa kolom
+     apa pun.
+
+     Kolom itu justru akan BOHONG nanti: begitu server mulai mengirim ECMWF
+     ke hostingan, SUMBER_CADANGAN jadi false sedangkan kolomnya tetap
+     "gitaction", sehingga chip menulis GitAction untuk kiriman cirrus.
+     Dibuang 22 Oktober 2026 sesudah pemilik menanyakan soal peralihan itu.
+
+     Sekarang chip ini berpindah sendiri, dan tidak ada satu baris pun yang
+     perlu disunting waktu backend mengambil alih. */
+  el.textContent = cirrusSiap ? "cirrus siap" : SUMBER_CADANGAN ? "GitAction" : "cirrus";
   const wadah = $("fresh-src");
   if (wadah) {
     if (cirrusSiap) {
@@ -4370,13 +4358,13 @@ function tandaiSumber() {
     } else {
       wadah.title = SUMBER_CADANGAN
         ? "Kiriman server cirrus belum masuk lebih dari 24 jam, jadi situs memakai cadangan yang dimasak GitHub Actions"
-        : `Data ${MODEL.label} dimasak ${pm.nama}, lewat hostingan ini sendiri`;
+        : `Data ${MODEL.label} dari server cirrus, lewat hostingan ini sendiri`;
       wadah.style.cursor = "";
       wadah.onclick = null;
     }
   }
   const badge = $("data-fresh");
-  if (badge) badge.dataset.sumber = SUMBER_CADANGAN ? "cadangan" : MODEL.pemasok || "cirrus";
+  if (badge) badge.dataset.sumber = SUMBER_CADANGAN ? "cadangan" : "cirrus";
 }
 
 // Dot HIJAU kalau data MENDARAT di path kita dalam 24 JAM terakhir, MERAH
