@@ -75,9 +75,9 @@
 // berkasnya ada atau tidak, jadi kalau satu run gugur di tengah dan satu
 // berkas tidak tertulis, tombolnya hilang sendiri alih alih mengejar 404.
 const MODELS = {
-  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "GFS - 28 km",         ekstra: true,  dx: 0.25,  pemasok: "cirrus",    warna: "#1679AB" },
-  ec9:         { base: "../backend/atmosight/data/output/ecmwf_9km/",           label: "ECMWF - 9 km",        ekstra: false, dx: 0.1,   pemasok: "gitaction", warna: "#7a3fb0", cadangan: "ecmwf_9km/" },
-  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "WRF - 12 km",         ekstra: false, dx: 0.108, privat: true, pemasok: "cirrus", warna: "#e4572e" },
+  gfs:         { base: "../backend/atmosight/data/output/gfs/",                 label: "NOAA/NCEP GFS - 28 km",         ekstra: true,  dx: 0.25,  pemasok: "cirrus",    warna: "#1679AB" },
+  ec9:         { base: "../backend/atmosight/data/output/ecmwf_9km/",           label: "ECMWF IFS - 9 km",        ekstra: false, dx: 0.1,   pemasok: "gitaction", warna: "#7a3fb0", cadangan: "ecmwf_9km/" },
+  wrf9:        { base: "../backend/atmosight/data/output/wrfchem_9km_meteo/",   label: "Envirocircle WRF - 12 km",         ekstra: false, dx: 0.108, privat: true, pemasok: "cirrus", warna: "#e4572e" },
   hima:        { base: "../backend/atmosight/data/output/himawari/",            label: "Satelit Himawari-9",  ekstra: false, dx: 0.05,  satelit: true, pemasok: "cirrus", cadangan: "himawari/" },
 };
 

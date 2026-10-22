@@ -35,8 +35,8 @@
 // paling penting, isinya PENGAMATAN sedangkan dua yang lain ramalan.
 // Penanda `satelit` dibaca di beberapa tempat, jangan dihapus.
 const MODELS = {
-  cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "CAMS - 44 km",    dx: 0.4   },
-  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "WRFCHEM - 12 km", dx: 0.108, privat: true },
+  cams:    { base: "../backend/smokewatch/data/output/cams/",                label: "ECMWF CAMS - 44 km",    dx: 0.4   },
+  wrfchem: { base: "../backend/smokewatch/data/output/wrfchem_9km_kimia/",   label: "Envirocircle WRFCHEM - 12 km", dx: 0.108, privat: true },
   hima:    { base: "../backend/smokewatch/data/output/himawari/",            label: "Satelit Himawari-9", dx: 0.05, satelit: true },
 };
 

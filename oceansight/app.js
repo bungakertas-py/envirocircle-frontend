@@ -1328,7 +1328,17 @@ ambilManifes().then((res) => {
   const d = state.domain;
   dataBounds = L.latLngBounds([d.latS, d.lonW], [d.latN, d.lonE]);
   // Darat = basemap OSM (dipasang di atas, lapisan "basemap"); data laut transparan tepat di pantai.
-  if (state.currents && state.currents.label) $("cur-model-opt").textContent = state.currents.label;
+  /* LABEL MODEL ARUS TIDAK LAGI DIAMBIL DARI MANIFES, 22 Oktober 2026.
+
+     Nama model di tiga app disamakan polanya jadi "Lembaga Model -
+     resolusi", dan manifes kertas-fenomena menulis "CMEMS (model laut)"
+     yang tidak mengikuti pola itu. Menyetelnya di manifes berarti menyentuh
+     pipeline backend cuma untuk urusan tampilan, dan pemilik memang minta
+     yang diubah tampilannya saja.
+
+     Jadi labelnya dipatok di markup. KALAU SUATU SAAT MODEL ARUSNYA DIGANTI
+     di backend, baris di index.html itu WAJIB ikut diubah, sebab dia tidak
+     lagi mengikuti manifes dan tidak akan memberi tahu kalau mulai bohong. */
   document.querySelector('.layer-btn[data-layer="current"]').classList.toggle("disabled", !(state.currents && state.currents.frames && state.currents.frames.length));
   document.querySelector('.layer-btn[data-layer="sal"]').classList.toggle("disabled", !(state.layers.sal && state.layers.sal.frames && state.layers.sal.frames.length));
   setLayer("anom");  // mulai di Anomali SST; panel indeks dibangun saat pilih dari dropdown
