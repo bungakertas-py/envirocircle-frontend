@@ -1,10 +1,34 @@
 # Aturan yang disisipkan pasang-di-hostingan.sh ke .htaccess hostingan.
 # Jangan menyunting .htaccess di server tangan, sunting berkas ini lalu push.
 #
-# Kompresi SENGAJA tidak diatur di sini. Sudah diuji langsung di hostingan,
-# brotli hidup bawaan dan berkas JSON 347 KB turun jadi 104 KB tanpa aturan
-# apa pun. Menambah AddOutputFilterByType di sini cuma jadi berkas mati.
-# Catatan, berkas kecil memang tidak dikompresi, itu wajar.
+# Kompresi sebagian besar tidak perlu diatur di sini. Brotli hidup bawaan dan
+# berkas .json 347 KB turun jadi 104 KB tanpa aturan apa pun. Berkas kecil
+# memang tidak dikompresi, itu wajar.
+#
+# TAPI .geojson adalah pengecualian, lihat AddType di bawah.
+
+# =====================================================================
+# .geojson HARUS DIKENALI SEBAGAI JSON.
+#
+# Diukur di situs 23 Oktober 2026. Hostingan menyajikan .geojson sebagai
+# application/octet-stream, dan kompresi cuma jalan untuk tipe teks yang
+# dikenal. Akibatnya dua berkas batas wilayah dikirim MENTAH:
+#
+#   world_countries.geojson   428 KB mentah, mestinya sekitar 120 KB
+#   idn_provinces.geojson     363 KB mentah, mestinya sekitar  90 KB
+#
+# Itu sekitar 580 KB per pengunjung baru, lebih besar daripada seluruh kode
+# situs digabung. Pembandingnya ada di folder yang sama, id_places.json
+# dapat application/json dan memang dikirim ber-brotli.
+#
+# Dipetakan ke application/json, bukan application/geo+json, sebab yang
+# pertama sudah TERBUKTI ikut dikompresi di hostingan ini sedangkan yang
+# kedua belum tentu ada di daftarnya. Frontend membacanya lewat .json()
+# dan Leaflet tidak memeriksa tipe, jadi tidak ada yang terganggu.
+# =====================================================================
+<IfModule mod_mime.c>
+  AddType application/json .geojson
+</IfModule>
 
 # =====================================================================
 # PAKSA HTTPS, dan satukan ke satu alamat resmi.
@@ -61,6 +85,16 @@ RedirectMatch 404 /\.gitignore$
   # browser menyimpan potongan 206 itu dengan validator Last-Modified yang
   # sama, jadi potongan dari berkas lama tidak pernah tercampur dengan yang
   # baru.
+  # geojson DITAMBAHKAN 23 Oktober 2026. Pola lama menulis \.(json|...)$ yang
+  # TIDAK pernah cocok dengan .geojson, sebab ada "geo" di antara titik dan
+  # "json". Jadi dua berkas batas wilayah, yang justru paling besar, selama
+  # ini dikirim tanpa Cache-Control sama sekali dan diunduh ulang tiap muat.
+  # Batasnya dipisah 1 hari, sebab batas wilayah praktis tidak pernah berubah
+  # sedangkan data model berganti tiap hari.
+  <FilesMatch "\.geojson$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+
   <FilesMatch "\.(json|webp|png|bin|gz)$">
     Header set Cache-Control "public, max-age=600"
   </FilesMatch>
