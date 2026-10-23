@@ -89,7 +89,71 @@ else
 fi
 
 # ---------------------------------------------------------------------
-# 2. Folder data. Dibuat kalau belum ada, TIDAK PERNAH dihapus.
+# 2. Cap versi cangkang.
+#
+# Tiap app menyimpan CANGKANGNYA sendiri (html, css, js, ikon) dengan nama
+# simpanan berakhiran VERSION di sw.js. Kalau angka itu tidak berubah,
+# pengunjung lama tetap disuguhi cangkang lama walaupun kodenya sudah baru.
+# Itu kesalahan yang tidak memunculkan galat apa pun, jadi baru ketahuan
+# waktu ada yang melapor tampilannya aneh.
+#
+# Dulu angkanya dinaikkan tangan di tiga berkas sebelum tiap rilis, dan
+# sekali lupa saja cukup. Sekarang dicap di sini dari commit yang barusan
+# ditarik, jadi mustahil terlewat, dan angkanya sekalian memberi tahu kode
+# mana yang sedang hidup.
+#
+# Aman diulang. Penarikannya reset --hard, jadi sw.js dikembalikan dulu ke
+# versi repo sebelum dicap lagi dan tidak akan pernah bentrok.
+#
+# DATA TIDAK TERSENTUH. sw.js memang sengaja tidak menyimpan ../backend/...,
+# jadi yang dibuang cuma cangkangnya, bukan data model.
+# ---------------------------------------------------------------------
+CAP="v$BARU"
+BELUM=""
+for sw in "$SITUS"/*/sw.js; do
+  [ -f "$sw" ] || continue
+  sed -i -E "s/^const VERSION = \"[^\"]*\";/const VERSION = \"$CAP\";/" "$sw"
+  grep -q "^const VERSION = \"$CAP\";\$" "$sw" ||
+    BELUM="$BELUM $(basename "$(dirname "$sw")")"
+done
+if [ -n "$BELUM" ]; then
+  kabar "PERINGATAN, versi cangkang tidak tercap di:$BELUM"
+  kabar "Periksa baris VERSION di sw.js app itu, pengunjung lama bisa dapat kode lama"
+else
+  kabar "Versi cangkang dicap $CAP"
+fi
+
+# ---------------------------------------------------------------------
+# 3. Kecilkan cangkang.
+#
+# Komentar di repo ini panjang panjang dan memang disengaja, itu dokumentasi
+# yang paling sering dibaca. Tapi pengunjung tidak perlu mengunduhnya. Membuang
+# komentar dan spasi awal baris memangkas cangkang Atmosight dari 208 KB jadi
+# 95 KB terkompresi, Smokewatch 161 jadi 75, Oceansight 72 jadi 39.
+#
+# Dikerjakan DI SINI, bukan di repo, jadi sumbernya tetap utuh dan enak dibaca.
+# Penarikannya reset --hard, jadi tiap pemasangan berkasnya kembali ke versi
+# GitHub dulu baru dikecilkan lagi. Aman diulang.
+#
+# Nama variabel TIDAK diubah, cuma komentar dan spasi yang dibuang. Jadi kalau
+# ada galat di hostingan, nomor barisnya masih berarti dan jejaknya terbaca.
+#
+# sw.js sengaja dilewati, dia sudah dicap versinya di pasal 2 dan isinya kecil.
+# Berkas yang bikin pengurainya ragu DILEWATI utuh, bukan ditebak, dan namanya
+# disebut di layar.
+# ---------------------------------------------------------------------
+if command -v python3 >/dev/null 2>&1; then
+  if [ -f "$SITUS/deploy/kecilkan.py" ]; then
+    python3 "$SITUS/deploy/kecilkan.py" "$SITUS" || kabar "PERINGATAN, pengecilan gagal, berkas tetap versi penuh"
+  else
+    kabar "deploy/kecilkan.py tidak ada, pengecilan dilewati"
+  fi
+else
+  kabar "python3 tidak ada, pengecilan dilewati"
+fi
+
+# ---------------------------------------------------------------------
+# 4. Folder data. Dibuat kalau belum ada, TIDAK PERNAH dihapus.
 #
 # SATU MODEL SATU FOLDER, akar data/output sengaja dibiarkan kosong. Dulu
 # model utama duduk di akar, dan itu bikin keluaran model lain yang salah
@@ -137,7 +201,7 @@ for m in $MODEL_SMOKEWATCH; do mkdir -p "$SITUS/backend/smokewatch/data/output/$
 kabar "Folder data siap, isinya tidak disentuh"
 
 # ---------------------------------------------------------------------
-# 3. Aturan .htaccess.
+# 5. Aturan .htaccess.
 #
 # Hostingan TIDAK memasang cache-control sendiri, dan daftar isi folder
 # MENYALA bawaan. Tanpa Options -Indexes, seluruh isi folder data
@@ -171,7 +235,7 @@ else
 fi
 
 # ---------------------------------------------------------------------
-# 4. Laporan
+# 6. Laporan
 # ---------------------------------------------------------------------
 garis
 echo "  Isi folder data, per model."

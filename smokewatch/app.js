@@ -1709,200 +1709,12 @@ function deretKota(key, nama) {
            arr, dariKota: true };
 }
 
-// Bilinear di titik (lat,lon) untuk semua waktu -> array nilai.// Bilinear di titik (lat,lon) untuk semua waktu -> array nilai.
-function sampleVar(pd, name, lat, lon) {
-  const v = pd.vars[name];
-  if (!v) return null;
-  const { nx, ny, bounds, dx, dy, times } = pd.meta;
-  const [w, , , n] = bounds;
-  let fx = Math.max(0, Math.min(nx - 1, (lon - w) / dx));
-  let fy = Math.max(0, Math.min(ny - 1, (n - lat) / dy)); // baris-0 = utara
-  const x0 = Math.floor(fx), x1 = Math.min(x0 + 1, nx - 1), tx = fx - x0;
-  const y0 = Math.floor(fy), y1 = Math.min(y0 + 1, ny - 1), ty = fy - y0;
-  const plane = nx * ny, out = [];
-  for (let t = 0; t < times.length; t++) {
-    const b = t * plane;
-    const A = v.arr[b + y0 * nx + x0], B = v.arr[b + y0 * nx + x1];
-    const C = v.arr[b + y1 * nx + x0], D = v.arr[b + y1 * nx + x1];
-    const raw = (1 - tx) * (1 - ty) * A + tx * (1 - ty) * B + (1 - tx) * ty * C + tx * ty * D;
-    out.push(raw * v.scale + v.offset);
-  }
-  return out;
-}
 
-function windAt(u, v) {
-  const spd = Math.sqrt(u * u + v * v) * MS_TO_KT;
-  const deg = (Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360; // arah DATANG
-  return { spd, dir: DIRS[Math.round(deg / 45) % 8] };
-}
-
-// ============== PROFIL VERTIKAL (Skew-T) — muat malas & sampel ==============
-let profileData = null;      // { meta, vars:{t,r,u,v} }
-let profileLoading = null;
-let skewtOpen = false;       // kartu Skew-T sedang dibuka?
-
-async function loadProfileData() {
-  if (profileData) return profileData;
-  if (profileLoading) return profileLoading;
-  profileLoading = (async () => {
-    const meta = await fetch(DATA_BASE + "profile_meta.json").then((r) => r.json());
-    const gz = await fetch(DATA_BASE + "profile.bin.gz").then((r) => r.arrayBuffer());
-    const stream = new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const buf = await new Response(stream).arrayBuffer();
-    const vars = {};
-    for (const v of meta.vars) {
-      const Ctor = v.dtype === "uint8" ? Uint8Array : Int16Array;
-      vars[v.var] = { arr: new Ctor(buf, v.byteOffset, v.byteLength / Ctor.BYTES_PER_ELEMENT),
-                      scale: v.scale, offset: v.offset };
-    }
-    profileData = { meta, vars };
-    return profileData;
-  })();
-  return profileLoading;
-}
-
-// Index waktu profil terdekat dengan valid_time frame yang sedang ditampilkan.
-function profileTimeIndex(pd) {
-  const vt = frames && frames[current] && frames[current].valid_time;
-  const ts = pd.meta.times;
-  const hit = ts.indexOf(vt);
-  if (hit >= 0) return hit;
-  const target = new Date(vt || ts[0]).getTime();
-  let best = 0, bd = Infinity;
-  ts.forEach((t, i) => { const dd = Math.abs(new Date(t).getTime() - target); if (dd < bd) { bd = dd; best = i; } });
-  return best;
-}
-
-// Profil vertikal di (lat,lon) untuk index waktu ti -> {levels,T,RH,u,v} per level.
-function sampleProfile(pd, lat, lon, ti) {
-  const { nx, ny, bounds, dx, dy, levels } = pd.meta;
-  const nlev = levels.length, plane = nx * ny, [w, , , n] = bounds;
-  const fx = Math.max(0, Math.min(nx - 1, (lon - w) / dx));
-  const fy = Math.max(0, Math.min(ny - 1, (n - lat) / dy));
-  const x0 = Math.floor(fx), x1 = Math.min(x0 + 1, nx - 1), tx = fx - x0;
-  const y0 = Math.floor(fy), y1 = Math.min(y0 + 1, ny - 1), ty = fy - y0;
-  const samp = (vv, lev) => {
-    const b = (ti * nlev + lev) * plane;
-    const A = vv.arr[b + y0 * nx + x0], B = vv.arr[b + y0 * nx + x1];
-    const C = vv.arr[b + y1 * nx + x0], D = vv.arr[b + y1 * nx + x1];
-    return ((1 - tx) * (1 - ty) * A + tx * (1 - ty) * B + (1 - tx) * ty * C + tx * ty * D) * vv.scale + vv.offset;
-  };
-  const out = { levels: levels.slice(), T: [], RH: [], u: [], v: [] };
-  for (let l = 0; l < nlev; l++) {
-    out.T.push(samp(pd.vars.t, l)); out.RH.push(Math.max(0, Math.min(100, samp(pd.vars.r, l))));
-    out.u.push(samp(pd.vars.u, l)); out.v.push(samp(pd.vars.v, l));
-  }
-  return out;
-}
-
-// Export PLOT Skew-T (tanpa legenda) ke PNG. Rasterize SVG plot ke canvas,
-// beri latar + border + bayangan neubrutalist agar rapi saat dibagikan.
-function exportSkewTPng() {
-  const wrap = $("pt-skewt-wrap");
-  const svgEl = wrap && wrap.querySelector("svg");   // svg PERTAMA = plot (bukan swatch legenda)
-  if (!svgEl) return;
-  const vb = svgEl.viewBox.baseVal;
-  const W = vb && vb.width ? vb.width : 340, H = vb && vb.height ? vb.height : 380;
-  const xml = new XMLSerializer().serializeToString(svgEl);
-  const img = new Image();
-  img.onload = () => {
-    const s = 2, M = 14, SH = 6;
-    const cw = W + M * 2 + SH, ch = H + M * 2 + SH;
-    const c = document.createElement("canvas");
-    c.width = cw * s; c.height = ch * s;
-    const x = c.getContext("2d");
-    x.scale(s, s);
-    x.fillStyle = "#ffffff"; x.fillRect(0, 0, cw, ch);         // latar
-    x.fillStyle = "#ffffff"; x.fillRect(M, M, W, H);           // latar plot putih
-    x.drawImage(img, M, M, W, H);
-    x.lineWidth = 1; x.strokeStyle = "rgba(7,65,115,.35)"; x.strokeRect(M + 0.5, M + 0.5, W - 1, H - 1);
-    c.toBlob((b) => {
-      if (!b) return;
-      const nm = (sharedPoint && sharedPoint.name) ? sharedPoint.name.replace(/[^\w-]+/g, "_")
-        : (lastPoint ? lastPoint.lat.toFixed(2) + "_" + lastPoint.lon.toFixed(2) : "titik");
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(b); a.download = `skewt_${nm}.png`; a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    }, "image/png");
-  };
-  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
-}
-
-// Legenda garis/elemen diagram (di bawah plot, sebelum kartu indeks).
-function skewtLegend() {
-  const line = (c, dash) => `<svg width="24" height="10" viewBox="0 0 24 10"><line x1="1" y1="5" x2="23" y2="5" stroke="${c}" stroke-width="2"${dash ? ` stroke-dasharray="${dash}"` : ""}/></svg>`;
-  const box = (fill) => `<svg width="24" height="10" viewBox="0 0 24 10"><rect x="1" y="1" width="22" height="8" fill="${fill}" stroke="#8FA0B3" stroke-width="0.5"/></svg>`;
-  const barbSw = `<svg width="24" height="12" viewBox="0 0 24 12"><line x1="2" y1="6" x2="19" y2="6" stroke="#074173" stroke-width="1.2"/><line x1="19" y1="6" x2="23" y2="1" stroke="#074173" stroke-width="1.2"/><line x1="15" y1="6" x2="19" y2="1" stroke="#074173" stroke-width="1.2"/></svg>`;
-  const it = (sw, label) => `<div class="skt-lg">${sw}<span>${label}</span></div>`;
-  return `<div class="skt-legend">` +
-    it(line("#e42320"), "Suhu (T)") +
-    it(line("#1f8a4c"), "Titik embun (Td)") +
-    it(line("#074173", "4 3"), "Jalur parcel") +
-    it(barbSw, "Angin (barbs)") +
-    it(line("#0029d7", "5 3"), "LCL · dasar awan") +
-    it(line("#d97706", "5 3"), "LFC · mulai konveksi") +
-    it(line("#7a1fa2", "5 3"), "EL · puncak konveksi") +
-    it(box("rgba(226,35,32,.30)"), "CAPE · energi naik") +
-    it(box("rgba(35,96,200,.25)"), "CIN · penghambat") +
-    `</div>`;
-}
-
-// Kotak indeks konvektif di bawah diagram.
-function skewtIndexBox(d) {
-  const fmtP = (p) => p ? Math.round(p) + " hPa" : "–";
-  const capeCol = d.cape > 2500 ? "#d61f1f" : d.cape > 1000 ? "#e8590c" : d.cape > 300 ? "#f59f00" : "#2b8a3e";
-  const cell = (label, val, col) =>
-    `<div class="skt-cell"><span class="skt-k">${label}</span><span class="skt-v" style="color:${col || "#074173"}">${val}</span></div>`;
-  return `<div class="skt-idx">` +
-    cell("CAPE", Math.round(d.cape) + " J/kg", capeCol) +
-    cell("CIN", Math.round(d.cin) + " J/kg", d.cin < -50 ? "#e8590c" : "#4A6685") +
-    cell("LCL", fmtP(d.lcl.p)) +
-    cell("LFC", fmtP(d.lfc)) +
-    cell("EL", fmtP(d.el)) +
-    cell("LI", d.li !== null ? d.li.toFixed(1) : "–", d.li !== null && d.li < -2 ? "#d61f1f" : "#4A6685") +
-    `</div>`;
-}
-
-// Skeleton loading kartu Skew-T (meniru layout: catatan + plot + export + legenda + indeks).
-function skewtSkeleton() {
-  return `<div class="pt-skel skt-skel">` +
-    `<div class="sk-bar skt-sk-note"></div>` +
-    `<div class="sk-bar skt-sk-plot"></div>` +
-    `<div class="sk-bar skt-sk-exp"></div>` +
-    `<div class="skt-sk-idx">${"<div class='sk-bar'></div>".repeat(6)}</div>` +
-    `</div>`;
-}
-
-// Render (atau re-render) kartu Skew-T ke #pt-skewt-wrap untuk titik & waktu aktif.
-async function renderSkewTCard() {
-  // skewt.js dibuang di Smokewatch (profil termodinamika tak ada kaitannya dengan
-  // polutan). Kartunya juga disembunyikan lewat CSS, tapi jaga-jaga kalau terpanggil.
-  if (!window.SkewT) return;
-  const wrap = $("pt-skewt-wrap");
-  if (!wrap || !lastPoint) return;
-  wrap.innerHTML = skewtSkeleton();
-  let pd;
-  try { pd = await loadProfileData(); }
-  catch (e) { wrap.innerHTML = `<div class="skt-load">Profil belum tersedia.</div>`; return; }
-  if (!skewtOpen) return;                     // keburu ditutup
-  const ti = profileTimeIndex(pd);
-  const prof = sampleProfile(pd, lastPoint.lat, lastPoint.lon, ti);
-  const d = window.SkewT.derive(prof);
-  wrap.innerHTML =
-    `<div class="skt-note">Profil ${fmtValid(pd.meta.times[ti])} · indikasi model GFS (grid ~1°), bukan sounding asli.</div>` +
-    window.SkewT.svg(d, { W: 340, H: 380 }) +
-    `<div class="skt-exp-row"><button type="button" class="skt-export" id="skt-export">` +
-    `<span class="material-symbols-outlined">image</span> Export PNG</button></div>` +
-    skewtLegend() +
-    skewtIndexBox(d);
-  $("skt-export")?.addEventListener("click", exportSkewTPng);
-}
 
 function fmtCoord(lat, lon) {
   return Math.abs(lat).toFixed(2) + "° " + (lat >= 0 ? "LU" : "LS") + " · " +
          Math.abs(lon).toFixed(2) + "° " + (lon >= 0 ? "BT" : "BB");
 }
-function fmtHour(iso) { const w = toWIB(iso); return w.getUTCDate() + "/" + String(w.getUTCHours()).padStart(2, "0"); }
 
 // Judul panel titik: koordinat (klik acak), nama kota (search/ikon), atau
 // alamat hasil reverse-geocoding (tombol "lokasi saya"). Token menjaga agar
@@ -1953,131 +1765,8 @@ async function fillAddress(lat, lon) {
   }
 }
 
-// Deret-waktu untuk VARIABEL yang sedang dipilih (ikut layer aktif).
-function chartSeries(pd, lat, lon) {
-  const times = pd.meta.times;
-  // yDomain = [bawah, atas] skala sumbu Y tetap. Utk tekanan sengaja TERBALIK
-  // (1200 di bawah → 400 di atas) meniru profil atmosfer vertikal: tekanan
-  // tertinggi di permukaan. Tanpa yDomain → skala otomatis dari data (mulai 0).
-  const num = (v, label, unit, color, type, yDomain) =>
-    ({ label, unit, color, type, times, values: sampleVar(pd, v, lat, lon), yDomain });
-  // Panel titik = prakiraan PERMUKAAN (di tempat berdiri). Bila peta sedang di
-  // level strato, grafik ikut variabel permukaan padanannya (data titik = permukaan).
-  switch (BASE_OF[activeLayer] || activeLayer) {
-    case "wind_surface": {
-      const u = sampleVar(pd, "u", lat, lon), v = sampleVar(pd, "v", lat, lon);
-      return { label: "Kecepatan Angin", unit: "kt", color: "#0029d7", type: "line",
-               times, values: u.map((uu, i) => Math.sqrt(uu * uu + v[i] * v[i]) * MS_TO_KT) };
-    }
-    case "temp_surface": return num("temp", "Suhu", "°C", "#e42320", "line", [0, 50]);
-    case "humidity_surface": return num("humidity", "Kelembapan", "%", "#1f8a5c", "line", [0, 100]);
-    case "cloud_surface": return num("cloud", "Tutupan Awan", "%", "#4A6685", "line", [0, 100]);
-    case "pressure_surface": return num("pressure", "Tekanan", "hPa", "#7a3fb0", "line", [1200, 400]);
-    case "storm_potential": return num("cape", "CAPE", "J/kg", "#e84a2f", "line", [0, 4000]);
-    // Sumbu CIN sengaja 0 di atas, -400 di bawah: makin ke bawah makin tebal tutupnya.
-    case "cin_surface": return num("cin", "CIN", "J/kg", "#8a29c8", "line", [-400, 0]);
-    case "rain_accum_surface": {
-      const rain = sampleVar(pd, "rain", lat, lon), days = {};
-      times.forEach((t, i) => { const d = t.slice(0, 10); days[d] = (days[d] || 0) + rain[i] * 3; });
-      const dts = Object.keys(days).sort();
-      return { label: "Akumulasi Hujan Harian", unit: "mm/hari", color: "#2360c8", type: "line",
-               times: dts.map((d) => d + "T00:00:00Z"), values: dts.map((d) => days[d]), daily: true };
-    }
-    default: return num("rain", "Hujan", "mm", "#2360c8", "line"); // rain_surface
-  }
-}
 
-function chartSVG(spec) {
-  const { values, color, type, times, daily } = spec;
-  const n = values.length;
-  if (!n) return "";
-  // Padding asimetris: kiri utk label sumbu-Y, bawah utk label waktu sumbu-X.
-  const W = 330, H = 162, padL = 32, padR = 8, padT = 12, padB = 26;
-  const plotW = W - padL - padR, plotH = H - padT - padB, y0 = padT + plotH;
-  const vmin = Math.min(...values), vmax = Math.max(...values);
-  // lo = nilai di DASAR sumbu, hi = nilai di PUNCAK. Bila yDomain diberi, pakai
-  // itu (bisa terbalik spt tekanan: lo=1200 > hi=400). Selain itu otomatis mulai 0.
-  const [lo, hi] = spec.yDomain
-    ? [spec.yDomain[0], spec.yDomain[1]]
-    : [Math.min(0, vmin), vmax === Math.min(0, vmin) ? Math.min(0, vmin) + 1 : vmax];
-  const x = (i) => padL + plotW * (n <= 1 ? 0.5 : i / (n - 1));
-  const y = (v) => y0 - plotH * ((v - lo) / (hi - lo));
-  const fmt = (v) => (Math.abs(v) < 10 ? v.toFixed(1) : v.toFixed(0));
-  const tms = times ? times.map((t) => new Date(t).getTime()) : [];
-  const nowMs = Date.now();
 
-  // Posisi pecahan "kini" di dalam deret (utk memisah garis solid vs putus-putus).
-  let sxi = n - 1;
-  if (times && n > 1) {
-    if (nowMs <= tms[0]) sxi = 0;
-    else if (nowMs >= tms[n - 1]) sxi = n - 1;
-    else for (let i = 0; i < n - 1; i++)
-      if (nowMs >= tms[i] && nowMs <= tms[i + 1]) { sxi = i + (nowMs - tms[i]) / (tms[i + 1] - tms[i]); break; }
-  }
-  const sx = x(sxi);
-
-  // ---- data (bar: solid=terlewati, transparan+outline putus=forecast) ----
-  let body = "";
-  if (type === "bar") {
-    const bw = Math.max(3, (plotW / n) * 0.6);
-    for (let i = 0; i < n; i++) {
-      const past = !times || tms[i] <= nowMs;
-      const bx = (x(i) - bw / 2).toFixed(1), by = y(values[i]).toFixed(1), bh = (y0 - y(values[i])).toFixed(1);
-      body += `<rect x="${bx}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" fill="${color}" ` +
-        (past ? `opacity="0.82"/>` : `opacity="0.26" stroke="${color}" stroke-width="1" stroke-dasharray="3 2"/>`);
-    }
-  } else {
-    const pts = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
-    if (type === "area")
-      body += `<path d="${pts}L${x(n - 1).toFixed(1)},${y0}L${x(0).toFixed(1)},${y0}Z" fill="${color}" opacity="0.14"/>`;
-    // Garis digambar 2x: klip kiri "kini" = solid, klip kanan = putus-putus.
-    body += `<clipPath id="cpPast"><rect x="0" y="0" width="${sx.toFixed(1)}" height="${H}"/></clipPath>` +
-            `<clipPath id="cpFut"><rect x="${sx.toFixed(1)}" y="0" width="${(W - sx).toFixed(1)}" height="${H}"/></clipPath>`;
-    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" clip-path="url(#cpPast)"/>`;
-    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="5 4" opacity="0.8" clip-path="url(#cpFut)"/>`;
-  }
-
-  // ---- sumbu X & Y + tick label (tanpa grid) ----
-  const AX = `stroke="rgba(7,65,115,.35)" stroke-width="1"`;
-  let axes = `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${y0}" ${AX}/>` +
-             `<line x1="${padL}" y1="${y0}" x2="${padL + plotW}" y2="${y0}" ${AX}/>`;
-  for (const tv of [hi, (lo + hi) / 2, lo]) {
-    const yy = y(tv);
-    axes += `<line x1="${padL - 3}" y1="${yy.toFixed(1)}" x2="${padL}" y2="${yy.toFixed(1)}" ${AX}/>` +
-            `<text x="${padL - 5}" y="${(yy + 3).toFixed(1)}" class="pt-ax" text-anchor="end">${fmt(tv)}</text>`;
-  }
-  if (times) {
-    const nt = Math.min(5, n), last = n - 1;
-    let prevDay = null;
-    for (let k = 0; k < nt; k++) {
-      const i = nt <= 1 ? 0 : Math.round((k * last) / (nt - 1));
-      const xx = x(i), w = toWIB(times[i]), day = w.getUTCDate();
-      const lbl = (daily || prevDay === null || day !== prevDay)
-        ? day + "/" + (w.getUTCMonth() + 1)
-        : String(w.getUTCHours()).padStart(2, "0") + ":00";
-      prevDay = day;
-      const anchor = i === 0 ? "start" : i === last ? "end" : "middle";
-      axes += `<line x1="${xx.toFixed(1)}" y1="${y0}" x2="${xx.toFixed(1)}" y2="${y0 + 3}" ${AX}/>` +
-              `<text x="${xx.toFixed(1)}" y="${y0 + 14}" class="pt-ax" text-anchor="${anchor}">${lbl}</text>`;
-    }
-    // garis acuan real-time di batas solid/forecast (tanpa teks — dijelaskan legenda)
-    if (sx > padL + 1 && sx < padL + plotW - 1)
-      axes += `<line class="pt-kini" x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="#e8590c" stroke-width="1" stroke-dasharray="2 3" opacity="0.75"/>`;
-  }
-
-  return `<svg class="pt-meteo" viewBox="0 0 ${W} ${H}" width="100%">` +
-    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="#ffffff" stroke="rgba(7,65,115,.2)" stroke-width="1"/>` +
-    axes + body + `</svg>`;
-}
-
-// Legenda bawah frame grafik: garis solid = kondisi sekarang, putus = forecast.
-function chartLegend(color) {
-  const line = (dash) => `<svg width="24" height="8" viewBox="0 0 24 8">` +
-    `<line x1="1" y1="4" x2="23" y2="4" stroke="${color}" stroke-width="2.5"${dash ? ` stroke-dasharray="5 4"` : ""}/></svg>`;
-  return `<div class="chart-legend">` +
-    `<span class="chl-key">${line(false)}Kondisi Sekarang</span>` +
-    `<span class="chl-key">${line(true)}<i>Forecast</i></span></div>`;
-}
 
 // ================= POPUP TITIK =================
 // Atmosight memakai sidebar kanan. Di sini diganti POPUP tepat di titik yang
@@ -4407,22 +4096,6 @@ async function init() {
     $("zoom-in")?.addEventListener("click", () => map.zoomIn());
     $("zoom-out")?.addEventListener("click", () => map.zoomOut());
 
-    // Panah geser variabel (HP): gulir strip layer + auto-redup panah di ujung.
-    const layersEl = document.querySelector(".layers");
-    const layerStep = () => Math.max(120, (layersEl ? layersEl.clientWidth : 200) * 0.7);
-    function updateLayerNav() {
-      if (!layersEl) return;
-      const atStart = layersEl.scrollLeft <= 1;
-      const atEnd = layersEl.scrollLeft + layersEl.clientWidth >= layersEl.scrollWidth - 1;
-      $("layer-prev")?.classList.toggle("nav-hidden", atStart);
-      $("layer-next")?.classList.toggle("nav-hidden", atEnd);
-    }
-    $("layer-prev")?.addEventListener("click", () => layersEl?.scrollBy({ left: -layerStep(), behavior: "smooth" }));
-    $("layer-next")?.addEventListener("click", () => layersEl?.scrollBy({ left: layerStep(), behavior: "smooth" }));
-    layersEl?.addEventListener("scroll", updateLayerNav);
-    window.addEventListener("resize", updateLayerNav);
-    updateLayerNav();
-
     // HP: dropdown "Parameter" (variabel) & dropdown kontrol kanan (buka/tutup)
     $("param-toggle")?.addEventListener("click", () =>
       document.querySelector(".layer-bar")?.classList.toggle("param-open"));
@@ -4561,7 +4234,6 @@ async function init() {
       map.on("moveend zoomend", () => { geser = false; nyala(); });
     })();
     $("pt-close")?.addEventListener("click", closePoint);
-    $("pt-export")?.addEventListener("click", exportCSV);
     $("pt-hide")?.addEventListener("click", hidePoint);
     $("pt-reopen")?.addEventListener("click", reopenPoint);
     $("share-btn")?.addEventListener("click", shareCurrent);
@@ -4624,12 +4296,6 @@ async function init() {
       const it = e.target.closest(".search-item");
       if (it) pickPlace(parseFloat(it.dataset.lat), parseFloat(it.dataset.lon), it.textContent);
     });
-    // Initial time (dekoratif) diisi dari run model
-    const io = $("init-opt");
-    if (io) io.textContent = cat.run_time;
-
-    const runEl = $("run-info");
-    if (runEl) runEl.title = "Run model: " + cat.run_time;
     current = nearestNowIndex();       // mulai di frame terdekat "sekarang"
     if (!dataMissing) {
       await showFrame(current);

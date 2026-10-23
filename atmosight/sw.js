@@ -1,5 +1,6 @@
 /* Service worker Atmosight — cache SHELL app (berversi), data cuaca TETAP
- * online. Naikkan VERSION tiap rilis frontend agar user dapat versi terbaru
+ * online. VERSION dicap otomatis dari commit oleh deploy/pasang-di-hostingan.sh
+ * tiap pemasangan, jadi angka di bawah cuma cadangan untuk review lokal
  * (cache lama dihapus saat activate). */
 const VERSION = "v75";
 const CACHE = "kertas-cuaca-" + VERSION;

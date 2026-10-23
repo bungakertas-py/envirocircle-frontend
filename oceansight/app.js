@@ -580,13 +580,6 @@ function statusChip(s) {
 }
 function valClass(v) { if (v == null || isNaN(v)) return "v-neutral"; if (v >= 0.5) return "v-warm"; if (v <= -0.5) return "v-cool"; return "v-neutral"; }
 function fmtSigned(v) { return (v >= 0 ? "+" : "") + Number(v).toFixed(2); }
-function sparkPoints(vals, w, h) {
-  if (!vals.length) return "";
-  let lo = Math.min(...vals), hi = Math.max(...vals);
-  if (hi - lo < 0.4) { const m = (hi + lo) / 2; lo = m - 0.2; hi = m + 0.2; }
-  const pad = 3;
-  return vals.map((v, i) => `${(vals.length === 1 ? w / 2 : (i / (vals.length - 1)) * w).toFixed(1)},${(pad + (1 - (v - lo) / (hi - lo)) * (h - 2 * pad)).toFixed(1)}`).join(" ");
-}
 function ninoStatus(v) { return v >= 0.5 ? "El Nino" : v <= -0.5 ? "La Nina" : "Netral"; }
 const INDEX_COLOR = { nino12: NINO_COLORS.nino12, nino3: NINO_COLORS.nino3, nino34: NINO_COLORS.nino34, nino4: NINO_COLORS.nino4, oni: "#7048e8", dmi: "#e64980" };
 const INDEX_LABEL = { nino12: "Nino 1+2", nino3: "Nino 3", nino34: "Nino 3.4", nino4: "Nino 4", oni: "ONI", dmi: "DMI" };
@@ -606,7 +599,6 @@ function niceAxis(lo, hi) {
   const dec = step >= 1 ? 0 : step >= 0.1 ? 1 : step >= 0.01 ? 2 : 3;
   return { lo: nlo, hi: nhi, step, ticks, dec };
 }
-function dlabel(d) { return `${+d.slice(6, 8)} ${MONTHS[+d.slice(4, 6) - 1]}`; }
 function nowVal(key) {
   if (key === "dmi") return (liveIndex && liveIndex.dmi != null) ? liveIndex.dmi : state.iod.dmi_now;
   if (key === "oni") return state.enso.oni_latest ? state.enso.oni_latest.anom : null;
@@ -855,12 +847,6 @@ function sampleGrid(arr, m, ti, lat, lon, comp) {
   for (const [val, wt] of q) if (val != null) { s += val * wt; w += wt; }
   return w > 0 ? s / w : null;
 }
-function tiByDate(m, date) { const a = (m.dates || []).indexOf(date); return a < 0 ? 0 : a; }
-function tiSstFor(m, f) {
-  if (activeLayer === "sst") return frameIdx;
-  const d = frameDateOf(f), i = (m.times || []).findIndex((t) => t.slice(0, 10).replace(/-/g, "") === d);
-  return i < 0 ? (m.times ? m.times.length - 1 : 0) : i;
-}
 const COMPASS = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
 function dirLabel(u, v) {
   const deg = (Math.atan2(u, v) * 180 / Math.PI + 360) % 360;   // arah ALIRAN menuju (0=U, 90=T)
@@ -880,13 +866,6 @@ const POINT_PARAM = {
   clim:    { pd: "clim", label: "Klimatologi SST", unit: "°C", color: GARIS_DERET, signed: false },
   sal:     { pd: "sal",  label: "Salinitas",      unit: "PSU", color: GARIS_DERET, signed: false },
 };
-function ptXlabel(f) {
-  if (!f) return "";
-  if (f.valid_time) { const w = toWIB(f.valid_time); return `${w.getUTCDate()}/${w.getUTCMonth() + 1}`; }
-  if (f.date) return `${+f.date.slice(6, 8)}/${+f.date.slice(4, 6)}`;
-  if (f.month) return MONTHS[f.month - 1];
-  return "";
-}
 // Sumbu waktu deret titik diambil dari pd SENDIRI (harian/bulanan), bukan dari frames tampilan
 // (SST kini per-jam tapi pd-nya harian) -> label & indeks-kini dipetakan lewat tanggal.
 function pdTimeArr(pd) { return pd.dates || pd.months || pd.times || []; }
@@ -1512,7 +1491,7 @@ function updateParChip() {
 if (window.matchMedia("(hover: hover)").matches) {
   const sorot = (e) => {
     const b = e.target.closest && e.target.closest(".layer-btn[data-layer]");
-    if (!b || b.classList.contains("disabled") || b.classList.contains("sembunyi")) return b;
+    if (!b || b.classList.contains("disabled")) return b;
     const el = _q("par-badge");
     if (el && !el.hidden) isiParBadge(b);
     return b;
@@ -1601,8 +1580,8 @@ else setupHP();
 /* Service worker. Menyimpan CANGKANG app, bukan datanya. Data laut tetap
    selalu dari jaringan, sebab yang disajikan di sini keadaan hari ini dan
    menyajikan salinan kemarin diam diam itu lebih buruk daripada kosong.
-   VERSION di sw.js WAJIB dinaikkan tiap rilis, kalau tidak pengunjung lama
-   tetap melihat cangkang yang lama. */
+   VERSION di sw.js dicap otomatis waktu dipasang, lihat
+   deploy/pasang-di-hostingan.sh. */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () =>
     navigator.serviceWorker.register("sw.js").catch((e) => console.warn("SW gagal:", e)));

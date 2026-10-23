@@ -1039,7 +1039,6 @@ function terapkanFiturModel() {
   document.querySelector(".level-bar")?.style.setProperty("display", "none", "important");
   const lv = $("level-select");
   if (lv) lv.closest(".field")?.style.setProperty("display", "none");
-  document.body.classList.add("model-wrf");
   if (MODEL_ID === "wrf9") document.body.classList.add("model-private");
 }
 
@@ -1769,9 +1768,6 @@ function setActiveLayer(layerKey) {
   current = nearestNowIndex();
   showFrame(current);
   syncIsobars();                 // isobar auto muncul/lepas mengikuti layer Tekanan
-  // panel titik ikut variabel aktif
-  if (pdTerakhir && lastPoint && $("point-panel")?.classList.contains("open"))
-    renderPoint(pdTerakhir, lastPoint.lat, lastPoint.lon);
   updateHash();
 }
 
@@ -2047,7 +2043,6 @@ let pointMarker = null;
 let kotaTerpilih = null;   // nama kota yang sedang dipilih, labelnya dibuat berkedip
 let sharedPoint = null;    // {lat,lon,name} titik aktif → dipakai untuk link Bagikan
 let lastPoint = null;      // untuk export CSV
-let pdTerakhir = null;     // pd titik aktif (kisi kecil atau blob), untuk gambar ulang saat layer ganti
 const MS_TO_KT = 1.943844;
 const DIRS = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"]; // 8 arah dari Utara searah jarum jam
 
@@ -2676,7 +2671,6 @@ function fmtCoord(lat, lon) {
   return Math.abs(lat).toFixed(2) + "° " + (lat >= 0 ? "LU" : "LS") + " · " +
          Math.abs(lon).toFixed(2) + "° " + (lon >= 0 ? "BT" : "BB");
 }
-function fmtHour(iso) { const w = toWIB(iso); return w.getUTCDate() + "/" + String(w.getUTCHours()).padStart(2, "0"); }
 
 // Judul panel titik: koordinat (klik acak), nama kota (search/ikon), atau
 // alamat hasil reverse-geocoding (tombol "lokasi saya"). Token menjaga agar
@@ -2773,104 +2767,7 @@ function warnaDeret() {
   return getComputedStyle(document.documentElement).getPropertyValue("--aksen").trim() || "#1679AB";
 }
 
-function chartSVG(spec) {
-  /* WARNA DERET, sejarahnya. 8 Sep dipaksa tinta #333 ikut rebranding, sebab
-     tiap grafik di panel ini cuma punya SATU deret dan warnanya tidak
-     membedakan apa apa. 11 Sep jadi TERAKOTA, diminta user, supaya garis
-     ramalan di titik yang dipilih terbaca sebagai hal yang disorot.
-     Kalau suatu saat grafiknya berisi lebih dari satu deret, kembalikan
-     `color` dari spec dan beri tiap deret warnanya sendiri. */
-  const { values, type, times, daily } = spec;
-  const color = warnaDeret();
-  const n = values.length;
-  if (!n) return "";
-  // Padding asimetris: kiri utk label sumbu-Y, bawah utk label waktu sumbu-X.
-  const W = 330, H = 162, padL = 32, padR = 8, padT = 12, padB = 26;
-  const plotW = W - padL - padR, plotH = H - padT - padB, y0 = padT + plotH;
-  const vmin = Math.min(...values), vmax = Math.max(...values);
-  // lo = nilai di DASAR sumbu, hi = nilai di PUNCAK. Bila yDomain diberi, pakai
-  // itu (bisa terbalik spt tekanan: lo=1200 > hi=400). Selain itu otomatis mulai 0.
-  const [lo, hi] = spec.yDomain
-    ? [spec.yDomain[0], spec.yDomain[1]]
-    : [Math.min(0, vmin), vmax === Math.min(0, vmin) ? Math.min(0, vmin) + 1 : vmax];
-  const x = (i) => padL + plotW * (n <= 1 ? 0.5 : i / (n - 1));
-  const y = (v) => y0 - plotH * ((v - lo) / (hi - lo));
-  const fmt = (v) => (Math.abs(v) < 10 ? v.toFixed(1) : v.toFixed(0));
-  const tms = times ? times.map((t) => new Date(t).getTime()) : [];
-  const nowT = nowMs();
 
-  // Posisi pecahan "kini" di dalam deret (utk memisah garis solid vs putus-putus).
-  let sxi = n - 1;
-  if (times && n > 1) {
-    if (nowT <= tms[0]) sxi = 0;
-    else if (nowT >= tms[n - 1]) sxi = n - 1;
-    else for (let i = 0; i < n - 1; i++)
-      if (nowT >= tms[i] && nowT <= tms[i + 1]) { sxi = i + (nowT - tms[i]) / (tms[i + 1] - tms[i]); break; }
-  }
-  const sx = x(sxi);
-
-  // ---- data (bar: solid=terlewati, transparan+outline putus=forecast) ----
-  let body = "";
-  if (type === "bar") {
-    const bw = Math.max(3, (plotW / n) * 0.6);
-    for (let i = 0; i < n; i++) {
-      const past = !times || tms[i] <= nowT;
-      const bx = (x(i) - bw / 2).toFixed(1), by = y(values[i]).toFixed(1), bh = (y0 - y(values[i])).toFixed(1);
-      body += `<rect x="${bx}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" fill="${color}" ` +
-        (past ? `opacity="0.82"/>` : `opacity="0.26" stroke="${color}" stroke-width="1" stroke-dasharray="3 2"/>`);
-    }
-  } else {
-    const pts = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
-    if (type === "area")
-      body += `<path d="${pts}L${x(n - 1).toFixed(1)},${y0}L${x(0).toFixed(1)},${y0}Z" fill="${color}" opacity="0.14"/>`;
-    // Garis digambar 2x: klip kiri "kini" = solid, klip kanan = putus-putus.
-    body += `<clipPath id="cpPast"><rect x="0" y="0" width="${sx.toFixed(1)}" height="${H}"/></clipPath>` +
-            `<clipPath id="cpFut"><rect x="${sx.toFixed(1)}" y="0" width="${(W - sx).toFixed(1)}" height="${H}"/></clipPath>`;
-    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" clip-path="url(#cpPast)"/>`;
-    body += `<path d="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="5 4" opacity="0.55" clip-path="url(#cpFut)"/>`;
-  }
-
-  // ---- sumbu X & Y + tick label (tanpa grid) ----
-  const AX = `stroke="rgba(7,65,115,.35)" stroke-width="1"`;
-  let axes = `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${y0}" ${AX}/>` +
-             `<line x1="${padL}" y1="${y0}" x2="${padL + plotW}" y2="${y0}" ${AX}/>`;
-  for (const tv of [hi, (lo + hi) / 2, lo]) {
-    const yy = y(tv);
-    axes += `<line x1="${padL - 3}" y1="${yy.toFixed(1)}" x2="${padL}" y2="${yy.toFixed(1)}" ${AX}/>` +
-            `<text x="${padL - 5}" y="${(yy + 3).toFixed(1)}" class="pt-ax" text-anchor="end">${fmt(tv)}</text>`;
-  }
-  if (times) {
-    const nt = Math.min(5, n), last = n - 1;
-    let prevDay = null;
-    for (let k = 0; k < nt; k++) {
-      const i = nt <= 1 ? 0 : Math.round((k * last) / (nt - 1));
-      const xx = x(i), w = toWIB(times[i]), day = w.getUTCDate();
-      const lbl = (daily || prevDay === null || day !== prevDay)
-        ? day + "/" + (w.getUTCMonth() + 1)
-        : String(w.getUTCHours()).padStart(2, "0") + ":00";
-      prevDay = day;
-      const anchor = i === 0 ? "start" : i === last ? "end" : "middle";
-      axes += `<line x1="${xx.toFixed(1)}" y1="${y0}" x2="${xx.toFixed(1)}" y2="${y0 + 3}" ${AX}/>` +
-              `<text x="${xx.toFixed(1)}" y="${y0 + 14}" class="pt-ax" text-anchor="${anchor}">${lbl}</text>`;
-    }
-    // garis acuan real-time di batas solid/forecast (tanpa teks — dijelaskan legenda)
-    if (sx > padL + 1 && sx < padL + plotW - 1)
-      axes += `<line class="pt-kini" x1="${sx.toFixed(1)}" y1="${padT}" x2="${sx.toFixed(1)}" y2="${y0}" stroke="rgba(7,65,115,.5)" stroke-width="1" stroke-dasharray="2 3" opacity="0.9"/>`;
-  }
-
-  return `<svg class="pt-meteo" viewBox="0 0 ${W} ${H}" width="100%">` +
-    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="#ffffff" stroke="rgba(7,65,115,.2)" stroke-width="1"/>` +
-    axes + body + `</svg>`;
-}
-
-// Legenda bawah frame grafik: garis solid = kondisi sekarang, putus = forecast.
-function chartLegend(color) {
-  const line = (dash) => `<svg width="24" height="8" viewBox="0 0 24 8">` +
-    `<line x1="1" y1="4" x2="23" y2="4" stroke="${color}" stroke-width="1.6"${dash ? ` stroke-dasharray="5 4"` : ""}/></svg>`;
-  return `<div class="chart-legend">` +
-    `<span class="chl-key">${line(false)}Kondisi Sekarang</span>` +
-    `<span class="chl-key">${line(true)}<i>Forecast</i></span></div>`;
-}
 
 /* =====================================================================
    PLOT BANDING ANTAR MODEL. 21 Oktober 2026, diminta pemilik.
@@ -3227,10 +3124,6 @@ const LAYER_SAMPEL = {
 };
 
 let gelembung = null, gelembungTitik = null;
-function tutupGelembung() {
-  if (gelembung) { map.closePopup(gelembung); gelembung = null; }
-  gelembungTitik = null;
-}
 
 async function bukaGelembung(lat, lon, label, isMe) {
   /* SUMBER SATELIT TIDAK PUNYA PANEL TITIK. Citra itu bidang gambar, tidak
@@ -3361,12 +3254,11 @@ async function openPoint(lat, lon, label, isMe) {
      Range kecil), dan panelnya digambar ulang dengan arah anginnya. Untuk klik di tempat yang bukan kota, langkah
      pertama ini dilewat dan jalannya persis seperti dulu. */
   const cepat = deretKota(label);
-  if (cepat) { pdTerakhir = cepat; try { renderPoint(cepat, lat, lon); } catch (e) { console.warn(e); } }
+  if (cepat) { try { renderPoint(cepat, lat, lon); } catch (e) { console.warn(e); } }
 
   try {
     const pd = await ambilTitik(lat, lon);
     if (pointToken !== tokenKu) return;   // sudah pindah ke titik lain
-    pdTerakhir = pd;
     renderPoint(pd, lat, lon);
   } catch (e) {
     if (pointToken !== tokenKu) return;
@@ -3450,109 +3342,11 @@ function fenomenaSkeletonLepas() {
   document.querySelectorAll("#mb-fenomena .mb-sel-skel").forEach((e) => e.classList.remove("mb-sel-skel"));
 }
 
-// ---- Ringkasan awam untuk panel titik --------------------------------
-function hhWIB(iso) { const w = toWIB(iso); return String(w.getUTCHours()).padStart(2, "0") + ":00"; }
-function windWord(kt) { return kt < 7 ? "tenang" : kt < 17 ? "sedang" : kt < 28 ? "kencang" : "sangat kencang"; }
 
-// Suhu TERASA (apparent temperature, rumus BOM Australia) dari suhu(°C) +
-// kelembapan(%) + angin(knot). Di iklim tropis lembap umumnya lebih PANAS dari
-// suhu asli karena keringat sulit menguap. e = tekanan uap air (hPa).
-function feelsLike(tC, rh, spdKt) {
-  const e = (rh / 100) * 6.105 * Math.exp((17.27 * tC) / (237.7 + tC));
-  const ws = (spdKt || 0) / MS_TO_KT; // knot -> m/s
-  return tC + 0.33 * e - 0.70 * ws - 4.0;
-}
 
-// Kalimat bahasa manusia: kondisi kini + hujan mendatang + angin.
-function pointSummary(times, temp, rain, cloud, wind, rh, ci) {
-  const now = cityCondition(rain[ci], cloud ? cloud[ci] : null);
-  let s = `Saat ini <b>${now.label}</b>`;
-  if (temp) {
-    const t = Math.round(temp[ci]);
-    s += `, ${t}°C`;
-    if (rh && wind) {
-      const fl = Math.round(feelsLike(temp[ci], rh[ci], wind[ci].spd));
-      if (Math.abs(fl - t) >= 1) s += ` <span class="feels">(terasa ${fl}°)</span>`;
-    }
-  }
-  s += ".";
-  if (rain[ci] >= 0.5) {
-    let stop = -1;
-    for (let i = ci + 1; i < times.length; i++) if (rain[i] < 0.5) { stop = i; break; }
-    s += stop > 0 ? ` Hujan diperkirakan mereda sekitar <b>${hhWIB(times[stop])} WIB</b>.`
-                  : " Hujan diperkirakan masih berlanjut beberapa jam.";
-  } else {
-    let onset = -1;
-    for (let i = ci + 1; i < times.length; i++) if (rain[i] >= 0.5) { onset = i; break; }
-    s += onset > 0 ? ` Hujan diperkirakan mulai sekitar <b>${hhWIB(times[onset])} WIB</b>.`
-                   : " Tidak ada hujan berarti dalam beberapa jam ke depan.";
-  }
-  if (wind) s += ` Angin ${windWord(wind[ci].spd)}.`;
-  return s;
-}
 
-// Saran aktivitas dari kondisi ~12 jam ke depan (chip yang relevan saja).
-function pointAdvice(times, rain, cloud, wind, ci) {
-  const to = Math.min(times.length, ci + 5), dry6To = Math.min(times.length, ci + 3);
-  let maxRain = 0, storm = false, strongWind = false, dry6 = true;
-  for (let i = ci; i < to; i++) {
-    maxRain = Math.max(maxRain, rain[i]);
-    if (rain[i] >= 20) storm = true;
-    if (wind && wind[i].spd >= 22) strongWind = true;
-    if (i < dry6To && rain[i] >= 0.5) dry6 = false;
-  }
-  const chips = [];
-  if (maxRain >= 0.5) chips.push(["umbrella", "cc-rain", "Bawa payung"]);
-  if (storm) chips.push(["thunderstorm", "cc-storm", "Waspada petir"]);
-  if (maxRain >= 10 || strongWind) chips.push(["two_wheeler", "cc-heavy", "Hati-hati berkendara"]);
-  if (dry6 && (!cloud || cloud[ci] < 85)) chips.push(["dry_cleaning", "cc-sunny", "Aman jemur"]);
-  if (!chips.length) chips.push(["check_circle", "cc-pcloud", "Cuaca bersahabat"]);
-  return chips.map(([ic, cls, txt]) =>
-    `<span class="adv-chip ${cls}"><span class="material-symbols-outlined">${ic}</span>${txt}</span>`).join("");
-}
 
-// Potensi badai/petir dari CAPE (energi labil). Ambang konvektif yang lazim.
-function stormLevel(c) {
-  if (c >= 3000) return ["Ekstrem", "cc-storm", "thunderstorm", "atmosfer sangat labil, potensi badai petir kuat"];
-  if (c >= 1800) return ["Tinggi", "cc-heavy", "bolt", "berpotensi badai dan petir"];
-  if (c >= 1000) return ["Sedang", "cc-rain", "cloud", "awan hujan bisa tumbuh"];
-  return ["Rendah", "cc-sunny", "wb_sunny", "atmosfer relatif stabil"];
-}
-function stormChip(cape, ci) {
-  if (!cape) return "";
-  const c = Math.round(cape[ci]);
-  const [lvl, cls, ic, note] = stormLevel(c);
-  return `<div class="pt-storm"><span class="adv-chip ${cls}"><span class="material-symbols-outlined">${ic}</span>Potensi badai: ${lvl}</span>` +
-         `<span class="pt-storm-note">CAPE ${c} J/kg, ${note}</span></div>`;
-}
 
-// Kartu prakiraan harian (maks 3 hari): ikon dominan + suhu maks/min + hujan total.
-function dailyCards(times, temp, rain, cloud, ci) {
-  const days = {}, fromDate = times[ci].slice(0, 10); // mulai dari hari frame aktif (bukan masa lalu)
-  for (let i = 0; i < times.length; i++) {
-    const d = times[i].slice(0, 10);
-    if (d < fromDate) continue;
-    const o = days[d] || (days[d] = { tmax: -99, tmin: 99, peak: 0, rain: 0, cloud: 0, n: 0, nc: 0 });
-    if (temp) { o.tmax = Math.max(o.tmax, temp[i]); o.tmin = Math.min(o.tmin, temp[i]); }
-    o.peak = Math.max(o.peak, rain[i]); o.rain += rain[i] * STEP_JAM;
-    if (cloud) { o.cloud += cloud[i]; o.nc++; }
-    o.n++;
-  }
-  return Object.keys(days).sort().slice(0, 3).map((d) => {
-    const o = days[d], cond = cityCondition(o.peak, o.nc ? o.cloud / o.nc : null);
-    const base = new Date(d + "T00:00:00Z");
-    const wd = base.toLocaleDateString("id-ID", { weekday: "short", timeZone: "UTC" });
-    const dm = base.toLocaleDateString("id-ID", { day: "numeric", month: "short", timeZone: "UTC" });
-    return `<div class="fc-card"><div class="fc-day">${wd}<span>${dm}</span></div>` +
-      `<span class="cc-ico cc-mini ${cond.cls}"><span class="material-symbols-outlined">${cond.icon}</span></span>` +
-      `<div class="fc-temp">` + (temp
-        ? `<span class="material-symbols-outlined ft-ico">device_thermostat</span>` +
-          `<span class="t-max">${Math.round(o.tmax)}°</span>` +
-          `<span class="t-min">${Math.round(o.tmin)}°</span>`
-        : "–") + `</div>` +
-      `<div class="fc-rain">${o.rain >= 1 ? Math.round(o.rain) + " mm" : "–"}</div></div>`;
-  }).join("");
-}
 
 /* =====================================================================
    PANEL TITIK PINDAH KE BAWAH, METEOGRAM TABEL. 13 Oktober 2026.
@@ -6776,38 +6570,6 @@ function toggleMonsoon() {
   terapkanFenomena();
 }
 
-function toggleMonsoonLama() {
-  monsoonOn = !monsoonOn;
-  $("mon-toggle") && $("mon-toggle").classList.toggle("active", monsoonOn);
-  const panel = $("phenom-panel");
-  if (monsoonOn) {
-    Promise.all([loadMonsoon(), loadMonsoonVel()]).then(([mon, data]) => {
-      if (!monsoonOn) return;
-      fillPhenomPanel();
-      if (panel) panel.classList.add("show");
-      showBorneoVortex(mon && mon.vortex);
-      if (data) {
-        const code = mon && mon.phase ? mon.phase.code : "AUS";
-        if (!monsoonVel) {
-          monsoonVel = L.velocityLayer({
-            displayValues: false, data,
-            minVelocity: 0, maxVelocity: 14, velocityScale: 0.02,
-            particleAge: 120, particleMultiplier: 1 / 500, lineWidth: 2.4,
-            colorScale: monColors(code).scale, frameRate: 22,
-          });
-          monsoonVel.addTo(map);
-        } else if (!map.hasLayer(monsoonVel)) {
-          monsoonVel.addTo(map);
-        }
-      }
-    });
-  } else {
-    if (monsoonVel && map.hasLayer(monsoonVel)) map.removeLayer(monsoonVel);
-    hideBorneoVortex();
-    if (panel) panel.classList.remove("show");
-  }
-  updateHash();
-}
 
 // ---- Skeleton loading ---------------------------------------------------
 function hideSkeleton() {
@@ -7123,22 +6885,6 @@ async function init() {
     $("zoom-in")?.addEventListener("click", () => map.zoomIn());
     $("zoom-out")?.addEventListener("click", () => map.zoomOut());
 
-    // Panah geser variabel (HP): gulir strip layer + auto-redup panah di ujung.
-    const layersEl = document.querySelector(".layers");
-    const layerStep = () => Math.max(120, (layersEl ? layersEl.clientWidth : 200) * 0.7);
-    function updateLayerNav() {
-      if (!layersEl) return;
-      const atStart = layersEl.scrollLeft <= 1;
-      const atEnd = layersEl.scrollLeft + layersEl.clientWidth >= layersEl.scrollWidth - 1;
-      $("layer-prev")?.classList.toggle("nav-hidden", atStart);
-      $("layer-next")?.classList.toggle("nav-hidden", atEnd);
-    }
-    $("layer-prev")?.addEventListener("click", () => layersEl?.scrollBy({ left: -layerStep(), behavior: "smooth" }));
-    $("layer-next")?.addEventListener("click", () => layersEl?.scrollBy({ left: layerStep(), behavior: "smooth" }));
-    layersEl?.addEventListener("scroll", updateLayerNav);
-    window.addEventListener("resize", updateLayerNav);
-    updateLayerNav();
-
     // HP: dropdown "Parameter" (variabel) & dropdown kontrol kanan (buka/tutup)
     $("param-toggle")?.addEventListener("click", () =>
       document.querySelector(".layer-bar")?.classList.toggle("param-open"));
@@ -7317,12 +7063,6 @@ async function init() {
       const it = e.target.closest(".search-item");
       if (it) pickPlace(parseFloat(it.dataset.lat), parseFloat(it.dataset.lon), it.textContent);
     });
-    // Initial time (dekoratif) diisi dari run model
-    const io = $("init-opt");
-    if (io) io.textContent = cat.run_time;
-
-    const runEl = $("run-info");
-    if (runEl) runEl.title = "Run model: " + cat.run_time;
     current = nearestNowIndex();       // mulai di frame terdekat "sekarang"
     await showFrame(current);
     restoreFromHash();                 // pulihkan layer/waktu/titik dari link dibagikan

@@ -145,7 +145,6 @@
               <span class="param-lbl">Parameter</span>
               <span class="material-symbols-outlined param-caret">expand_more</span>
             </button>
-            <button id="layer-prev" class="layer-nav" aria-label="Variabel sebelumnya"><span class="material-symbols-outlined">chevron_left</span></button>
             <!-- NAMA DULU BARU KODENYA, diminta user 4 Oktober 2026. Dulu
                  isinya kode kimia saja, PM2.5, CO, NO2, dan seterusnya, dan
                  orang yang bukan orang udara tidak tahu itu apa.
@@ -203,7 +202,6 @@
                 <span class="material-symbols-outlined">satellite_alt</span> <span class="lb-txt">Brightness Temperature</span>
               </button>
             </div>
-            <button id="layer-next" class="layer-nav" aria-label="Variabel berikutnya"><span class="material-symbols-outlined">chevron_right</span></button>
             <!-- Buka-tutup panel kiri (Parameter + Model). Menempel di sisi kontainer
                  Parameter, sejajar tengahnya. Desktop saja; di HP sudah ada dropdown. -->
             <button id="panel-toggle" class="panel-toggle" aria-label="Sembunyikan panel" title="Sembunyikan panel">
@@ -683,7 +681,7 @@
   <!-- Daya Tampung Wilayah: baca banyak format vektor (SHP zip/KMZ via shpjs+JSZip,
        KML/GeoJSON/WKT langsung) + reproyeksi (proj4) + digitasi manual -->
   <script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
-  <script src="https://unpkg.com/shpjs@6.1.1/dist/shp.min.js"></script>
+  <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.min.js"></script>
   <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="sisi.js" defer></script>
   <script src="app.js"></script>
